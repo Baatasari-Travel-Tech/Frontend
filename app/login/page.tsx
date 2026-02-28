@@ -29,28 +29,43 @@ export default function Login() {
   }
 
   return (
-    <div style={{ padding: 40 }}>
-      <h2>Login</h2>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div>
+          <p className="eyebrow">Welcome back</p>
+          <h2>Login to Baatasari</h2>
+        </div>
 
-      <input
-        placeholder="email"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-      />
-      <br />
+        <div className="auth-form">
+          <label>
+            Email
+            <input
+              className="input"
+              placeholder="you@domain.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
+          </label>
 
-      <input
-        placeholder="password"
-        type="password"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-      />
-      <br />
+          <label>
+            Password
+            <input
+              className="input"
+              placeholder="********"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+            />
+          </label>
+        </div>
 
-      <button onClick={handleLogin}>Login</button>
-      <button onClick={googlelogin}>
-      Continue with Google
-    </button>
+        <div className="auth-actions">
+          <button className="btn" onClick={handleLogin}>Login</button>
+          <button className="btn btn-ghost" onClick={googlelogin}>
+            Continue with Google
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

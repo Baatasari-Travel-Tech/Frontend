@@ -29,11 +29,24 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ padding: 40 }}>
-      <h2>Dashboard</h2>
-      <p>Logged in as: {email}</p>
-
-      <button onClick={logout}>Logout</button>
+    <div className="dashboard-page">
+      <div className="dashboard-card">
+        <div className="dashboard-header">
+          <div>
+            <p className="eyebrow">Dashboard</p>
+            <h2>Welcome back</h2>
+          </div>
+          <button className="btn btn-ghost" onClick={logout}>Logout</button>
+        </div>
+        <div className="dashboard-body">
+          <p>Logged in as</p>
+          <strong>{email}</strong>
+        </div>
+        <div className="dashboard-actions">
+          <button className="btn" type="button">Get a plan now</button>
+          <button className="btn btn-light" type="button">Update mood</button>
+        </div>
+      </div>
     </div>
   )
 }
