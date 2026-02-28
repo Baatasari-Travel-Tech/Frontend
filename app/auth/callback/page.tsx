@@ -9,9 +9,9 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const handle = async () => {
-      const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href)
+      const { data } = await supabase.auth.getSession()
 
-      if (error || !data.session) {
+      if (!data.session) {
         router.replace('/login')
         return
       }
