@@ -55,7 +55,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <header className="site-header">
         <nav className="nav-bar">
           <Link href="/" className="brand-logo">
-            <Image src="/Navbar_logo.svg" alt="Baatasari" width={120} height={40} />
+            <Image src="/Logo.svg" alt="Baatasari" width={32} height={32} />
           </Link>
           <div className="nav-actions">
             {session?.user ? (
@@ -80,7 +80,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <footer className="site-footer">
         <div className="footer-content">
           <div className="footer-brand">
-            <Image src="/Logo.svg" alt="Baatasari logo" width={120} height={40} />
+            <Image src="/Navbar_logo.svg" alt="Baatasari logo" width={140} height={40} />
             <span>Baatasari</span>
           </div>
           <div className="footer-links">

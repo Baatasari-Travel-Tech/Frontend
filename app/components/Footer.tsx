@@ -14,7 +14,7 @@ export function Footer() {
           <div className="lg:col-span-2">
             <div className="mb-4 relative h-[88px] w-[216px] overflow-hidden rounded-xl">
               <Image
-                src="/landing/footer-logo.png"
+                src="/Navbar_logo.svg"
                 alt="Baatasari"
                 fill
                 className="object-contain object-left"

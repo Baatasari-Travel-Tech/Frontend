@@ -25,9 +25,9 @@ export function Header() {
         
         {/* LEFT: LOGO */}
         <div className="flex items-center">
-          <Link href="/" className="relative h-30 w-20 transition-transform hover:scale-105 active:scale-95">
+          <Link href="/" className="relative h-10 w-10 transition-transform hover:scale-105 active:scale-95">
             <Image
-              src="/images/svglogo.png"
+              src="/Logo.svg"
               alt="Baatasari"
               fill
               className="object-contain object-left absolute"
