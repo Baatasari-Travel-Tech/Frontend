@@ -1,18 +1,25 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/providers'
 
 export default function OnboardingClient() {
   const router = useRouter()
-  const { session, userRoleId } = useAuth()
+  const { session, userRoleId, isLoading } = useAuth()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isLoading) return
+    if (!session?.user) {
+      router.replace('/login')
+    }
+  }, [isLoading, router, session?.user])
 
   const user = session?.user ?? null
   const displayName = useMemo(() => user?.email ?? 'Member', [user?.email])

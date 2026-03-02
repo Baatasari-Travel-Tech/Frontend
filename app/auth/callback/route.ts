@@ -1,21 +1,20 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { isRole, toDbRoleName } from '@/lib/roles'
 
 export async function GET(request: NextRequest) {
-  const cookieStore = await cookies()
+  const response = NextResponse.redirect(new URL('/', request.url))
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => cookieStore.getAll(),
+        getAll: () => request.cookies.getAll(),
         setAll: (
           cookiesToSet: { name: string; value: string; options: CookieOptions }[]
         ) => {
           cookiesToSet.forEach((cookie) => {
-            cookieStore.set(cookie.name, cookie.value, cookie.options)
+            response.cookies.set(cookie.name, cookie.value, cookie.options)
           })
         },
       },
@@ -34,8 +33,10 @@ export async function GET(request: NextRequest) {
 
   if (user) {
     const roleParam = searchParams.get('role')
-    const appRole = isRole(roleParam) ? roleParam : 'user'
-    const dbRoleName = toDbRoleName(appRole)
+    if (!isRole(roleParam)) {
+      return response
+    }
+    const dbRoleName = toDbRoleName(roleParam)
 
     const { data: roleRow } = await supabase
       .from('roles')
@@ -55,5 +56,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(new URL('/', request.url))
+  return response
 }

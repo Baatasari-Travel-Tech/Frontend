@@ -66,10 +66,11 @@ export default function Register() {
   }
 
   const googlelogin = async () => {
+    const redirectTo = `${window.location.origin}/auth/callback?role=${role}`
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `https://baatasari.com/auth/callback?role=${role}`,
+        redirectTo,
       },
     })
   }

@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/providers'
 
 export default function RestaurantOnboardingClient() {
   const router = useRouter()
-  const { session, userRoleId } = useAuth()
+  const { session, userRoleId, isLoading } = useAuth()
   const [name, setName] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [cuisine, setCuisine] = useState('')
@@ -17,6 +17,13 @@ export default function RestaurantOnboardingClient() {
   const [openingHours, setOpeningHours] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isLoading) return
+    if (!session?.user) {
+      router.replace('/login')
+    }
+  }, [isLoading, router, session?.user])
 
   const handleComplete = async () => {
     if (!session?.user) return

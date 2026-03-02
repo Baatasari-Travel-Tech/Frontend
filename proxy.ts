@@ -84,10 +84,13 @@ export async function proxy(request: NextRequest) {
       .limit(1)
       .maybeSingle()
 
-    if (!data && pathname !== '/register') {
-      const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/register'
-      return applyCookies(NextResponse.redirect(redirectUrl))
+    if (!data) {
+      if (pathname !== '/register') {
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.pathname = '/register'
+        return applyCookies(NextResponse.redirect(redirectUrl))
+      }
+      return applyCookies(NextResponse.next())
     }
 
     const dbRoleName = (data?.roles as { name?: string } | null)?.name ?? null
