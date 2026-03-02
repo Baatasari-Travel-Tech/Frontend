@@ -5,8 +5,8 @@ export const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true,
+      persistSession:     true,
+      autoRefreshToken:   true,
       detectSessionInUrl: true,
     },
   }

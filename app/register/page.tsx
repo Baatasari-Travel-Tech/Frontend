@@ -1,77 +1,41 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { fromDbRoleName, getRoleOnboarding, ROLE_LABELS, toDbRoleName } from '@/lib/roles'
-import { useAuth } from '@/app/providers'
+import { supabase } from '@/lib/supabase'
 
-export default function Register() {
-  const [email, setEmail] = useState('')
+const GoogleIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+)
+
+export default function RegisterPage() {
+  const router  = useRouter()
+  const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'user' | 'organizer' | 'vendor' | 'restaurant'>('user')
-  const router = useRouter()
-  const { session, activeRole, isLoadingRole } = useAuth()
-
-  useEffect(() => {
-    if (!session?.user || isLoadingRole) return
-    const resolvedRole = fromDbRoleName(activeRole)
-    if (!resolvedRole) return
-    router.replace(getRoleOnboarding(resolvedRole))
-  }, [session?.user, activeRole, isLoadingRole, router])
+  const [confirm,  setConfirm]  = useState('')
+  const [error,    setError]    = useState<string | null>(null)
+  const [loading,  setLoading]  = useState(false)
 
   const handleRegister = async () => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
-
-    if (error) {
-      alert(error.message)
-      return
-    }
-
-    if (!data.user?.id) {
-      router.replace('/')
-      return
-    }
-
-    const dbRoleName = toDbRoleName(role)
-    const { data: roleRow, error: roleError } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', dbRoleName)
-      .maybeSingle()
-
-    if (roleError || !roleRow?.id) {
-      alert('Unable to assign role. Please try again.')
-      return
-    }
-
-    const { error: userRoleError } = await supabase.from('user_roles').upsert(
-      {
-        user_id: data.user.id,
-        role_id: roleRow.id,
-        onboarding_completed: false,
-      },
-      { onConflict: 'user_id,role_id' }
-    )
-
-    if (userRoleError) {
-      alert('Role assignment failed. Please try again.')
-      return
-    }
-
-    router.replace(getRoleOnboarding(role))
+    if (!email || !password) { setError('Please fill in all fields.'); return }
+    if (password !== confirm)  { setError('Passwords do not match.'); return }
+    if (password.length < 8)   { setError('Password must be at least 8 characters.'); return }
+    setLoading(true); setError(null)
+    const { error: authErr } = await supabase.auth.signUp({ email, password })
+    if (authErr) { setError(authErr.message); setLoading(false); return }
+    // DB triggers automatically: create profile → assign USER role
+    router.replace('/onboarding')
   }
 
-  const googlelogin = async () => {
-    const redirectTo = `${window.location.origin}/auth/callback?role=${role}`
+  const handleGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     })
   }
 
@@ -80,52 +44,43 @@ export default function Register() {
       <div className="auth-card">
         <div>
           <p className="eyebrow">Start in minutes</p>
-          <h2>Create your Baatasari account</h2>
+          <h2>Create your account</h2>
+          <p>Join as a User — unlock other roles from your dashboard.</p>
         </div>
-
         <div className="auth-form">
           <label>
-            Role
-            <select
-              className="input"
-              value={role}
-              onChange={(e) => setRole(e.target.value as typeof role)}
-            >
-              <option value="user">{ROLE_LABELS.user}</option>
-              <option value="organizer">{ROLE_LABELS.organizer}</option>
-              <option value="vendor">{ROLE_LABELS.vendor}</option>
-              <option value="restaurant">{ROLE_LABELS.restaurant}</option>
-            </select>
-          </label>
-
-          <label>
             Email
-            <input
-              className="input"
-              placeholder="you@domain.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
+            <input className="input" type="email" placeholder="you@domain.com"
+              value={email} onChange={e => setEmail(e.target.value)} />
           </label>
-
           <label>
             Password
-            <input
-              className="input"
-              placeholder="Create a password"
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
+            <input className="input" type="password" placeholder="Min 8 characters"
+              value={password} onChange={e => setPassword(e.target.value)} />
+          </label>
+          <label>
+            Confirm password
+            <input className="input" type="password" placeholder="Repeat password"
+              value={confirm} onChange={e => setConfirm(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleRegister()} />
           </label>
         </div>
-
+        {error && <p className="error-msg">{error}</p>}
         <div className="auth-actions">
-          <button className="btn" onClick={handleRegister}>Create account</button>
-          <button className="btn btn-ghost" onClick={googlelogin}>
-            Continue with Google
+          <button className="btn btn-solid" onClick={handleRegister} disabled={loading}>
+            {loading ? 'Creating account…' : 'Create account'}
+          </button>
+          <div className="auth-divider">or</div>
+          <button className="btn btn-ghost" onClick={handleGoogle}>
+            <GoogleIcon /> Continue with Google
           </button>
         </div>
+        <p style={{ textAlign: 'center', fontSize: '.875rem', color: '#64748b' }}>
+          Already have an account?{' '}
+          <a href="/login" style={{ color: '#0e2240', fontWeight: 600, textDecoration: 'none' }}>
+            Login
+          </a>
+        </p>
       </div>
     </div>
   )

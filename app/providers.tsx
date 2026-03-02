@@ -1,192 +1,168 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import {
+  createContext, useContext, useEffect, useMemo,
+  useState, useCallback,
+} from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import type { AppRole } from '@/lib/roles'
 
-type AuthContextValue = {
-  session: Session | null
-  isLoading: boolean
-  profile: ProfileRecord | null
-  isLoadingProfile: boolean
-  profileError: string | null
-  activeRole: string | null
-  userRoleId: string | null
-  roleOnboardingCompleted: boolean | null
-  isLoadingRole: boolean
-  roleError: string | null
+export type UserRoleRecord = {
+  id: string
+  role: AppRole
+  onboarding_completed: boolean
+  updated_at: string
 }
 
-type ProfileRecord = {
+export type Profile = {
   email: string | null
   full_name: string | null
   phone: string | null
   avatar_url: string | null
-  global_onboarding_completed: boolean | null
+  global_onboarding_completed: boolean
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+type RoleRow = {
+  id: string
+  onboarding_completed: boolean
+  updated_at: string
+  roles: { name: AppRole } | null
+}
 
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within Providers')
-  }
-  return context
+type AuthCtx = {
+  session: Session | null
+  isLoading: boolean
+  profile: Profile | null
+  isLoadingProfile: boolean
+  userRoles: UserRoleRecord[]
+  isLoadingRoles: boolean
+  activeRole: AppRole
+  switchRole: (role: AppRole) => Promise<void>
+  refreshProfile: () => Promise<void>
+  refreshRoles: () => Promise<void>
+}
+
+const AuthContext = createContext<AuthCtx | undefined>(undefined)
+
+export function useAuth(): AuthCtx {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth must be inside <Providers>')
+  return ctx
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [profile, setProfile] = useState<ProfileRecord | null>(null)
+  const [session,          setSession]          = useState<Session | null>(null)
+  const [isLoading,        setIsLoading]        = useState(true)
+  const [profile,          setProfile]          = useState<Profile | null>(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
-  const [profileError, setProfileError] = useState<string | null>(null)
-  const [activeRole, setActiveRole] = useState<string | null>(null)
-  const [userRoleId, setUserRoleId] = useState<string | null>(null)
-  const [roleOnboardingCompleted, setRoleOnboardingCompleted] = useState<boolean | null>(null)
-  const [isLoadingRole, setIsLoadingRole] = useState(false)
-  const [roleError, setRoleError] = useState<string | null>(null)
+  const [userRoles,        setUserRoles]        = useState<UserRoleRecord[]>([])
+  const [isLoadingRoles,   setIsLoadingRoles]   = useState(false)
 
-  useEffect(() => {
-    let isMounted = true
+  const loadProfile = useCallback(async (userId: string) => {
+    setIsLoadingProfile(true)
+    const { data } = await supabase
+      .from('profiles')
+      .select('email,full_name,phone,avatar_url,global_onboarding_completed')
+      .eq('id', userId)
+      .single()
+    setProfile(data ?? null)
+    setIsLoadingProfile(false)
+  }, [])
 
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        if (!isMounted) return
-        setSession(data.session)
-        setIsLoading(false)
-        if (!data.session) {
-          setProfile(null)
-          setIsLoadingProfile(false)
-          setProfileError(null)
-          setActiveRole(null)
-          setUserRoleId(null)
-          setRoleOnboardingCompleted(null)
-          setIsLoadingRole(false)
-          setRoleError(null)
-        }
-      })
-      .catch(() => {
-        if (!isMounted) return
-        setIsLoading(false)
-      })
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!isMounted) return
-      setSession(nextSession)
-      if (!nextSession) {
-        setProfile(null)
-        setIsLoadingProfile(false)
-        setProfileError(null)
-        setActiveRole(null)
-        setUserRoleId(null)
-        setRoleOnboardingCompleted(null)
-        setIsLoadingRole(false)
-        setRoleError(null)
-      }
-    })
-
-    return () => {
-      isMounted = false
-      subscription.unsubscribe()
-    }
+  const loadRoles = useCallback(async (userId: string) => {
+    setIsLoadingRoles(true)
+    const { data } = await supabase
+      .from('user_roles')
+      .select('id, onboarding_completed, updated_at, roles(name)')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+    const mapped: UserRoleRecord[] = (data as RoleRow[] | null ?? []).map(row => ({
+      id:                   row.id,
+      role:                 row.roles?.name ?? 'USER',
+      onboarding_completed: row.onboarding_completed,
+      updated_at:           row.updated_at,
+    }))
+    setUserRoles(mapped)
+    setIsLoadingRoles(false)
   }, [])
 
   useEffect(() => {
-    if (!session?.user?.id) return
+    let mounted = true
 
-    let isMounted = true
+    const handleSession = async (nextSession: Session | null) => {
+      if (!mounted) return
+      setSession(nextSession)
+      setIsLoading(false)
+      if (!nextSession?.user?.id) { setProfile(null); setUserRoles([]); return }
+      await Promise.all([
+        loadProfile(nextSession.user.id),
+        loadRoles(nextSession.user.id),
+      ])
+    }
 
-    const loadProfile = async () => {
-      setIsLoadingProfile(true)
-      setProfileError(null)
+    supabase.auth.getSession()
+      .then(({ data }) => handleSession(data.session))
+      .catch(() => { if (mounted) setIsLoading(false) })
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('email,full_name,phone,avatar_url,global_onboarding_completed')
-        .eq('id', session.user.id)
-        .maybeSingle()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      void handleSession(s)
+    })
+    return () => { mounted = false; subscription.unsubscribe() }
+  }, [loadProfile, loadRoles])
 
-      if (!isMounted) return
+  const switchRole = useCallback(async (role: AppRole) => {
+    const userId = session?.user?.id
+    if (!userId) return
 
-      if (error) {
-        setProfile(null)
-        setProfileError('Unable to load your profile. Please try again.')
-        setIsLoadingProfile(false)
-        return
+    // Optimistic update
+    setUserRoles(prev => {
+      const now = new Date().toISOString()
+      const existing = prev.find(r => r.role === role)
+      if (existing) {
+        return [{ ...existing, updated_at: now }, ...prev.filter(r => r.role !== role)]
       }
+      return [{ id: 'pending', role, onboarding_completed: false, updated_at: now }, ...prev]
+    })
 
-      setProfile(data ?? null)
-      setIsLoadingProfile(false)
+    const { data: roleRow } = await supabase
+      .from('roles').select('id').eq('name', role).single()
+    if (!roleRow?.id) return
+
+    const { data: existing } = await supabase
+      .from('user_roles').select('id')
+      .eq('user_id', userId).eq('role_id', roleRow.id).maybeSingle()
+
+    if (existing?.id) {
+      await supabase.from('user_roles')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', existing.id)
+    } else {
+      await supabase.from('user_roles').insert({
+        user_id: userId, role_id: roleRow.id, onboarding_completed: false,
+      })
     }
 
-    const loadRole = async () => {
-      setIsLoadingRole(true)
-      setRoleError(null)
+    await loadRoles(userId)
+  }, [session?.user?.id, loadRoles])
 
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('id,role_id,onboarding_completed,roles(name)')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+  const activeRole: AppRole = userRoles[0]?.role ?? 'USER'
 
-      if (!isMounted) return
-
-      if (error) {
-        setActiveRole(null)
-        setUserRoleId(null)
-        setRoleOnboardingCompleted(null)
-        setRoleError('Unable to load your role. Please try again.')
-        setIsLoadingRole(false)
-        return
-      }
-
-      const roleName = (data?.roles as { name?: string } | null)?.name ?? null
-      setActiveRole(roleName)
-      setUserRoleId(data?.id ?? null)
-      setRoleOnboardingCompleted(data?.onboarding_completed ?? null)
-      setIsLoadingRole(false)
-    }
-
-    loadProfile()
-    loadRole()
-
-    return () => {
-      isMounted = false
-    }
-  }, [session?.user?.id])
-
-  const value = useMemo(
-    () => ({
-      session,
-      isLoading,
-      profile,
-      isLoadingProfile,
-      profileError,
-      activeRole,
-      userRoleId,
-      roleOnboardingCompleted,
-      isLoadingRole,
-      roleError,
-    }),
-    [
-      session,
-      isLoading,
-      profile,
-      isLoadingProfile,
-      profileError,
-      activeRole,
-      userRoleId,
-      roleOnboardingCompleted,
-      isLoadingRole,
-      roleError,
-    ]
-  )
+  const value = useMemo<AuthCtx>(() => ({
+    session, isLoading,
+    profile, isLoadingProfile,
+    userRoles, isLoadingRoles,
+    activeRole, switchRole,
+    refreshProfile: async () => {
+      if (!session?.user?.id) return
+      await loadProfile(session.user.id)
+    },
+    refreshRoles: async () => {
+      if (!session?.user?.id) return
+      await loadRoles(session.user.id)
+    },
+  }), [session, isLoading, profile, isLoadingProfile, userRoles, isLoadingRoles,
+      activeRole, switchRole, loadProfile, loadRoles])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

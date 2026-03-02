@@ -1,72 +1,48 @@
-export type AppRole = 'user' | 'organizer' | 'vendor' | 'restaurant'
-export type DbRoleName = 'USER' | 'EVENT_ORGANIZER' | 'VENDOR' | 'RESTAURANT' | 'TALENT'
+export type AppRole = 'USER' | 'EVENT_ORGANIZER' | 'VENDOR' | 'RESTAURANT' | 'TALENT'
 
-export const isRole = (value: string | null | undefined): value is AppRole => {
-  return value === 'user' || value === 'organizer' || value === 'vendor' || value === 'restaurant'
-}
-
-export const getRoleHome = (role: AppRole | null | undefined) => {
-  switch (role) {
-    case 'organizer':
-      return '/event-organizer/dashboard'
-    case 'vendor':
-      return '/vendor/dashboard'
-    case 'restaurant':
-      return '/restaurant/dashboard'
-    case 'user':
-    default:
-      return '/dashboard'
-  }
-}
-
-export const getRoleOnboarding = (role: AppRole | null | undefined) => {
-  switch (role) {
-    case 'organizer':
-      return '/event-organizer/onboarding'
-    case 'vendor':
-      return '/vendor/onboarding'
-    case 'restaurant':
-      return '/restaurant/onboarding'
-    case 'user':
-    default:
-      return '/onboarding'
-  }
-}
+export const ALL_ROLES: AppRole[] = [
+  'USER',
+  'EVENT_ORGANIZER',
+  'VENDOR',
+  'RESTAURANT',
+  'TALENT',
+]
 
 export const ROLE_LABELS: Record<AppRole, string> = {
-  user: 'Normal User',
-  organizer: 'Event Organizer',
-  vendor: 'Vendor',
-  restaurant: 'Restaurant',
+  USER:            'User',
+  EVENT_ORGANIZER: 'Event Organizer',
+  VENDOR:          'Vendor',
+  RESTAURANT:      'Restaurant',
+  TALENT:          'Talent',
 }
 
-export const toDbRoleName = (role: AppRole) => {
+export const ROLE_EMOJI: Record<AppRole, string> = {
+  USER:            '👤',
+  EVENT_ORGANIZER: '🎪',
+  VENDOR:          '🛍️',
+  RESTAURANT:      '🍽️',
+  TALENT:          '🎤',
+}
+
+export const getRoleDashboard = (role: AppRole): string => {
   switch (role) {
-    case 'organizer':
-      return 'EVENT_ORGANIZER' as const
-    case 'vendor':
-      return 'VENDOR' as const
-    case 'restaurant':
-      return 'RESTAURANT' as const
-    case 'user':
-    default:
-      return 'USER' as const
+    case 'EVENT_ORGANIZER': return '/event-organizer/dashboard'
+    case 'VENDOR':          return '/vendor/dashboard'
+    case 'RESTAURANT':      return '/restaurant/dashboard'
+    case 'TALENT':          return '/talent/dashboard'
+    default:                return '/dashboard'
   }
 }
 
-export const fromDbRoleName = (value: string | null | undefined): AppRole | null => {
-  switch (value) {
-    case 'USER':
-      return 'user'
-    case 'EVENT_ORGANIZER':
-      return 'organizer'
-    case 'VENDOR':
-      return 'vendor'
-    case 'RESTAURANT':
-      return 'restaurant'
-    case 'TALENT':
-      return 'user'
-    default:
-      return null
+export const getRoleOnboarding = (role: AppRole): string => {
+  switch (role) {
+    case 'EVENT_ORGANIZER': return '/event-organizer/onboarding'
+    case 'VENDOR':          return '/vendor/onboarding'
+    case 'RESTAURANT':      return '/restaurant/onboarding'
+    case 'TALENT':          return '/talent/onboarding'
+    default:                return '/onboarding'
   }
 }
+
+export const isValidRole = (v: unknown): v is AppRole =>
+  typeof v === 'string' && (ALL_ROLES as string[]).includes(v)

@@ -5,15 +5,15 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/providers'
 
-export default function VendorDashboardPage() {
+export default function TalentDashboardPage() {
   const { session } = useAuth()
   const router = useRouter()
-  const [bizName, setBizName] = useState<string | null>(null)
+  const [stageName, setStageName] = useState<string | null>(null)
 
   useEffect(() => {
     if (!session?.user?.id) return
-    supabase.from('vendor_profiles').select('business_name').eq('user_id', session.user.id).maybeSingle()
-      .then(({ data }) => setBizName(data?.business_name ?? null))
+    supabase.from('talent_profiles').select('stage_name').eq('user_id', session.user.id).maybeSingle()
+      .then(({ data }) => setStageName(data?.stage_name ?? null))
   }, [session?.user?.id])
 
   return (
@@ -21,18 +21,18 @@ export default function VendorDashboardPage() {
       <div className="dashboard-card">
         <div className="dashboard-header">
           <div>
-            <p className="eyebrow">Vendor dashboard</p>
+            <p className="eyebrow">Talent dashboard</p>
             <h2>Welcome back</h2>
           </div>
           <button className="btn btn-ghost" onClick={async () => { await supabase.auth.signOut(); router.push('/') }}>Logout</button>
         </div>
         <div className="dashboard-body">
-          <div><p>Business</p><strong>{bizName ?? '—'}</strong></div>
-          <div><p>Listings</p><strong>0</strong></div>
+          <div><p>Stage name</p><strong>{stageName ?? '—'}</strong></div>
+          <div><p>Bookings</p><strong>0</strong></div>
         </div>
         <div className="dashboard-actions">
-          <button className="btn btn-solid">Upload products</button>
-          <button className="btn btn-light">View listings</button>
+          <button className="btn btn-solid">View opportunities</button>
+          <button className="btn btn-light">Edit profile</button>
         </div>
       </div>
     </div>
