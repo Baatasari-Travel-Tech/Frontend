@@ -145,7 +145,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       )}
 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
+        <div className="flex w-full items-center justify-between px-4 py-3 md:px-6">
           <Link href="/" className="flex items-center gap-2">
             <Image
               src="/logo.png"
@@ -198,7 +198,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <main className="min-h-[70dvh]">{children}</main>
 
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="flex w-full flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:justify-between md:px-6">
           <div className="flex items-center gap-3">
             <Image
               src="/Navbar_logo.png"

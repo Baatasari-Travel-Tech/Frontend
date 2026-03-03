@@ -20,7 +20,7 @@ export function HeroSection() {
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] border border-slate-200 bg-gradient-to-br from-white via-stone-50 to-emerald-50 px-6 py-10 shadow-[0_30px_70px_rgba(15,23,42,0.08)] md:px-10 md:py-14"
+        className="relative w-full overflow-hidden rounded-[2.5rem] border border-slate-200 bg-gradient-to-br from-white via-stone-50 to-emerald-50 px-6 py-10 shadow-[0_30px_70px_rgba(15,23,42,0.08)] md:px-10 md:py-14"
       >
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-amber-200/50 blur-[110px]" />

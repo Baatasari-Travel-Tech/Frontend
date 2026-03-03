@@ -20,7 +20,7 @@ export function CategoryFilter({ activeCategory, onCategoryChange }: CategoryFil
 
   return (
     <div className="sticky top-16 z-30 px-4 md:px-8">
-      <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/60 bg-white/80 px-4 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur">
+      <div className="w-full rounded-[2rem] border border-white/60 bg-white/80 px-4 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
           <div className="hidden items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700 lg:flex">
             <span className="relative flex h-2.5 w-2.5">

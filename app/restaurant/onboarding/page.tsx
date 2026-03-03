@@ -65,7 +65,7 @@ export default function RestaurantOnboardingPage() {
 
   return (
     <div className="relative px-4 py-12 md:py-16">
-      <div className="mx-auto max-w-5xl rounded-3xl border border-white/60 bg-white/90 p-6 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+      <div className="w-full rounded-3xl border border-white/60 bg-white/90 p-6 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Restaurant setup</p>
           <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">Set up your restaurant profile</h2>
@@ -117,3 +117,4 @@ export default function RestaurantOnboardingPage() {
     </div>
   )
 }
+

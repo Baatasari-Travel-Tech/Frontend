@@ -39,7 +39,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative px-4 py-12 md:py-16">
-      <div className="mx-auto max-w-5xl">
+      <div className="w-full">
         <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-5">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Welcome back</p>
@@ -126,3 +126,4 @@ export default function LoginPage() {
     </div>
   )
 }
+

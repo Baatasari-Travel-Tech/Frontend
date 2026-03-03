@@ -26,7 +26,7 @@ export function EventSection({ title, activeCategory, maxPrice }: EventSectionPr
 
   return (
     <section className="px-4 md:px-8">
-      <div className="mx-auto max-w-6xl rounded-4xl bg-white px-6 py-8 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
+      <div className="w-full rounded-4xl bg-white px-6 py-8 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
             {title}

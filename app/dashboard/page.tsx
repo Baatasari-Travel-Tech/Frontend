@@ -17,7 +17,7 @@ export default function DashboardPage() {
 
   return (
     <div className="px-4 py-12 md:py-16">
-      <div className="mx-auto max-w-4xl rounded-3xl border border-white/60 bg-white/90 p-6 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+      <div className="w-full rounded-3xl border border-white/60 bg-white/90 p-6 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Dashboard</p>
@@ -58,3 +58,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+

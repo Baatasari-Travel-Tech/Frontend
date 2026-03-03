@@ -8,7 +8,7 @@ export function MovieSection({ title }: { title: string }) {
 
   return (
     <section className="px-4 md:px-8">
-      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-900 px-6 py-10 shadow-[0_30px_70px_rgba(15,23,42,0.2)] md:px-10">
+      <div className="relative w-full overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-900 px-6 py-10 shadow-[0_30px_70px_rgba(15,23,42,0.2)] md:px-10">
         <div className="absolute inset-0 opacity-30">
           <Image
             src="/landing/Baatasari-pass-entertainment-banner.jpg"
