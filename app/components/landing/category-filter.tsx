@@ -1,14 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { 
-  Flame, 
-  Music, 
-  Mic2, 
-  Laptop, 
-  Sparkles, 
-  Ticket 
-} from "lucide-react";
+import { Flame, Music, Mic2, Laptop, Sparkles, Ticket } from "lucide-react";
 
 interface CategoryFilterProps {
   activeCategory: string;
@@ -26,51 +19,41 @@ export function CategoryFilter({ activeCategory, onCategoryChange }: CategoryFil
   ];
 
   return (
-    <div 
-      className="w-full sticky top-20 z-40 px-4 md:px-10 py-4"
-      style={{ fontFamily: "'Switzer', sans-serif" }}
-    >
-      {/* Big Rounded Glossy Pill Container */}
-      <div className="mx-auto max-w-7xl bg-white/70 backdrop-blur-lg border border-white/40 shadow-xl rounded-[2.5rem] px-6 py-3 no-scrollbar overflow-x-auto">
-        <div className="flex items-center gap-6">
-          
-          {/* Hyper-local Vizag Indicator */}
-          <div className="hidden lg:flex items-center gap-2 px-5 py-2.5 bg-white/50 rounded-full border border-white shadow-sm">
+    <div className="sticky top-16 z-30 px-4 md:px-8">
+      <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/60 bg-white/80 px-4 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur">
+        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
+          <div className="hidden items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700 lg:flex">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/60" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-600" />
             </span>
-            <span className="text-[11px] font-bold uppercase tracking-widest text-[#122848]">
-              Visakhapatnam
-            </span>
+            Visakhapatnam
           </div>
+          <div className="hidden h-8 w-px bg-slate-200 lg:block" />
 
-          <div className="hidden lg:block h-8 w-px bg-gray-200/50" />
-
-          {/* Category Pills */}
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             {categories.map((cat) => {
               const isActive = activeCategory === cat.name;
-              
+
               return (
                 <button
                   key={cat.name}
-                  onClick={() => onCategoryChange && onCategoryChange(cat.name)}
-                  className={`relative flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
-                    isActive ? "text-white" : "text-gray-600 hover:text-black hover:bg-white/80"
+                  onClick={() => onCategoryChange(cat.name)}
+                  className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    isActive
+                      ? "text-white"
+                      : "text-slate-600 hover:bg-white hover:text-slate-900"
                   }`}
                 >
-                  {/* Sliding Active Pill */}
                   {isActive && (
                     <motion.div
                       layoutId="active-pill"
-                      className="absolute inset-0 z-0 rounded-full bg-[#122848] shadow-lg shadow-[#122848]/20"
+                      className="absolute inset-0 -z-10 rounded-full bg-emerald-600 shadow-lg shadow-emerald-500/20"
                       transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                     />
                   )}
-                  
-                  <span className="relative z-10">{cat.icon}</span>
-                  <span className="relative z-10">{cat.name}</span>
+                  <span>{cat.icon}</span>
+                  <span>{cat.name}</span>
                 </button>
               );
             })}

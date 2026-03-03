@@ -15,10 +15,10 @@ const GoogleIcon = () => (
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email,    setEmail]    = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error,    setError]    = useState<string | null>(null)
-  const [loading,  setLoading]  = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
     if (!email || !password) { setError('Please fill in all fields.'); return }
@@ -38,41 +38,90 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div>
-          <p className="eyebrow">Welcome back</p>
-          <h2>Login to Baatasari</h2>
+    <div className="relative px-4 py-12 md:py-16">
+      <div className="mx-auto max-w-5xl">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Welcome back</p>
+            <h1 className="text-3xl font-semibold text-slate-900 md:text-4xl">
+              Sign in to keep your plans moving.
+            </h1>
+            <p className="max-w-md text-sm text-slate-600">
+              Access your dashboard, manage bookings, and discover what is happening in your city.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <span className="rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">Trusted hosts</span>
+              <span className="rounded-full border border-amber-100 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700">Curated events</span>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Login</p>
+              <h2 className="text-2xl font-semibold text-slate-900">Login to Baatasari</h2>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <label className="block text-sm font-semibold text-slate-700">
+                Email
+                <input
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                  type="email"
+                  placeholder="you@domain.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                />
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">
+                Password
+                <input
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                  type="password"
+                  placeholder="********"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                />
+              </label>
+            </div>
+
+            {error && (
+              <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-6 space-y-4">
+              <button
+                className="w-full rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+                onClick={handleLogin}
+                disabled={loading}
+              >
+                {loading ? 'Signing in...' : 'Login'}
+              </button>
+
+              <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">
+                <span className="h-px flex-1 bg-slate-200" />
+                or
+                <span className="h-px flex-1 bg-slate-200" />
+              </div>
+
+              <button
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                onClick={handleGoogle}
+              >
+                <GoogleIcon /> Continue with Google
+              </button>
+            </div>
+
+            <p className="mt-6 text-center text-sm text-slate-500">
+              No account?{' '}
+              <a href="/register" className="font-semibold text-emerald-700 hover:text-emerald-800">
+                Sign up
+              </a>
+            </p>
+          </div>
         </div>
-        <div className="auth-form">
-          <label>
-            Email
-            <input className="input" type="email" placeholder="you@domain.com"
-              value={email} onChange={e => setEmail(e.target.value)} />
-          </label>
-          <label>
-            Password
-            <input className="input" type="password" placeholder="••••••••"
-              value={password} onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()} />
-          </label>
-        </div>
-        {error && <p className="error-msg">{error}</p>}
-        <div className="auth-actions">
-          <button className="btn btn-solid" onClick={handleLogin} disabled={loading}>
-            {loading ? 'Signing in…' : 'Login'}
-          </button>
-          <div className="auth-divider">or</div>
-          <button className="btn btn-ghost" onClick={handleGoogle}>
-            <GoogleIcon /> Continue with Google
-          </button>
-        </div>
-        <p style={{ textAlign: 'center', fontSize: '.875rem', color: '#64748b' }}>
-          No account?{' '}
-          <a href="/register" style={{ color: '#0e2240', fontWeight: 600, textDecoration: 'none' }}>
-            Sign up
-          </a>
-        </p>
       </div>
     </div>
   )

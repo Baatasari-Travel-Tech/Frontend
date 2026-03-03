@@ -25,21 +25,13 @@ export default function AuthCallback() {
   }, [router])
 
   return (
-    <div style={{
-      minHeight: '100dvh', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', background: '#0e2240',
-      flexDirection: 'column', gap: '1.25rem',
-    }}>
-      <div style={{
-        width: 44, height: 44, borderRadius: 12,
-        background: 'linear-gradient(135deg, #e8a020, #1e3f73)',
-        animation: 'pulse 1.4s ease-in-out infinite',
-      }} />
-      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '.8125rem', fontWeight: 600,
-        letterSpacing: '.08em', textTransform: 'uppercase', margin: 0 }}>
-        Signing you in…
-      </p>
-      <style>{`@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(0.85);opacity:0.6}}`}</style>
+    <div className="flex min-h-dvh items-center justify-center bg-slate-900 px-4">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <div className="h-12 w-12 animate-pulse rounded-2xl bg-gradient-to-br from-amber-400 to-emerald-500 shadow-lg shadow-amber-400/40" />
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+          Signing you in...
+        </p>
+      </div>
     </div>
   )
 }
