@@ -179,12 +179,6 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
               <>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/register"
                   className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
                 >
                   Get started
