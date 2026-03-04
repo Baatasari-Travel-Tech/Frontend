@@ -64,11 +64,11 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="relative px-4 py-12 md:py-16">
+    <div className="relative page-x py-12 md:py-16">
       <div className="w-full">
         <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur">
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">One-time setup</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-900">One-time setup</p>
             <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">Complete your profile</h2>
             <p className="text-sm text-slate-500">Just a few details to personalize your experience.</p>
           </div>
@@ -77,7 +77,7 @@ export default function OnboardingPage() {
             <label className="block text-sm font-semibold text-slate-700">
               Full name
               <input
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
                 placeholder="Your name"
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -86,7 +86,7 @@ export default function OnboardingPage() {
             <label className="block text-sm font-semibold text-slate-700">
               Phone (optional)
               <input
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
                 placeholder="+91 98765 43210"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
@@ -95,7 +95,7 @@ export default function OnboardingPage() {
             <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
               Profile photo (optional)
               <input
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500 shadow-sm file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-700 hover:file:bg-emerald-100"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500 shadow-sm file:mr-4 file:rounded-full file:border-0 file:bg-brand-900/5 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-brand-800 hover:file:bg-brand-900/10"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={e => setAvatarFile(e.target.files?.[0] ?? null)}
@@ -111,7 +111,7 @@ export default function OnboardingPage() {
 
           <div className="mt-6">
             <button
-              className="w-full rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+              className="w-full rounded-full bg-brand-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
               onClick={handleComplete}
               disabled={loading}
             >
@@ -123,4 +123,5 @@ export default function OnboardingPage() {
     </div>
   )
 }
+
 

@@ -12,6 +12,9 @@ const sora = Sora({
 export const metadata = {
   title: 'Baatasari - Discover, Connect, Experience',
   description: 'Book the best events, dining, and activities near you.',
+  icons: {
+    icon: '/logo.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,3 +28,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   )
 }
+

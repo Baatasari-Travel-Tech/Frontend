@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Flame, Music, Mic2, Laptop, Sparkles, Ticket } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface CategoryFilterProps {
   activeCategory: string;
@@ -17,15 +18,45 @@ export function CategoryFilter({ activeCategory, onCategoryChange }: CategoryFil
     { name: "Festival", icon: <Sparkles size={16} /> },
     { name: "Movies", icon: <Ticket size={16} /> },
   ];
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [thumb, setThumb] = useState({ left: 0, width: 0 });
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const updateThumb = () => {
+      const maxScroll = Math.max(1, el.scrollWidth - el.clientWidth);
+      const trackWidth = el.clientWidth;
+      const width = Math.max(36, Math.round((el.clientWidth / el.scrollWidth) * trackWidth));
+      const left = Math.round((el.scrollLeft / maxScroll) * (trackWidth - width));
+      setThumb({ left, width });
+    };
+    updateThumb();
+    const onResize = () => updateThumb();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   return (
-    <div className="sticky top-16 z-30 px-4 md:px-8">
-      <div className="w-full rounded-[2rem] border border-white/60 bg-white/80 px-4 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur">
-        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
-          <div className="hidden items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700 lg:flex">
+    <div className="sticky top-12 z-30 w-full page-x">
+      <div className="relative mx-auto w-full max-w-full rounded-[2rem] border border-white/60 bg-white/80 px-4 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur md:w-fit">
+        <div
+          ref={scrollRef}
+          onScroll={() => {
+            const el = scrollRef.current;
+            if (!el) return;
+            const maxScroll = Math.max(1, el.scrollWidth - el.clientWidth);
+            const trackWidth = el.clientWidth;
+            const width = Math.max(36, Math.round((el.clientWidth / el.scrollWidth) * trackWidth));
+            const left = Math.round((el.scrollLeft / maxScroll) * (trackWidth - width));
+            setThumb({ left, width });
+          }}
+          className="flex items-center justify-start gap-4 overflow-x-scroll pb-3 no-scrollbar md:justify-center md:overflow-visible md:pb-0"
+        >
+          <div className="hidden items-center gap-2 rounded-full border border-brand-900/10 bg-brand-900/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-800 lg:flex">
             <span className="relative flex h-2.5 w-2.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/60" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-600" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
             </span>
             Visakhapatnam
           </div>
@@ -48,7 +79,7 @@ export function CategoryFilter({ activeCategory, onCategoryChange }: CategoryFil
                   {isActive && (
                     <motion.div
                       layoutId="active-pill"
-                      className="absolute inset-0 -z-10 rounded-full bg-emerald-600 shadow-lg shadow-emerald-500/20"
+                      className="absolute inset-0 -z-10 rounded-full bg-brand-900 shadow-lg shadow-brand-900/20"
                       transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                     />
                   )}
@@ -59,7 +90,16 @@ export function CategoryFilter({ activeCategory, onCategoryChange }: CategoryFil
             })}
           </div>
         </div>
+        <div className="mt-2 md:hidden" aria-hidden="true">
+          <div className="h-1 w-full rounded-full bg-slate-200/70">
+            <div
+              className="h-1 rounded-full bg-slate-500/70 transition-[transform,width] duration-300 ease-out"
+              style={{ width: `${thumb.width}px`, transform: `translateX(${thumb.left}px)` }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+

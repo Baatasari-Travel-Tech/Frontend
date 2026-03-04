@@ -2,13 +2,15 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useAuthModal } from "@/app/components/auth/auth-modal-context";
 
 export function MovieSection({ title }: { title: string }) {
   const router = useRouter();
+  const { openModal } = useAuthModal();
 
   return (
-    <section className="px-4 md:px-8">
-      <div className="relative w-full overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-900 px-6 py-10 shadow-[0_30px_70px_rgba(15,23,42,0.2)] md:px-10">
+    <section className="w-full page-x">
+      <div className="relative w-full overflow-hidden rounded-[2rem] border border-slate-200 bg-brand-900 px-6 py-10 shadow-[0_30px_70px_rgba(15,23,42,0.2)] md:px-10">
         <div className="absolute inset-0 opacity-30">
           <Image
             src="/landing/Baatasari-pass-entertainment-banner.jpg"
@@ -26,7 +28,7 @@ export function MovieSection({ title }: { title: string }) {
           </span>
 
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-200">{title}</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/70">{title}</p>
             <h2 className="mt-3 text-3xl font-semibold text-white md:text-4xl">
               Unlimited access to events and movies
             </h2>
@@ -39,12 +41,12 @@ export function MovieSection({ title }: { title: string }) {
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button
               onClick={() => router.push("/")}
-              className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-amber-100"
+              className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-brand-900/10"
             >
               Explore
             </button>
             <button
-              onClick={() => router.push("/register")}
+              onClick={() => openModal("register")}
               className="rounded-full border border-white/40 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
             >
               Join the pass
@@ -55,3 +57,4 @@ export function MovieSection({ title }: { title: string }) {
     </section>
   );
 }
+

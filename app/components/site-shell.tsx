@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { useAuth } from '@/app/providers'
 import { supabase } from '@/lib/supabase'
+import { Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react'
 import {
   type AppRole, ALL_ROLES, ROLE_LABELS, ROLE_EMOJI,
   getRoleDashboard, getRoleOnboarding,
 } from '@/lib/roles'
+import { AuthModalRoot } from '@/app/components/auth/auth-modal'
+import { useAuthModal } from '@/app/components/auth/auth-modal-context'
 
 function RoleSwitcher() {
   const { activeRole, userRoles, switchRole, profile } = useAuth()
@@ -73,10 +76,10 @@ function RoleSwitcher() {
               const isActive = role === activeRole
               const isDone = record?.onboarding_completed === true
               const chipClass = isActive
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-brand-900 text-white'
                 : isDone
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'bg-amber-50 text-amber-700'
+                  ? 'bg-brand-900/5 text-brand-800'
+                  : 'bg-brand-900/5 text-brand-900'
 
               return (
                 <button
@@ -108,17 +111,36 @@ function RoleSwitcher() {
   )
 }
 
-export default function SiteShell({ children }: { children: React.ReactNode }) {
+function SiteShellContent({ children }: { children: React.ReactNode }) {
   const [booting, setBooting] = useState(true)
   const [hideLoader, setHideLoader] = useState(false)
   const { session, activeRole } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const { open, openModal } = useAuthModal()
 
   useEffect(() => {
     const t1 = setTimeout(() => setBooting(false), 550)
     const t2 = setTimeout(() => setHideLoader(true), 1150)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [])
+
+  useEffect(() => {
+    const auth = searchParams.get('auth')
+    if (auth === 'login' || auth === 'register') {
+      openModal(auth)
+    }
+  }, [searchParams, openModal])
+
+  useEffect(() => {
+    if (open) return
+    const auth = searchParams.get('auth')
+    if (!auth) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('auth')
+    router.replace(params.size ? `${pathname}?${params}` : pathname)
+  }, [open, searchParams, pathname, router])
 
   const logout = async () => {
     await supabase.auth.signOut()
@@ -135,17 +157,17 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
           aria-hidden
         >
           <div className="flex flex-col items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-linear-to-br from-amber-400 via-amber-300 to-emerald-500 shadow-lg shadow-amber-200/60" />
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-brand-900 via-brand-700 to-brand-900 shadow-lg shadow-brand-900/30" />
             <span className="text-sm font-semibold tracking-[0.3em] text-slate-600">BAATASARI</span>
             <div className="h-1.5 w-40 overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full w-2/3 animate-pulse rounded-full bg-lineaar-to-r from-emerald-500 via-emerald-400 to-amber-400" />
+              <div className="h-full w-2/3 animate-pulse rounded-full bg-gradient-to-r from-brand-900 via-brand-700 to-brand-900" />
             </div>
           </div>
         </div>
       )}
 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-lg">
-        <div className="flex w-full items-center justify-between px-4 py-3 md:px-6">
+        <div className="flex w-full items-center justify-between page-x py-3">
           <Link href="/" className="flex items-center gap-2">
             <Image
               src="/logo.png"
@@ -169,7 +191,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
                   Dashboard
                 </Link>
                 <button
-                  className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                  className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
                   onClick={logout}
                 >
                   Logout
@@ -177,12 +199,13 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
+                  onClick={() => openModal('login')}
                 >
                   Get started
-                </Link>
+                </button>
               </>
             )}
           </div>
@@ -192,25 +215,105 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <main className="min-h-[70dvh]">{children}</main>
 
       <footer className="border-t border-slate-200 bg-white">
-        <div className="flex w-full flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:justify-between md:px-6">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/Navbar_logo.png"
-              alt="Baatasari"
-              width={110}
-              height={34}
-              style={{ width: 'auto', height: 'auto' }}
-              unoptimized
-            />
-            <p className="text-xs text-slate-500">Discover, connect, experience.</p>
+        <div className="page-x py-10">
+          <div className="grid gap-8 md:grid-cols-[1.6fr_1fr_1fr_1.2fr] md:items-start">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/Navbar_logo.png"
+                  alt="Baatasari"
+                  width={110}
+                  height={34}
+                  style={{ width: 'auto', height: 'auto' }}
+                  unoptimized
+                />
+                <span className="text-sm font-semibold tracking-tight text-slate-900">Baatasari</span>
+              </div>
+              <p className="max-w-sm text-sm text-slate-600">
+                Discover, connect, experience. Official platform for curated events, venues, and experiences.
+              </p>
+              <div className="flex items-center gap-3 text-slate-500">
+                <a
+                  href="https://www.instagram.com"
+                  aria-label="Baatasari on Instagram"
+                  className="rounded-full border border-slate-200 p-2 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                  <Instagram className="h-4 w-4" />
+                </a>
+                <a
+                  href="https://www.facebook.com"
+                  aria-label="Baatasari on Facebook"
+                  className="rounded-full border border-slate-200 p-2 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                  <Facebook className="h-4 w-4" />
+                </a>
+                <a
+                  href="https://www.twitter.com"
+                  aria-label="Baatasari on X"
+                  className="rounded-full border border-slate-200 p-2 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                  <Twitter className="h-4 w-4" />
+                </a>
+                <a
+                  href="https://www.linkedin.com"
+                  aria-label="Baatasari on LinkedIn"
+                  className="rounded-full border border-slate-200 p-2 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                  <Linkedin className="h-4 w-4" />
+                </a>
+                <a
+                  href="https://www.youtube.com"
+                  aria-label="Baatasari on YouTube"
+                  className="rounded-full border border-slate-200 p-2 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                  <Youtube className="h-4 w-4" />
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Company</p>
+              <div className="grid gap-2 text-slate-600">
+                <a className="hover:text-slate-900" href="/about">About</a>
+                <a className="hover:text-slate-900" href="/careers">Careers</a>
+                <a className="hover:text-slate-900" href="/partners">Partners</a>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Resources</p>
+              <div className="grid gap-2 text-slate-600">
+                <a className="hover:text-slate-900" href="/support">Support</a>
+                <a className="hover:text-slate-900" href="/contact">Contact</a>
+                <a className="hover:text-slate-900" href="/help">Help Center</a>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Legal</p>
+              <div className="grid gap-2 text-slate-600">
+                <a className="hover:text-slate-900" href="/terms">Terms</a>
+                <a className="hover:text-slate-900" href="/privacy">Privacy</a>
+                <a className="hover:text-slate-900" href="/security">Security</a>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-6 text-sm text-slate-600">
-            <a className="hover:text-slate-900" href="/terms">Terms</a>
-            <a className="hover:text-slate-900" href="/privacy">Privacy</a>
+
+          <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
+            <p>© {new Date().getFullYear()} Baatasari. All rights reserved.</p>
+            <p>Official company footer · Built for trusted experiences.</p>
           </div>
-          <p className="text-xs text-slate-500">Copyright 2025 Baatasari</p>
         </div>
       </footer>
     </div>
   )
 }
+
+export default function SiteShell({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthModalRoot>
+      <SiteShellContent>{children}</SiteShellContent>
+    </AuthModalRoot>
+  )
+}
+

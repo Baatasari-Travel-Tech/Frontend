@@ -48,12 +48,12 @@ export function EventCard({ title, location, price, date, image, category }: Eve
       </div>
 
       <div className="mt-4 px-2">
-        <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-800">
           <Calendar size={12} strokeWidth={2.5} />
           {date}
         </div>
 
-        <h3 className="text-lg font-semibold text-slate-900 transition group-hover:text-emerald-700">
+        <h3 className="text-lg font-semibold text-slate-900 transition group-hover:text-brand-800">
           {title}
         </h3>
 
@@ -68,3 +68,4 @@ export function EventCard({ title, location, price, date, image, category }: Eve
     </motion.div>
   );
 }
+

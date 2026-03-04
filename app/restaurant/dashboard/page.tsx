@@ -17,11 +17,11 @@ export default function RestaurantDashboardPage() {
   }, [session?.user?.id])
 
   return (
-    <div className="px-4 py-12 md:py-16">
+    <div className="page-x py-12 md:py-16">
       <div className="w-full rounded-3xl border border-white/60 bg-white/90 p-6 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">Restaurant dashboard</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-900">Restaurant dashboard</p>
             <h2 className="mt-2 text-2xl font-semibold text-slate-900 md:text-3xl">Welcome back</h2>
           </div>
           <button
@@ -48,7 +48,7 @@ export default function RestaurantDashboardPage() {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <button className="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+          <button className="rounded-full bg-brand-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800">
             Upload menu
           </button>
           <button className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
@@ -59,4 +59,5 @@ export default function RestaurantDashboardPage() {
     </div>
   )
 }
+
 

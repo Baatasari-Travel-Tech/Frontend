@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export function HeroSection() {
+  const router = useRouter();
   const [index, setIndex] = useState(0);
   const words = ["Interest", "Budget", "Vibe"];
 
@@ -16,88 +18,98 @@ export function HeroSection() {
   }, [words.length]);
 
   return (
-    <section className="relative px-4 pt-8 md:px-8">
+    <section className="relative w-full bg-white px-4 pt-4 md:px-10 md:pt-5" style={{ fontFamily: "'Switzer', sans-serif" }}>
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative w-full overflow-hidden rounded-[2.5rem] border border-slate-200 bg-gradient-to-br from-white via-stone-50 to-emerald-50 px-6 py-10 shadow-[0_30px_70px_rgba(15,23,42,0.08)] md:px-10 md:py-14"
+        className="relative w-full overflow-hidden rounded-[3.5rem] border border-gray-100 shadow-sm min-h-[520px] md:h-[480px]"
+        style={{ background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)" }}
       >
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-amber-200/50 blur-[110px]" />
-          <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-emerald-200/40 blur-[120px]" />
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <motion.div
+            animate={{ x: [0, 40, 0], scale: [1, 1.1, 1] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-20 -left-20 h-[500px] w-[500px] rounded-full bg-[#3a5f94]/15 blur-[120px]"
+          />
+          <motion.div
+            animate={{ x: [0, -40, 0], scale: [1, 1.2, 1] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -bottom-20 -right-20 h-[500px] w-[500px] rounded-full bg-[#122848]/10 blur-[120px]"
+          />
         </div>
 
-        <div className="relative z-10 grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-600 shadow-sm backdrop-blur"
-            >
-              <Users size={14} className="text-emerald-600" />
-              150+ people exploring Vizag today
-            </motion.div>
-
-            <h1 className="text-4xl font-semibold tracking-tight text-slate-900 md:text-6xl">
-              Experiences curated for every
-              <span className="mt-2 block text-emerald-700">
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={words[index]}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -16 }}
-                    transition={{ duration: 0.5 }}
-                    className="inline-block"
-                  >
-                    {words[index]}.
-                  </motion.span>
-                </AnimatePresence>
-              </span>
-            </h1>
-
-            <p className="mt-5 max-w-xl text-base text-slate-600 md:text-lg">
-              Book premium workshops, community events, and local experiences that
-              match your mood, schedule, and budget.
-            </p>
-          </div>
-
+        <div className="relative z-10 flex h-full flex-col items-center justify-center px-4 py-10 text-center md:py-0">
           <motion.div
-            whileHover={{ y: -4 }}
-            className="rounded-[2rem] border border-white/70 bg-white/80 p-5 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-6 flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 border border-white shadow-sm backdrop-blur-md"
           >
-            <div className="grid gap-4">
-              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Where</p>
+            <Users size={14} className="text-[#3a5f94]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-600">
+              150+ People exploring Vizag today
+            </span>
+          </motion.div>
+
+          <h1 className="mb-4 max-w-4xl text-5xl font-medium tracking-tight text-black md:text-7xl">
+            Events for every <br />
+            <span className="relative inline-block text-[#122848] min-w-[200px]">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={words[index]}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                  className="block"
+                >
+                  {words[index]}.
+                </motion.span>
+              </AnimatePresence>
+            </span>
+          </h1>
+
+          <p className="mb-12 max-w-lg text-base font-normal text-gray-600 md:text-lg">
+            Handpicked workshops and premium local experiences tailored to your lifestyle.
+          </p>
+
+          <motion.div whileHover={{ y: -5 }} className="w-full max-w-4xl">
+            <div className="flex flex-col gap-0 rounded-[2.5rem] bg-white p-2 shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-gray-100 md:flex-row md:items-stretch md:rounded-full md:min-h-[72px]">
+              <div className="flex-1 px-8 py-3 text-left md:border-r border-gray-100 group transition-colors hover:bg-gray-50 rounded-l-full">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#3a5f94] mb-0.5">Where</p>
                 <input
                   type="text"
                   placeholder="Visakhapatnam"
-                  className="mt-2 w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                  className="w-full bg-transparent text-sm font-semibold text-black outline-none placeholder:text-gray-400"
                 />
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Activity</p>
+              <div className="flex-1 px-8 py-3 text-left md:border-r border-gray-100 group transition-colors hover:bg-gray-50">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#284878] mb-0.5">Activity</p>
                 <input
                   type="text"
-                  placeholder="Music, art, tech"
-                  className="mt-2 w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                  placeholder="Music, Art, Tech..."
+                  className="w-full bg-transparent text-sm font-semibold text-black outline-none"
                 />
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Budget</p>
-                <select className="mt-2 w-full appearance-none bg-transparent text-sm font-semibold text-slate-900 outline-none">
-                  <option>Any price</option>
+              <div className="flex-1 px-8 py-3 text-left md:border-r border-gray-100 group transition-colors hover:bg-gray-50">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#122848] mb-0.5">Budget</p>
+                <select className="w-full bg-transparent text-sm font-semibold text-black outline-none appearance-none cursor-pointer">
+                  <option>Any Price</option>
                   <option>Free</option>
-                  <option>Pocket friendly</option>
+                  <option>Pocket Friendly</option>
                 </select>
               </div>
 
-              <button className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
-                <Search size={18} />
-                Explore
-              </button>
+              <div className="p-1 md:p-0 md:self-stretch">
+                <button
+                  onClick={() => router.push("/")}
+                  className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#0c1d37] px-10 font-bold text-white transition-all hover:bg-[#122848] hover:shadow-lg active:scale-95 md:h-full md:rounded-full md:w-auto"
+                >
+                  <Search size={16} />
+                  <span>Explore</span>
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>

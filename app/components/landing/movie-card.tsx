@@ -34,3 +34,4 @@ export function MovieCard({ title, rating, language, image }: MovieCardProps) {
     </div>
   );
 }
+
