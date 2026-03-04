@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
@@ -298,7 +298,9 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthModalRoot>
-      <SiteShellContent>{children}</SiteShellContent>
+      <Suspense fallback={null}>
+        <SiteShellContent>{children}</SiteShellContent>
+      </Suspense>
     </AuthModalRoot>
   )
 }
