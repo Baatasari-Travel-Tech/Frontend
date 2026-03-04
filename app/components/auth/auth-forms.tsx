@@ -31,7 +31,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
     const { data, error: authErr } = await supabase.auth.signInWithPassword({ email, password })
     if (authErr) { setError(authErr.message); setLoading(false); return }
     const { data: profile } = await supabase
-      .from('profiles').select('global_onboarding_completed').eq('id', data.user.id).single()
+      .from('profiles').select('global_onboarding_completed').eq('id', data.user.id).maybeSingle()
     router.replace(profile?.global_onboarding_completed ? '/dashboard' : '/onboarding')
   }
 

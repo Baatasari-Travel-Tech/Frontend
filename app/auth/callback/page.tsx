@@ -17,7 +17,7 @@ export default function AuthCallback() {
         .from('profiles')
         .select('global_onboarding_completed')
         .eq('id', data.session.user.id)
-        .single()
+        .maybeSingle()
 
       router.replace(profile?.global_onboarding_completed ? '/dashboard' : '/onboarding')
     }

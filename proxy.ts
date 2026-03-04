@@ -56,7 +56,7 @@ export async function proxy(request: NextRequest) {
     .from('profiles')
     .select('global_onboarding_completed')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   const onboarded = profile?.global_onboarding_completed === true
 

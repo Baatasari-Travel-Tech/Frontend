@@ -65,7 +65,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       .from('profiles')
       .select('email,full_name,phone,avatar_url,global_onboarding_completed')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
     setProfile(data ?? null)
     setIsLoadingProfile(false)
   }, [])
@@ -126,7 +126,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     })
 
     const { data: roleRow } = await supabase
-      .from('roles').select('id').eq('name', role).single()
+      .from('roles').select('id').eq('name', role).maybeSingle()
     if (!roleRow?.id) return
 
     const { data: existing } = await supabase
