@@ -182,17 +182,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         .eq('name', role)
         .maybeSingle()
       if (!roleRow?.id) throw new Error('Role not found.')
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .eq('role_id', roleRow.id)
-        .maybeSingle()
-      if (!userRole?.id) throw new Error('User role not found.')
       const { error } = await supabase
         .from('user_roles')
-        .update({ onboarding_completed: true })
-        .eq('id', userRole.id)
+        .upsert({
+          user_id: session.user.id,
+          role_id: roleRow.id,
+          onboarding_completed: true,
+        }, { onConflict: 'user_id,role_id' })
       if (error) throw new Error(error.message)
       await loadRoles(session.user.id)
     },

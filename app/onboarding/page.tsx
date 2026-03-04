@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { session, updateProfile, completeRoleOnboarding } = useAuth()
+  const { session, profile, updateProfile, completeRoleOnboarding } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -31,10 +31,15 @@ export default function OnboardingPage() {
   const previewUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
+    if (session?.user?.email && !email) {
+      setEmail(session.user.email)
+    } else if (profile?.email && !email) {
+      setEmail(profile.email)
+    }
     return () => {
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
     }
-  }, [])
+  }, [session?.user?.email, profile?.email, email])
 
   const getCropMetrics = (zoom = cropZoom) => {
     if (!cropImage) return null
@@ -261,7 +266,9 @@ export default function OnboardingPage() {
                   placeholder="you@example.com"
                   type="email"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  readOnly
+                  disabled
+                  title="Email is tied to your login"
                   required
                 />
               </label>
