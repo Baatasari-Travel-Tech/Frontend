@@ -62,13 +62,13 @@ function UserMenu() {
   return (
     <div className="relative" ref={ref}>
       <button
-        className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+        className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
         onClick={() => { setOpen(o => !o); setShowRoles(false) }}
         aria-label="Open user menu"
         aria-expanded={open}
         disabled={busy}
       >
-        <span className="flex h-9 w-12 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
+        <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100">
           {avatarUrl ? (
             <img
               src={avatarUrl}
