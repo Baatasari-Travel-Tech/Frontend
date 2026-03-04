@@ -70,9 +70,11 @@ function UserMenu() {
       >
         <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100">
           {avatarUrl ? (
-            <img
+            <Image
               src={avatarUrl}
               alt="User avatar"
+              width={36}
+              height={36}
               className="h-full w-full object-cover"
             />
           ) : (
