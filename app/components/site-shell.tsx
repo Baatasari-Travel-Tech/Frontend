@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useAuth } from '@/app/providers'
 import { supabase } from '@/lib/supabase'
 import { Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react'
+import LoadingScreen from '@/app/components/loading-screen'
 import {
   type AppRole, ALL_ROLES, ROLE_LABELS, ROLE_EMOJI,
   getRoleDashboard, getRoleOnboarding,
@@ -151,18 +152,12 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     <div className="min-h-dvh bg-stone-50 text-slate-900">
       {!hideLoader && (
         <div
-          className={`fixed inset-0 z-60 flex items-center justify-center bg-stone-50/90 transition-opacity duration-500 ${
+          className={`fixed inset-0 z-60 transition-opacity duration-500 ${
             booting ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
           aria-hidden
         >
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-brand-900 via-brand-700 to-brand-900 shadow-lg shadow-brand-900/30" />
-            <span className="text-sm font-semibold tracking-[0.3em] text-slate-600">BAATASARI</span>
-            <div className="h-1.5 w-40 overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full w-2/3 animate-pulse rounded-full bg-gradient-to-r from-brand-900 via-brand-700 to-brand-900" />
-            </div>
-          </div>
+          <LoadingScreen />
         </div>
       )}
 
@@ -227,7 +222,6 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                   style={{ width: 'auto', height: 'auto' }}
                   unoptimized
                 />
-                <span className="text-sm font-semibold tracking-tight text-slate-900">Baatasari</span>
               </div>
               <p className="max-w-sm text-sm text-slate-600">
                 Discover, connect, experience. Official platform for curated events, venues, and experiences.
@@ -275,33 +269,25 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Company</p>
               <div className="grid gap-2 text-slate-600">
                 <a className="hover:text-slate-900" href="/about">About</a>
-                <a className="hover:text-slate-900" href="/careers">Careers</a>
-                <a className="hover:text-slate-900" href="/partners">Partners</a>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-sm">
+              </div><br/>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Resources</p>
               <div className="grid gap-2 text-slate-600">
-                <a className="hover:text-slate-900" href="/support">Support</a>
                 <a className="hover:text-slate-900" href="/contact">Contact</a>
-                <a className="hover:text-slate-900" href="/help">Help Center</a>
               </div>
             </div>
 
             <div className="space-y-3 text-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Legal</p>
               <div className="grid gap-2 text-slate-600">
-                <a className="hover:text-slate-900" href="/terms">Terms</a>
-                <a className="hover:text-slate-900" href="/privacy">Privacy</a>
-                <a className="hover:text-slate-900" href="/security">Security</a>
+                <a className="hover:text-slate-900" href="/terms">Terms & Conditions</a>
+                <a className="hover:text-slate-900" href="/privacy">Privacy Policy</a>
               </div>
             </div>
           </div>
 
           <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
             <p>© {new Date().getFullYear()} Baatasari. All rights reserved.</p>
-            <p>Official company footer · Built for trusted experiences.</p>
+            <p>Built for personalized experiences.</p>
           </div>
         </div>
       </footer>

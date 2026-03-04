@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import InlineSpinner from '@/app/components/ui/inline-spinner'
 
 const GoogleIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -80,11 +81,12 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
 
       <div className="space-y-4">
         <button
-          className="w-full rounded-full bg-brand-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
           onClick={handleLogin}
           disabled={loading}
         >
-          {loading ? 'Signing in...' : 'Login'}
+          {loading && <InlineSpinner />}
+          <span>{loading ? 'Signing in...' : 'Login'}</span>
         </button>
 
         <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">
@@ -190,11 +192,12 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
       <div className="space-y-4">
         <button
-          className="w-full rounded-full bg-brand-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
           onClick={handleRegister}
           disabled={loading}
         >
-          {loading ? 'Creating account...' : 'Create account'}
+          {loading && <InlineSpinner />}
+          <span>{loading ? 'Creating account...' : 'Create account'}</span>
         </button>
 
         <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">

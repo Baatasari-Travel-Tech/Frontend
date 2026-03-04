@@ -58,4 +58,17 @@
       padding-right: var(--page-x-md, 2rem);
     }
   }
+
+  @keyframes dot-bounce {
+    0%, 80%, 100% {
+      transform: scale(0);
+    }
+    40% {
+      transform: scale(1);
+    }
+  }
+
+  .animate-dot-bounce {
+    animation: dot-bounce 1.4s infinite;
+  }
 }
