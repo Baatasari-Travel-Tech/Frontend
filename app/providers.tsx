@@ -167,10 +167,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     },
     updateProfile: async payload => {
       if (!session?.user?.id) return
+      const resolvedEmail =
+        payload.email ?? session.user.email ?? null
       const { error } = await supabase
         .from('profiles')
-        .update(payload)
-        .eq('id', session.user.id)
+        .upsert({
+          id: session.user.id,
+          email: resolvedEmail,
+          ...payload,
+        }, { onConflict: 'id' })
       if (error) throw new Error(error.message)
       await loadProfile(session.user.id)
     },
