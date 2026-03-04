@@ -20,6 +20,8 @@ export type Profile = {
   full_name: string | null
   phone: string | null
   avatar_url: string | null
+  dob: string | null
+  location: string | null
   global_onboarding_completed: boolean
 }
 
@@ -41,6 +43,8 @@ type AuthCtx = {
   switchRole: (role: AppRole) => Promise<void>
   refreshProfile: () => Promise<void>
   refreshRoles: () => Promise<void>
+  updateProfile: (payload: Partial<Profile>) => Promise<void>
+  completeRoleOnboarding: (role: AppRole) => Promise<void>
 }
 
 const AuthContext = createContext<AuthCtx | undefined>(undefined)
@@ -63,7 +67,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     setIsLoadingProfile(true)
     const { data } = await supabase
       .from('profiles')
-      .select('email,full_name,phone,avatar_url,global_onboarding_completed')
+      .select('email,full_name,phone,avatar_url,dob,location,global_onboarding_completed')
       .eq('id', userId)
       .maybeSingle()
     setProfile(data ?? null)
@@ -161,9 +165,39 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       if (!session?.user?.id) return
       await loadRoles(session.user.id)
     },
+    updateProfile: async payload => {
+      if (!session?.user?.id) return
+      const { error } = await supabase
+        .from('profiles')
+        .update(payload)
+        .eq('id', session.user.id)
+      if (error) throw new Error(error.message)
+      await loadProfile(session.user.id)
+    },
+    completeRoleOnboarding: async role => {
+      if (!session?.user?.id) return
+      const { data: roleRow } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', role)
+        .maybeSingle()
+      if (!roleRow?.id) throw new Error('Role not found.')
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .eq('role_id', roleRow.id)
+        .maybeSingle()
+      if (!userRole?.id) throw new Error('User role not found.')
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ onboarding_completed: true })
+        .eq('id', userRole.id)
+      if (error) throw new Error(error.message)
+      await loadRoles(session.user.id)
+    },
   }), [session, isLoading, profile, isLoadingProfile, userRoles, isLoadingRoles,
       activeRole, switchRole, loadProfile, loadRoles])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
-
