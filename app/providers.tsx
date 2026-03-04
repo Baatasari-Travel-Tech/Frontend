@@ -141,13 +141,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       await supabase.from('user_roles')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', existing.id)
-    } else {
-      await supabase.from('user_roles').insert({
-        user_id: userId, role_id: roleRow.id, onboarding_completed: false,
-      })
+      await loadRoles(userId)
     }
-
-    await loadRoles(userId)
   }, [session?.user?.id, loadRoles])
 
   const activeRole: AppRole = userRoles[0]?.role ?? 'USER'

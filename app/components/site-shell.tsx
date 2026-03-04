@@ -6,25 +6,29 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { useAuth } from '@/app/providers'
 import { supabase } from '@/lib/supabase'
-import { Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react'
+import { ArrowLeftRight, Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react'
 import LoadingScreen from '@/app/components/loading-screen'
 import {
-  type AppRole, ALL_ROLES, ROLE_LABELS, ROLE_EMOJI,
+  type AppRole, ROLE_LABELS,
   getRoleDashboard, getRoleOnboarding,
 } from '@/lib/roles'
 import { AuthModalRoot } from '@/app/components/auth/auth-modal'
 import { useAuthModal } from '@/app/components/auth/auth-modal-context'
 
-function RoleSwitcher() {
+function UserMenu() {
   const { activeRole, userRoles, switchRole, profile } = useAuth()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [showRoles, setShowRoles] = useState(false)
   const [busy, setBusy] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fn = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+        setShowRoles(false)
+      }
     }
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
@@ -35,6 +39,7 @@ function RoleSwitcher() {
   const handleSwitch = async (role: AppRole) => {
     if (role === activeRole || busy) return
     setOpen(false)
+    setShowRoles(false)
     setBusy(true)
     await switchRole(role)
     const existing = userRoles.find(r => r.role === role)
@@ -46,19 +51,36 @@ function RoleSwitcher() {
     setBusy(false)
   }
 
+  const avatarUrl = profile?.avatar_url
+  const initials = (profile?.full_name ?? profile?.email ?? 'User')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('')
+
   return (
     <div className="relative" ref={ref}>
       <button
-        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
-        onClick={() => setOpen(o => !o)}
-        aria-label="Switch role"
+        className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+        onClick={() => { setOpen(o => !o); setShowRoles(false) }}
+        aria-label="Open user menu"
         aria-expanded={open}
         disabled={busy}
       >
-        <span className="text-base">{ROLE_EMOJI[activeRole]}</span>
-        <span>{ROLE_LABELS[activeRole]}</span>
+        <span className="flex h-9 w-12 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="User avatar"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className="text-xs font-semibold text-slate-500">{initials}</span>
+          )}
+        </span>
         <svg
-          className={`h-3 w-3 transition ${open ? 'rotate-180' : ''}`}
+          className={`h-3.5 w-3.5 transition ${open ? 'rotate-180' : ''}`}
           viewBox="0 0 10 6" fill="none"
         >
           <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6"
@@ -68,43 +90,63 @@ function RoleSwitcher() {
 
       {open && (
         <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-          <p className="px-3 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Switch role
-          </p>
           <div className="grid gap-1">
-            {ALL_ROLES.map(role => {
-              const record = userRoles.find(r => r.role === role)
-              const isActive = role === activeRole
-              const isDone = record?.onboarding_completed === true
-              const chipClass = isActive
-                ? 'bg-brand-900 text-white'
-                : isDone
-                  ? 'bg-brand-900/5 text-brand-800'
-                  : 'bg-brand-900/5 text-brand-900'
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              onClick={() => setOpen(false)}
+            >
+              Profile
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              onClick={() => setOpen(false)}
+            >
+              Preferences
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              onClick={() => setShowRoles(s => !s)}
+            >
+              <span>Switch to</span>
+              <ArrowLeftRight className="h-4 w-4 text-slate-500" />
+            </button>
+            {showRoles && (
+              <div className="mt-1 grid gap-1 rounded-xl bg-slate-50 p-2">
+                {(['USER', 'EVENT_ORGANIZER', 'VENDOR'] as AppRole[]).map(role => {
+                  const record = userRoles.find(r => r.role === role)
+                  const isActive = role === activeRole
+                  const isDone = record?.onboarding_completed === true
+                  const chipClass = isActive
+                    ? 'bg-brand-900 text-white'
+                    : isDone
+                      ? 'bg-brand-900/5 text-brand-800'
+                      : 'bg-brand-900/5 text-brand-900'
 
-              return (
-                <button
-                  key={role}
-                  role="option"
-                  aria-selected={isActive}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium transition ${
-                    isActive
-                      ? 'bg-slate-100 text-slate-900'
-                      : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                  onClick={() => handleSwitch(role)}
-                  disabled={isActive || busy}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-base">{ROLE_EMOJI[role]}</span>
-                    <span>{ROLE_LABELS[role]}</span>
-                  </span>
-                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${chipClass}`}>
-                    {isActive ? 'Active' : isDone ? 'Ready' : 'Set up'}
-                  </span>
-                </button>
-              )
-            })}
+                  return (
+                    <button
+                      key={role}
+                      role="option"
+                      aria-selected={isActive}
+                      className={`flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition ${
+                        isActive
+                          ? 'bg-white text-slate-900'
+                          : 'text-slate-700 hover:bg-white'
+                      }`}
+                      onClick={() => handleSwitch(role)}
+                      disabled={isActive || busy}
+                    >
+                      <span>{ROLE_LABELS[role]}</span>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${chipClass}`}>
+                        {isActive ? 'Active' : isDone ? 'Ready' : 'Set up'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -115,7 +157,7 @@ function RoleSwitcher() {
 function SiteShellContent({ children }: { children: React.ReactNode }) {
   const [booting, setBooting] = useState(true)
   const [hideLoader, setHideLoader] = useState(false)
-  const { session, activeRole } = useAuth()
+  const { session } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -178,13 +220,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 md:gap-3">
             {session?.user ? (
               <>
-                <RoleSwitcher />
-                <Link
-                  href={getRoleDashboard(activeRole)}
-                  className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  Dashboard
-                </Link>
+                <UserMenu />
                 <button
                   className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
                   onClick={logout}

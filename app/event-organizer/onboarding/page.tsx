@@ -5,14 +5,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/providers'
 
-type RoleRow = {
-  id: string
-  roles: { name: string } | null
-}
-
 export default function OrganizerOnboardingPage() {
   const router = useRouter()
-  const { session, refreshRoles } = useAuth()
+  const { session, completeRoleOnboarding } = useAuth()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [email, setEmail] = useState('')
@@ -70,11 +65,7 @@ export default function OrganizerOnboardingPage() {
 
     if (profileErr) { setError('Could not save profile.'); setLoading(false); return }
 
-    const { data: roleRows } = await supabase.from('user_roles').select('id, roles(name)').eq('user_id', userId)
-    const orgRow = ((roleRows as RoleRow[] | null) ?? []).find(r => r.roles?.name === 'EVENT_ORGANIZER')
-    if (orgRow) await supabase.from('user_roles').update({ onboarding_completed: true }).eq('id', orgRow.id)
-
-    await refreshRoles()
+    await completeRoleOnboarding('EVENT_ORGANIZER')
     router.replace('/event-organizer/dashboard')
   }
 

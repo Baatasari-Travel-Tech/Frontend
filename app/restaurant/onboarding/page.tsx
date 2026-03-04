@@ -5,14 +5,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/providers'
 
-type RoleRow = {
-  id: string
-  roles: { name: string } | null
-}
-
 export default function RestaurantOnboardingPage() {
   const router = useRouter()
-  const { session, refreshRoles } = useAuth()
+  const { session, completeRoleOnboarding } = useAuth()
   const [name, setName] = useState('')
   const [cuisine, setCuisine] = useState('')
   const [desc, setDesc] = useState('')
@@ -55,11 +50,7 @@ export default function RestaurantOnboardingPage() {
 
     if (profileErr) { setError('Could not save profile.'); setLoading(false); return }
 
-    const { data: roleRows } = await supabase.from('user_roles').select('id, roles(name)').eq('user_id', userId)
-    const row = ((roleRows as RoleRow[] | null) ?? []).find(r => r.roles?.name === 'RESTAURANT')
-    if (row) await supabase.from('user_roles').update({ onboarding_completed: true }).eq('id', row.id)
-
-    await refreshRoles()
+    await completeRoleOnboarding('RESTAURANT')
     router.replace('/restaurant/dashboard')
   }
 
