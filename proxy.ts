@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
-const ALWAYS_PUBLIC = new Set(['/', '/login', '/register', '/events', '/auth/callback'])
+const ALWAYS_PUBLIC = new Set(['/', '/login', '/register', '/events', '/about', '/auth/callback'])
 const PUBLIC_FILE = /\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|txt|xml)$/i
 
 export async function proxy(request: NextRequest) {

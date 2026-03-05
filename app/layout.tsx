@@ -1,6 +1,6 @@
 import './globals.css'
 import Providers from './providers'
-import SiteShell from './components/site-shell'
+import SiteShell from '../components/site-shell'
 import { Sora } from 'next/font/google'
 
 const sora = Sora({

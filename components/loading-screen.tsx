@@ -16,9 +16,9 @@ export const LoadingScreen: FC = () => {
 
         <div className="relative mx-auto w-fit">
           <div className="absolute inset-0 rounded-full bg-brand-900/10 blur-sm animate-pulse" />
-          <div className="relative h-14 w-14 rounded-full border-4 border-transparent border-t-brand-900/80 animate-spin motion-reduce:animate-none [animation-duration:3s]">
-            <div className="absolute inset-0.5 rounded-full border-[3px] border-transparent border-t-brand-700/70 animate-spin motion-reduce:animate-none [animation-duration:2s] [animation-direction:reverse]" />
-            <div className="absolute inset-1.25 rounded-full border-2 border-transparent border-b-brand-900/60 animate-spin motion-reduce:animate-none [animation-duration:1s]" />
+          <div className="relative h-14 w-14 rounded-full border-4 border-transparent border-t-brand-900/80 animate-spin motion-reduce:animate-none animation-duration-[3s]">
+            <div className="absolute inset-0.5 rounded-full border-[3px] border-transparent border-t-brand-700/70 animate-spin motion-reduce:animate-none animation-duration-[2s] direction-[reverse]" />
+            <div className="absolute inset-1.25 rounded-full border-2 border-transparent border-b-brand-900/60 animate-spin motion-reduce:animate-none animation-duration-[1s]" />
           </div>
         </div>
 

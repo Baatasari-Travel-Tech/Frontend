@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import InlineSpinner from '@/app/components/ui/inline-spinner'
+import InlineSpinner from '@/components/ui/inline-spinner'
 
 const GoogleIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

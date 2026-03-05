@@ -7,13 +7,13 @@ import Image from 'next/image'
 import { useAuth } from '@/app/providers'
 import { supabase } from '@/lib/supabase'
 import { ArrowLeftRight, Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react'
-import LoadingScreen from '@/app/components/loading-screen'
+import LoadingScreen from '@/components/loading-screen'
 import {
   type AppRole, ROLE_LABELS,
   getRoleDashboard, getRoleOnboarding,
 } from '@/lib/roles'
-import { AuthModalRoot } from '@/app/components/auth/auth-modal'
-import { useAuthModal } from '@/app/components/auth/auth-modal-context'
+import { AuthModalRoot } from '@/components/auth/auth-modal'
+import { useAuthModal } from '@/components/auth/auth-modal-context'
 
 function UserMenu() {
   const { activeRole, userRoles, switchRole, profile } = useAuth()
@@ -21,6 +21,7 @@ function UserMenu() {
   const [open, setOpen] = useState(false)
   const [showRoles, setShowRoles] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -51,7 +52,8 @@ function UserMenu() {
     setBusy(false)
   }
 
-  const avatarUrl = profile?.avatar_url
+  const avatarUrl = profile?.avatar_url ?? undefined
+  const showAvatar = Boolean(avatarUrl) && failedAvatarUrl !== avatarUrl
   const initials = (profile?.full_name ?? profile?.email ?? 'User')
     .split(' ')
     .filter(Boolean)
@@ -69,13 +71,17 @@ function UserMenu() {
         disabled={busy}
       >
         <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100">
-          {avatarUrl ? (
+          {showAvatar ? (
             <Image
-              src={avatarUrl}
+              src={avatarUrl!}
               alt="User avatar"
               width={36}
               height={36}
               className="h-full w-full object-cover"
+              unoptimized
+              onError={() => {
+                if (avatarUrl) setFailedAvatarUrl(avatarUrl)
+              }}
             />
           ) : (
             <span className="text-xs font-semibold text-slate-500">{initials}</span>
@@ -159,7 +165,7 @@ function UserMenu() {
 function SiteShellContent({ children }: { children: React.ReactNode }) {
   const [booting, setBooting] = useState(true)
   const [hideLoader, setHideLoader] = useState(false)
-  const { session } = useAuth()
+  const { session, activeRole } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -192,6 +198,22 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     router.push('/')
   }
 
+  const isActive = (path: string) => pathname === path
+  const showTalents = Boolean(session?.user) && activeRole === 'USER'
+  const homeHref = session?.user ? '/dashboard' : '/'
+  const navLinks = session?.user
+    ? [
+      { label: 'Home', href: homeHref },
+      { label: 'Events', href: '/events' },
+      { label: 'About Us', href: '/about' },
+      ...(showTalents ? [{ label: 'Talents', href: '/talent' }] : []),
+    ]
+    : [
+      { label: 'Home', href: homeHref },
+      { label: 'Events', href: '/events' },
+      { label: 'About Us', href: '/about' },
+    ]
+
   return (
     <div className="min-h-dvh bg-stone-50 text-slate-900">
       {!hideLoader && (
@@ -206,7 +228,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
       )}
 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-lg">
-        <div className="flex w-full items-center justify-between page-x py-3">
+        <div className="flex w-full items-center justify-between gap-6 py-4 px-10">
           <Link href="/" className="flex items-center gap-2">
             <Image
               src="/logo.png"
@@ -219,6 +241,19 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
             />
             <span className="text-lg font-semibold tracking-tight">Baatasari</span>
           </Link>
+          <nav className="hidden flex-1 items-center justify-center gap-8 text-sm font-medium text-slate-700 md:flex">
+            {navLinks.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`pb-1 transition hover:text-slate-900 ${
+                  isActive(link.href) ? 'text-slate-900 font-semibold border-b-2 border-slate-900' : ''
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
           <div className="flex items-center gap-2 md:gap-3">
             {session?.user ? (
               <>
