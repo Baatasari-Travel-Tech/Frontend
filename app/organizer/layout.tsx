@@ -1,5 +1,9 @@
-import { OrganizerShell } from "@/components/platform/organizer-shell"
+import DashboardLayout from "@/components/event-org/layout/DashboardLayout";
 
-export default function OrganizerLayout({ children }: { children: React.ReactNode }) {
-  return <OrganizerShell>{children}</OrganizerShell>
+export default function EventOrganizerLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <DashboardLayout>{children}</DashboardLayout>;
 }
