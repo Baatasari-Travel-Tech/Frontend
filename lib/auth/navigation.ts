@@ -10,7 +10,7 @@ export function resolveUserHome(params: {
   const { user, activeRole, organizerVerificationStatus, userRoles = [] } = params
 
   if (!user) return "/"
-  if (user.role === "ADMIN") return "/admin/users"
+  if (user.role === "ADMIN") return "/admin/dashboard"
 
   const userReady = user.onboardingStatus === "COMPLETED"
 

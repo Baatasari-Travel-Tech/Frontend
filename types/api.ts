@@ -194,6 +194,24 @@ export type AdminUserListResponse = {
   limit: number;
 };
 
+export type AdminLoginPayload = {
+  username: string;
+  password: string;
+};
+
+export type AdminVerifyPayload = {
+  token: string;
+};
+
+export type AdminDashboardResponse = {
+  message: string;
+  stats: {
+    totalUsers: number;
+    organizerCount: number;
+    pendingOrganizerCount: number;
+  };
+};
+
 export class ApiError extends Error {
   code: string;
   status: number;

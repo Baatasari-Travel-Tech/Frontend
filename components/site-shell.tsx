@@ -178,6 +178,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { open, openModal } = useAuthModal()
+  const isAdminRoute = pathname.startsWith('/admin')
 
   useEffect(() => {
     const t1 = setTimeout(() => setBooting(false), 550)
@@ -256,6 +257,10 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
       { label: 'Events', href: '/events' },
       { label: 'Talents', href: '/talent' },
     ]
+
+  if (isAdminRoute) {
+    return <main className="min-h-dvh bg-slate-100">{children}</main>
+  }
 
   return (
     <div className="min-h-dvh bg-stone-50 text-slate-900">
