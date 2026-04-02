@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useAuth } from '@/app/providers'
 import { ArrowLeftRight } from 'lucide-react'
 import LoadingScreen from '@/components/loading-screen'
+import { isAdminRoutePath } from '@/lib/admin/routes'
 import {
   type AppRole, ROLE_LABELS,
   getRoleDashboard, getRoleOnboarding,
@@ -178,7 +179,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { open, openModal } = useAuthModal()
-  const isAdminRoute = pathname.startsWith('/admin')
+  const isAdminRoute = isAdminRoutePath(pathname)
 
   useEffect(() => {
     const t1 = setTimeout(() => setBooting(false), 550)
