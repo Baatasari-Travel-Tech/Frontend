@@ -1,6 +1,6 @@
 # Baatasari (Frontend)
 
-# **Discover, connect, experience.**
+#### **Discover, connect, experience.**
 Baatasari is a location-first platform to book the best events and experiences near you - built for explorers, organizers, and performers.
 
 ## What Baatasari does
