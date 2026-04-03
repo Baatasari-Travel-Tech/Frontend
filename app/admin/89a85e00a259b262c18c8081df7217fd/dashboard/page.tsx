@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import {
   approveOrganizer,
   getAdminDashboard,
@@ -81,22 +82,6 @@ export default function AdminDashboardPage() {
     router.replace(ADMIN_ROUTES.login)
   }
 
-  const handleApproveOrganizer = async (id: string) => {
-    setBusyKey(`approve:${id}`)
-    try {
-      await approveOrganizer(id)
-      await refresh(false)
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to approve organizer"
-      )
-    } finally {
-      setBusyKey(null)
-    }
-  }
-
   const handleUpdateRole = async (id: string) => {
     const nextRole = roleDrafts[id]
     if (!nextRole) return
@@ -150,31 +135,56 @@ export default function AdminDashboardPage() {
         </div>
 
         <section className="rounded-xl bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-900">Pending organizer approvals</h2>
-          <div className="mt-4 space-y-3">
-            {pendingOrganizers.length === 0 ? (
-              <p className="text-sm text-slate-500">No pending organizers.</p>
-            ) : (
-              pendingOrganizers.map((user) => (
-                <div
+          <h2 className="text-xl font-semibold text-slate-900 mb-4">Pending organizer approvals</h2>
+          {pendingOrganizers.length === 0 ? (
+            <p className="text-sm text-slate-500">No pending organizers.</p>
+          ) : (
+            <ol className="w-full divide-y divide-slate-100 border-t border-slate-100">
+              {pendingOrganizers.map((user, index) => (
+                <li
                   key={user.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-3"
+                  className="flex items-center justify-between py-4 gap-6"
                 >
-                  <div>
-                    <p className="font-medium text-slate-900">{user.email}</p>
-                    <p className="text-xs text-slate-500">ID: {user.id}</p>
+                  <div className="flex items-center gap-4 flex-1">
+                    <span className="text-sm font-mono text-slate-400 w-6">
+                      {String(index + 1).padStart(2, '0')}.
+                    </span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Organization</p>
+                        <p className="font-semibold text-slate-900">
+                          {(user as any).profile?.org_name || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Email & ID</p>
+                        <p className="text-sm text-slate-700">{user.email}</p>
+                        <p className="text-[10px] text-slate-400 font-mono truncate max-w-37.5">{user.id}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Requested On</p>
+                        <p className="text-sm text-slate-700">
+                          {new Date(user.createdAt).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => void handleApproveOrganizer(user.id)}
-                    disabled={busyKey === `approve:${user.id}`}
-                    className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {busyKey === `approve:${user.id}` ? "Approving..." : "Approve"}
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
+                  <div className="shrink-0">
+                    <Link
+                      href={`/admin/89a85e00a259b262c18c8081df7217fd/organizer/${user.id}`}
+                      className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-6 py-2 text-sm font-bold text-white hover:bg-slate-800 transition-colors shadow-sm"
+                    >
+                      View Profile
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
 
         <section className="rounded-xl bg-white p-5 shadow-sm">
