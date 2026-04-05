@@ -1,8 +1,10 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { usePathname } from "next/navigation"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
+import { isAdminRoutePath } from "@/lib/admin/routes"
 import { useAuthStore } from "@/lib/auth/store"
 import type {
   ActiveRole,
@@ -122,6 +124,7 @@ export function useAuth(): AuthCtx {
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
   const [isLoadingOrganizerStatus, setIsLoadingOrganizerStatus] = useState(false)
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false)
@@ -267,8 +270,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }, [clearSession, hydrateForUser, setAccessToken, setBootstrapping])
 
   useEffect(() => {
+    if (isAdminRoutePath(pathname)) {
+      setBootstrapping(false)
+      return
+    }
+
     void bootstrap()
-  }, [bootstrap])
+  }, [bootstrap, pathname, setBootstrapping])
 
   const login = async (payload: { email: string; password: string }) => {
     const response = await apiRequest<AuthResponse>("/auth/login", {

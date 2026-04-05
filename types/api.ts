@@ -212,6 +212,16 @@ export type AdminDashboardResponse = {
   };
 };
 
+export type AdminPendingOrganizerUser = SafeUser & {
+  profile: Record<string, unknown> | null;
+};
+
+export type AdminOrganizerDetailsResponse = {
+  user: SafeUser;
+  userProfile: UserProfile | null;
+  organizerProfile: OrganizerProfile | null;
+};
+
 export class ApiError extends Error {
   code: string;
   status: number;
