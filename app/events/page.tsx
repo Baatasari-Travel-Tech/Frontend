@@ -1,17 +1,85 @@
 "use client"
 
-import Link from "next/link"
-import { useMemo, useState } from "react"
+import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { CalendarDays, MapPin, Search } from "lucide-react"
+import { FaFacebook, FaInstagram, FaLinkedin, FaTwitter, FaYoutube } from "react-icons/fa"
+import SuggestionsForm from "@/components/suggestions-form"
+import { EventList } from "@/components/events/event-list"
+import { EventsHero } from "@/components/events/hero"
 import { apiRequest } from "@/lib/api/client"
-import { formatCurrency, formatDate } from "@/lib/format"
+import { formatCurrency } from "@/lib/format"
+import type { EventData } from "@/lib/events-data"
 import type { EventSummary } from "@/types/api"
-import { PageShell, SectionCard } from "@/components/platform/page-shell"
-import { SkeletonGrid, StateBlock } from "@/components/platform/state-block"
+
+type EventRow = {
+  title: string
+  events: EventData[]
+}
+
+const ROW_TITLES = [
+  "Handpicked For You",
+  "Next Up: Events You'll Love",
+  "Based on Your Interests",
+  "Solo Performers",
+  "For Solopreneurs",
+]
+
+function formatCardDate(date: string) {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
+    .format(new Date(date))
+    .toUpperCase()
+}
+
+function toEventCardData(event: EventSummary): EventData {
+  const lowestPrice = event.startingPrice ?? 0
+  const readablePrice = formatCurrency(lowestPrice).replace("₹", "Rs ")
+  const routeId = event.slug ?? event.id
+
+  return {
+    id: routeId,
+    title: event.title,
+    price: readablePrice,
+    numericPrice: lowestPrice,
+    category: event.category ?? "Live Event",
+    image: event.heroImageUrl || "/e1.png",
+    date: formatCardDate(event.date),
+    location: event.venue,
+    tag: event.tagline ?? "Live Experience",
+    chiefGuest: event.artists?.[0]?.name ?? "Special Guests",
+    sponsors: "Baatasari",
+    eventTime: "All ages welcome",
+    highlights: [
+      event.tagline ?? "Curated event experience",
+      event.venue,
+      event.category ?? "Live Event",
+    ],
+  }
+}
+
+function buildRows(events: EventData[]): EventRow[] {
+  if (events.length === 0) return []
+
+  const chunkSize = 6
+  const rowCount = Math.min(ROW_TITLES.length, Math.ceil(events.length / chunkSize))
+  const rows: EventRow[] = []
+
+  for (let index = 0; index < rowCount; index += 1) {
+    const start = index * chunkSize
+    const slice = events.slice(start, start + chunkSize)
+    rows.push({
+      title: ROW_TITLES[index] ?? ROW_TITLES[0],
+      events: slice,
+    })
+  }
+
+  return rows
+}
 
 export default function EventsPage() {
-  const [query, setQuery] = useState("")
   const eventsQuery = useQuery({
     queryKey: ["public-events"],
     queryFn: async () => {
@@ -20,96 +88,107 @@ export default function EventsPage() {
     },
   })
 
-  const filtered = useMemo(() => {
-    const term = query.trim().toLowerCase()
-    if (!term) return eventsQuery.data ?? []
-
-    return (eventsQuery.data ?? []).filter((event) =>
-      [event.title, event.venue, event.category, event.tagline].some((value) =>
-        (value ?? "").toLowerCase().includes(term)
-      )
-    )
-  }, [eventsQuery.data, query])
+  const mappedEvents = (eventsQuery.data ?? []).map(toEventCardData)
+  const rows = buildRows(mappedEvents)
+  const hasAnyEvents = rows.length > 0
 
   return (
-    <PageShell
-      eyebrow="Public events"
-      title="Browse what’s live on Baatasari"
-      description="Discover published events, compare ticket tiers, and move straight into checkout from the detail page."
-    >
-      <SectionCard>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-xl">
-            <h2 className="text-lg font-semibold text-slate-950">Find an experience that fits the moment</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Public listings stay open to guests, while checkout can continue into authentication and onboarding when
-              needed.
-            </p>
+    <main className="min-h-screen bg-(--white)">
+      <div className="pt-16">
+        {eventsQuery.isLoading ? (
+          <section className="flex flex-col items-center justify-center py-32 text-center">
+            <h2 className="text-2xl font-semibold text-(--brand-blue)">Loading events...</h2>
+          </section>
+        ) : eventsQuery.isError ? (
+          <section className="flex flex-col items-center justify-center py-32 text-center">
+            <h2 className="text-2xl font-semibold text-(--brand-blue)">Unable to load events</h2>
+            <p className="mt-3 text-gray-500">Please try again in a moment.</p>
+          </section>
+        ) : hasAnyEvents ? (
+          <>
+            <EventsHero />
+            <EventList rows={rows} />
+            <SuggestionsForm />
+          </>
+        ) : (
+          <section className="flex flex-col items-center justify-center py-32 text-center">
+            <p className="mb-4 text-5xl">No events</p>
+            <h2 className="text-2xl font-semibold text-(--brand-blue)">No events available</h2>
+            <p className="mt-3 text-gray-500">Check back later or explore other experiences.</p>
+          </section>
+        )}
+      </div>
+
+      <footer className="border-t border-slate-200 bg-slate-900 text-white">
+        <div className="page-x w-full py-10">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr_1fr]">
+            <div className="md:col-span-1">
+              <Image src="/FLogo.png" alt="Baatasari" width={100} height={40} unoptimized />
+            </div>
+
+            <div className="hidden md:block" />
+            <div className="hidden md:block" />
+            <div className="hidden md:block" />
+
+            <div className="max-w-sm text-sm text-slate-300">
+              Discover, connect, experience. Official platform for curated events, venues, and experiences.
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Company</p>
+              <div className="grid gap-2 text-slate-300">
+                <a className="transition hover:text-white" href="/about">
+                  About
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Resources</p>
+              <div className="grid gap-2 text-slate-300">
+                <a className="transition hover:text-white" href="/contact">
+                  Contact
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Legal</p>
+              <div className="grid gap-2 text-slate-300">
+                <a className="transition hover:text-white" href="/terms&conditions">
+                  Terms & Conditions
+                </a>
+                <a className="transition hover:text-white" href="/privacy-policy">
+                  Privacy Policy
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-4">
+              <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800" href="#">
+                <FaInstagram className="h-5 w-5" />
+              </a>
+              <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800" href="#">
+                <FaFacebook className="h-5 w-5" />
+              </a>
+              <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800" href="#">
+                <FaTwitter className="h-5 w-5" />
+              </a>
+              <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800" href="#">
+                <FaLinkedin className="h-5 w-5" />
+              </a>
+              <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800" href="#">
+                <FaYoutube className="h-5 w-5" />
+              </a>
+            </div>
           </div>
 
-          <label className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 shadow-sm lg:min-w-80">
-            <Search className="h-4 w-4 text-slate-400" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by title, city, or category"
-              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-            />
-          </label>
+          <div className="mt-4 flex flex-col gap-2 border-t border-slate-700 pt-4 text-xs text-slate-400 md:flex-row md:items-center md:justify-between">
+            <p>Copyright {new Date().getFullYear()} Baatasari. All rights reserved.</p>
+            <p>Built for personalized experiences.</p>
+          </div>
         </div>
-      </SectionCard>
-
-      {eventsQuery.isLoading ? (
-        <SkeletonGrid />
-      ) : eventsQuery.isError ? (
-        <StateBlock
-          tone="error"
-          title="We couldn’t load the event feed"
-          description="The backend is reachable but the event listing request failed. Please retry in a moment."
-        />
-      ) : filtered.length === 0 ? (
-        <StateBlock
-          title="No events matched your search"
-          description="Try a different keyword or come back when more organizers publish events."
-        />
-      ) : (
-        <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((event) => (
-            <Link
-              key={event.id}
-              href={`/events/${event.slug ?? event.id}`}
-              className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_15px_45px_rgba(12,29,55,0.05)] transition hover:-translate-y-1 hover:shadow-[0_25px_55px_rgba(12,29,55,0.1)]"
-            >
-              <div className="flex min-h-56 flex-col justify-between bg-[linear-gradient(135deg,_rgba(12,29,55,0.94),_rgba(43,69,112,0.88))] p-6 text-white">
-                <div>
-                  <p className="inline-flex rounded-full border border-white/20 px-3 py-1 text-xs uppercase tracking-[0.22em] text-white/75">
-                    {event.category ?? "Featured"}
-                  </p>
-                  <h2 className="mt-4 text-2xl font-semibold">{event.title}</h2>
-                  <p className="mt-3 line-clamp-3 text-sm leading-6 text-white/75">{event.description}</p>
-                </div>
-                <div className="mt-5 flex items-center justify-between text-sm text-white/75">
-                  <span>{formatCurrency(event.startingPrice ?? 0)}</span>
-                  <span>{event.capacity} seats</span>
-                </div>
-              </div>
-              <div className="grid gap-4 p-6">
-                <div className="flex items-center gap-3 text-sm text-slate-600">
-                  <CalendarDays className="h-4 w-4 text-brand-900" />
-                  <span>{formatDate(event.date)}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-slate-600">
-                  <MapPin className="h-4 w-4 text-brand-900" />
-                  <span>{event.venue}</span>
-                </div>
-                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                  {event.tagline ?? "Open for public discovery and ticket purchases."}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </PageShell>
+      </footer>
+    </main>
   )
 }

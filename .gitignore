@@ -42,3 +42,4 @@ next-env.d.ts
 
 .env.local
 all.txt
+/Original_Design

@@ -21,7 +21,7 @@ export function PageShell({
   return (
     <main className={cn("page-x py-8 sm:py-10", className)}>
       <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white p-6 shadow-[0_20px_60px_rgba(12,29,55,0.06)] sm:p-8">
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-900 via-brand-700 to-sky-500" />
+        <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-brand-900 via-brand-700 to-sky-500" />
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="max-w-3xl">

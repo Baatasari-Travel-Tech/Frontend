@@ -70,6 +70,7 @@ export function HandpickedEventCard({
                                 src={image}
                                 alt={title}
                                 fill
+                                unoptimized
                                 className={`object-cover transition-transform duration-500 ${showDetails ? "scale-105" : ""}`}
                             />
                         </div>

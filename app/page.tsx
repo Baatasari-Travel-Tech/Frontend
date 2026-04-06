@@ -74,6 +74,7 @@ export default function AboutPage() {
                       alt="Baatasari"
                       width={100}
                       height={40}
+                      style={{ height: 'auto' }}
                       unoptimized
                     />
                   </div>

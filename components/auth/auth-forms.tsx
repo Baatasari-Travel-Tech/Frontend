@@ -60,6 +60,12 @@ const resolvePostAuthDestination = () =>
     organizerVerificationStatus: getOrganizerVerificationStatus(),
   })
 
+const resolveAuthDestination = (searchParams: { get: (key: string) => string | null }) => {
+  const redirect = searchParams.get('redirect')
+  if (redirect && redirect.startsWith('/')) return redirect
+  return resolvePostAuthDestination()
+}
+
 const useGoogleIdentity = (onCredential: (credential: string) => Promise<void>) => {
   const callbackRef = useRef(onCredential)
   const [googleReady, setGoogleReady] = useState(() => {
@@ -136,7 +142,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
     try {
       await googleAuth(credential)
       closeModal()
-      router.replace(resolvePostAuthDestination())
+      router.replace(resolveAuthDestination(searchParams))
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
       logAuthError('login:google:error', { message })
@@ -174,7 +180,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
     try {
       await login({ email, password })
       closeModal()
-      router.replace(resolvePostAuthDestination())
+      router.replace(resolveAuthDestination(searchParams))
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : 'Invalid email or password.'
       logAuthError('login:error', { message })
@@ -323,7 +329,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
     try {
       await googleAuth(credential, selectedRole)
       closeModal()
-      router.replace(resolvePostAuthDestination())
+      router.replace(resolveAuthDestination(searchParams))
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
       logAuthError('register:google:error', { message, role: selectedRole })
@@ -357,7 +363,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
         role: selectedRole,
       })
       closeModal()
-      router.replace(resolvePostAuthDestination())
+      router.replace(resolveAuthDestination(searchParams))
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : 'Unable to create account.'
       logAuthError('register:error', { message, role: selectedRole })

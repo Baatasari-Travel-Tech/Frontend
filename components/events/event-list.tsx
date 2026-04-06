@@ -18,6 +18,10 @@ interface EventRowProps {
     events: EventData[];
 }
 
+interface EventListProps {
+    rows?: EventRowProps[];
+}
+
 function EventRow({ title, events }: EventRowProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [activeDirection, setActiveDirection] = React.useState<"left" | "right">("right");
@@ -100,14 +104,23 @@ function EventRow({ title, events }: EventRowProps) {
     );
 }
 
-export function EventList() {
+export function EventList({ rows }: EventListProps = {}) {
+    const defaultRows: EventRowProps[] = [
+        { title: "Handpicked For You", events: HANDPICKED_DATA },
+        { title: "Next Up: Events You'll Love", events: NEXT_UP_DATA },
+        { title: "Based on Your Interests", events: INTEREST_DATA },
+        { title: "Solo Performers", events: SOLO_DATA },
+        { title: "For Solopreneurs", events: SOLOPRENEUR_DATA },
+    ]
+
+    const sourceRows = rows ?? defaultRows
+    const visibleRows = sourceRows.filter((row) => row.events.length > 0)
+
     return (
         <section className="container mx-auto px-4 py-12">
-            <EventRow title="Handpicked For You" events={HANDPICKED_DATA} />
-            <EventRow title="Next Up: Events You'll Love" events={NEXT_UP_DATA} />
-            <EventRow title="Based on Your Interests" events={INTEREST_DATA} />
-            <EventRow title="Solo Performers" events={SOLO_DATA} />
-            <EventRow title="For Solopreneurs" events={SOLOPRENEUR_DATA} />
+            {visibleRows.map((row) => (
+                <EventRow key={row.title} title={row.title} events={row.events} />
+            ))}
         </section>
     );
 }

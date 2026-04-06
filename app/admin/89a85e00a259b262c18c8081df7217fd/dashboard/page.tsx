@@ -60,19 +60,9 @@ export default function AdminDashboardPage() {
     void refresh()
   }, [refresh, router])
 
-  const cards = useMemo(() => {
-    if (!dashboard) return []
-
-    return [
-      { label: "Total users", value: dashboard.stats.totalUsers },
-      { label: "Organizers", value: dashboard.stats.organizerCount },
-      { label: "Pending approvals", value: dashboard.stats.pendingOrganizerCount },
-    ]
-  }, [dashboard])
-
   const handleLogout = () => {
     clearAdminToken()
-    router.replace(ADMIN_ROUTES.login)
+    router.replace("/")
   }
 
   const filteredUsers = useMemo(() => {
@@ -81,13 +71,28 @@ export default function AdminDashboardPage() {
     return users.filter((user) => user.email.toLowerCase().includes(search))
   }, [emailSearch, users])
 
+  const pendingOrganizersWithCompletedOnboarding = useMemo(
+    () => pendingOrganizers.filter((user) => user.onboardingStatus === "COMPLETED"),
+    [pendingOrganizers]
+  )
+
   const filteredPendingOrganizers = useMemo(() => {
     const search = organizerSearch.trim().toLowerCase()
-    if (!search) return pendingOrganizers
-    return pendingOrganizers.filter((user) =>
+    if (!search) return pendingOrganizersWithCompletedOnboarding
+    return pendingOrganizersWithCompletedOnboarding.filter((user) =>
       user.email.toLowerCase().includes(search)
     )
-  }, [organizerSearch, pendingOrganizers])
+  }, [organizerSearch, pendingOrganizersWithCompletedOnboarding])
+
+  const cards = useMemo(() => {
+    if (!dashboard) return []
+
+    return [
+      { label: "Total users", value: dashboard.stats.totalUsers },
+      { label: "Organizers", value: dashboard.stats.organizerCount },
+      { label: "Pending approvals", value: pendingOrganizersWithCompletedOnboarding.length },
+    ]
+  }, [dashboard, pendingOrganizersWithCompletedOnboarding.length])
 
   const handleDeleteUser = async (id: string, email: string) => {
     const isConfirmed = window.confirm(`Delete user ${email}? This action cannot be undone.`)

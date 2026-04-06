@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { Suspense } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { PageShell, SectionCard, StatGrid } from "@/components/platform/page-shell"
@@ -51,7 +50,7 @@ export default function OrganizerDashboardPage() {
             <div className="grid gap-6 lg:grid-cols-2">
               <SectionCard title="Next event">
                 <div className="grid gap-3 text-sm leading-6 text-slate-600">
-                  <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
+                  <div className="rounded-4xl border border-slate-200 bg-white px-4 py-4">
                     {analyticsQuery.data.nextEventDate
                       ? `Your next event is scheduled for ${formatDate(analyticsQuery.data.nextEventDate)}.`
                       : "No upcoming event date is currently scheduled."}
@@ -64,10 +63,10 @@ export default function OrganizerDashboardPage() {
 
               <SectionCard title="Organizer workflow">
                 <div className="grid gap-3 text-sm leading-6 text-slate-600">
-                  <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
+                  <div className="rounded-4xl border border-slate-200 bg-white px-4 py-4">
                     Event creation writes searchable core fields and normalized ticket tiers directly to the backend.
                   </div>
-                  <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
+                  <div className="rounded-4xl border border-slate-200 bg-white px-4 py-4">
                     Public buyers discover your events through `/events` and complete verified Razorpay checkout from `/events/[id]`.
                   </div>
                 </div>

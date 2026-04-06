@@ -28,6 +28,7 @@ interface EventPageProps {
   isDashboardMode?: boolean;
   startDirectly?: boolean;
   action?: string | null;
+  onSubmit?: (formData: EventFormData) => Promise<void>;
 }
 
 const SCROLL_OFFSET = 100;
@@ -100,6 +101,7 @@ const EventPage: React.FC<EventPageProps> = ({
   isDashboardMode = false,
   startDirectly = false,
   action = null,
+  onSubmit,
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -123,6 +125,9 @@ const EventPage: React.FC<EventPageProps> = ({
   const [additionalPhotos, setAdditionalPhotos] = useState<File[]>([]);
   const [additionalPhotoPreviews, setAdditionalPhotoPreviews] = useState<string[]>([]);
   const [additionalPhotosError, setAdditionalPhotosError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState({
     "event-info": true,
     "date-time": true,
@@ -227,10 +232,14 @@ const EventPage: React.FC<EventPageProps> = ({
     smoothScrollTo(container, top, 350);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (isSubmitting) return;
+
     if (currentStep === 4) {
       const errors = validateEventForm(formData);
       setFormErrors(errors);
+      setSubmitError(null);
+      setSubmitSuccess(null);
 
       if (Object.keys(errors).length > 0) {
         const errorFields = Object.keys(errors);
@@ -246,13 +255,26 @@ const EventPage: React.FC<EventPageProps> = ({
         return;
       }
 
-      // Clear draft on successful submission
+      if (onSubmit) {
+        setIsSubmitting(true);
+        try {
+          await onSubmit(formData);
+          localStorage.removeItem("eventFormData");
+          localStorage.removeItem("eventFormCurrentStep");
+          localStorage.removeItem("eventFormOpenSections");
+          setSubmitSuccess("Event submitted successfully.");
+        } catch (submitErr) {
+          setSubmitError(submitErr instanceof Error ? submitErr.message : "Event submission failed.");
+        } finally {
+          setIsSubmitting(false);
+        }
+        return;
+      }
+
       localStorage.removeItem("eventFormData");
       localStorage.removeItem("eventFormCurrentStep");
       localStorage.removeItem("eventFormOpenSections");
-
-      alert("Form Submitted (Simulated)");
-      console.log(formData);
+      setSubmitSuccess("Form submitted.");
       return;
     }
 
@@ -621,10 +643,17 @@ const EventPage: React.FC<EventPageProps> = ({
 
       {showCreateEvent && (
         <div className="flex justify-center py-2 px-[7%] bg-background">
-          <div className="flex justify-between w-full max-w-200 mt-8 pb-25 max-[480px]:pb-20">
+          <div className="w-full max-w-200 mt-8 pb-25 max-[480px]:pb-20">
+            {submitError ? (
+              <p className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{submitError}</p>
+            ) : null}
+            {submitSuccess ? (
+              <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{submitSuccess}</p>
+            ) : null}
+            <div className="flex justify-between w-full">
             <button
               onClick={handlePrevious}
-              disabled={currentStep === 1}
+              disabled={currentStep === 1 || isSubmitting}
               className={`flex items-center gap-2 py-3 px-6 rounded-full border border-border bg-background text-gray-700 cursor-pointer text-base font-medium ${currentStep === 1
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed invisible"
                   : ""
@@ -635,12 +664,14 @@ const EventPage: React.FC<EventPageProps> = ({
             </button>
 
             <button
-              onClick={handleNext}
+              onClick={() => void handleNext()}
+              disabled={isSubmitting}
               className="flex items-center gap-2 py-3 px-8 rounded-full bg-upcoming-primary-900 text-white border-none cursor-pointer text-base font-medium shadow-[0_4px_6px_-1px_rgb(0_0_0/0.1),0_2px_4px_-1px_rgb(0_0_0/0.06)]"
             >
-              {currentStep === 4 ? "Submit" : "Proceed"}
+              {isSubmitting ? "Submitting..." : currentStep === 4 ? "Submit" : "Proceed"}
               {currentStep !== 4 && <ArrowRightIcon size={20} />}
             </button>
+            </div>
           </div>
         </div>
       )}
