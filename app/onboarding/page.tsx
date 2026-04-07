@@ -217,7 +217,7 @@ export default function OnboardingPage() {
 
   return (
     <ProtectedRoute requireOnboarding={false}>
-      <div className="relative page-x py-6 md:py-8">
+      <div className="relative w-full px-4 py-6 sm:px-6 md:py-8 lg:px-8">
         <div className="w-full">
           <div className="rounded-3xl border border-white/60 bg-white/90 p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur md:p-6">
             <div className="space-y-1">
