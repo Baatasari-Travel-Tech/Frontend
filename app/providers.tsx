@@ -77,6 +77,8 @@ const normalizeLegacyProfile = (user: SafeUser | null, profile: UserProfile | nu
     avatar_url: profile?.avatarUrl ?? null,
     dob: profile?.dob ?? null,
     location: profile?.location ?? null,
+    gender: profile?.gender ?? null,
+    profession: profile?.profession ?? null,
     global_onboarding_completed: user?.onboardingStatus === "COMPLETED",
   }
 }
@@ -99,22 +101,47 @@ const userToSession = (user: SafeUser | null): Session | null =>
     : null
 
 const mapProfilePayload = (payload: Record<string, unknown>) => ({
-  fullName: typeof payload.full_name === "string" ? payload.full_name : payload.fullName,
-  phone: typeof payload.phone === "string" ? payload.phone : null,
-  avatarUrl: typeof payload.avatar_url === "string" ? payload.avatar_url : payload.avatarUrl,
-  dob: typeof payload.dob === "string" ? payload.dob : null,
-  location: typeof payload.location === "string" ? payload.location : null,
+  fullName:
+    typeof payload.full_name === "string"
+      ? payload.full_name
+      : typeof payload.fullName === "string"
+        ? payload.fullName
+        : undefined,
+  phone: typeof payload.phone === "string" ? payload.phone : undefined,
+  avatarUrl:
+    typeof payload.avatar_url === "string"
+      ? payload.avatar_url
+      : typeof payload.avatarUrl === "string"
+        ? payload.avatarUrl
+        : undefined,
+  dob: typeof payload.dob === "string" ? payload.dob : undefined,
+  location: typeof payload.location === "string" ? payload.location : undefined,
+  gender: typeof payload.gender === "string" ? payload.gender : undefined,
+  profession: typeof payload.profession === "string" ? payload.profession : undefined,
   organizerDisplayName:
     typeof payload.organizer_display_name === "string"
       ? payload.organizer_display_name
-      : payload.organizerDisplayName,
+      : typeof payload.organizerDisplayName === "string"
+        ? payload.organizerDisplayName
+        : undefined,
   organizerDescription:
     typeof payload.organizer_description === "string"
       ? payload.organizer_description
-      : payload.organizerDescription,
-  companyName: typeof payload.company_name === "string" ? payload.company_name : payload.companyName,
+      : typeof payload.organizerDescription === "string"
+        ? payload.organizerDescription
+        : undefined,
+  companyName:
+    typeof payload.company_name === "string"
+      ? payload.company_name
+      : typeof payload.companyName === "string"
+        ? payload.companyName
+        : undefined,
   companyWebsite:
-    typeof payload.company_website === "string" ? payload.company_website : payload.companyWebsite,
+    typeof payload.company_website === "string"
+      ? payload.company_website
+      : typeof payload.companyWebsite === "string"
+        ? payload.companyWebsite
+        : undefined,
 })
 
 export function useAuth(): AuthCtx {

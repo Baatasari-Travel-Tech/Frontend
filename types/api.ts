@@ -32,6 +32,8 @@ export type UserProfile = {
   avatarUrl: string | null;
   dob: string | null;
   location: string | null;
+  gender: string | null;
+  profession: string | null;
   organizerDisplayName: string | null;
   organizerDescription: string | null;
   companyName: string | null;
@@ -47,6 +49,8 @@ export type LegacyProfile = {
   avatar_url: string | null;
   dob: string | null;
   location: string | null;
+  gender: string | null;
+  profession: string | null;
   global_onboarding_completed: boolean;
 };
 
