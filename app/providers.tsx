@@ -253,29 +253,25 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
     setUser(currentUser)
     setActiveRole(nextActiveRole)
+    // Prime minimal profile state immediately so route guards can use
+    // onboarding status from the auth payload even if profile APIs lag.
+    setProfile(normalizeLegacyProfile(currentUser, null))
 
-    await Promise.all([
+    await Promise.allSettled([
       loadProfile(currentUser),
       loadOrganizerProfile(currentUser),
       loadPreferences(currentUser),
       loadTalentProfile(currentUser),
     ])
-  }, [loadOrganizerProfile, loadPreferences, loadProfile, loadTalentProfile, setActiveRole, setUser])
+  }, [loadOrganizerProfile, loadPreferences, loadProfile, loadTalentProfile, setActiveRole, setProfile, setUser])
 
   const bootstrap = useCallback(async () => {
     setBootstrapping(true)
     try {
-      const refresh = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? ""}/api/v1/auth/refresh`, {
+      const refreshPayload = await apiRequest<{ accessToken?: string }>("/auth/refresh", {
         method: "POST",
-        credentials: "include",
+        retryOn401: false,
       })
-
-      if (!refresh.ok) {
-        clearSession()
-        return
-      }
-
-      const refreshPayload = (await refresh.json()) as { accessToken?: string }
       if (!refreshPayload.accessToken) {
         clearSession()
         return
@@ -312,7 +308,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     })
 
     setAccessToken(response.accessToken)
-    await hydrateForUser(response.user)
+    void hydrateForUser(response.user)
   }
 
   const register = async (payload: { email: string; password: string; role: "USER" | "ORGANIZER" }) => {
@@ -323,7 +319,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
     setAccessToken(response.accessToken)
     setActiveRole(payload.role === "ORGANIZER" ? "ORGANIZER" : "USER")
-    await hydrateForUser(response.user)
+    void hydrateForUser(response.user)
   }
 
   const logout = async () => {
@@ -345,7 +341,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
     setAccessToken(response.accessToken)
     setActiveRole(response.user.role === "ORGANIZER" ? "ORGANIZER" : "USER")
-    await hydrateForUser(response.user)
+    void hydrateForUser(response.user)
   }
 
   const switchRole = async (role: AppRole) => {
@@ -384,7 +380,17 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         auth: true,
         body: JSON.stringify(payload ?? {}),
       })
-      await bootstrap()
+      const currentUser = useAuthStore.getState().user
+      if (currentUser) {
+        const completedUser: SafeUser = {
+          ...currentUser,
+          onboardingStatus: "COMPLETED",
+          updatedAt: new Date().toISOString(),
+        }
+        setUser(completedUser)
+        setProfile(normalizeLegacyProfile(completedUser, null))
+      }
+      void bootstrap()
       return
     }
 
@@ -394,7 +400,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       body: JSON.stringify(mapProfilePayload(payload ?? {})),
     })
 
-    await bootstrap()
+    const currentUser = useAuthStore.getState().user
+    if (currentUser) {
+      const completedUser: SafeUser = {
+        ...currentUser,
+        onboardingStatus: "COMPLETED",
+        updatedAt: new Date().toISOString(),
+      }
+      setUser(completedUser)
+      setProfile(normalizeLegacyProfile(completedUser, null))
+    }
+
+    void bootstrap()
   }
 
   const userRoles = useMemo<UserRoleRecord[]>(() => {

@@ -4,6 +4,7 @@ import { useAuthStore } from "@/lib/auth/store"
 import { ApiError, type ActiveRole, type ApiErrorPayload } from "@/types/api"
 
 const API_PREFIX = "/api/v1"
+const DEFAULT_REQUEST_TIMEOUT_MS = 12000
 
 const withPrefix = (path: string) => {
   const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? ""
@@ -85,11 +86,30 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       requestHeaders.set("Authorization", `Bearer ${accessToken}`)
     }
 
-    return fetch(withPrefix(path), {
-      ...init,
-      headers: requestHeaders,
-      credentials: "include"
-    })
+    const controller = init.signal ? null : new AbortController()
+    const timeout =
+      controller
+        ? setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
+        : null
+
+    try {
+      return await fetch(withPrefix(path), {
+        ...init,
+        headers: requestHeaders,
+        credentials: "include",
+        signal: init.signal ?? controller?.signal
+      })
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new ApiError(408, {
+          code: "REQUEST_TIMEOUT",
+          message: "Request timed out. Please try again."
+        })
+      }
+      throw error
+    } finally {
+      if (timeout) clearTimeout(timeout)
+    }
   }
 
   let response = await makeRequest(token)
