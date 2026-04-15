@@ -7,7 +7,7 @@ import { resolveUserHome } from '@/lib/auth/navigation'
 import { useAuthStore } from '@/lib/auth/store'
 import { useAuthModal } from './auth-modal-context'
 import InlineSpinner from '@/components/ui/inline-spinner'
-import { User, CalendarPlus, Eye, EyeOff } from 'lucide-react'
+import { User, CalendarPlus, Eye, EyeOff, Lock } from 'lucide-react'
 import { logAuth, logAuthError } from '@/lib/auth-log'
 
 const GoogleIcon = () => (
@@ -313,13 +313,13 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   const [confirm, setConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const roleParam = searchParams.get('role')
-  const initialRole: 'user' | 'organizer' = roleParam === 'organizer' ? 'organizer' : 'user'
-  const [role, setRole] = useState<'user' | 'organizer'>(initialRole)
+  const requestedOrganizerSignup = roleParam === 'organizer'
+  const role = 'user' as const
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
 
-  const selectedRole: 'USER' | 'ORGANIZER' = role === 'organizer' ? 'ORGANIZER' : 'USER'
+  const selectedRole = 'USER' as const
 
   const { googleReady, prompt } = useGoogleIdentity(async (credential) => {
     setError(null)
@@ -416,7 +416,6 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
         <button
           type="button"
-          onClick={() => setRole('user')}
           className={`relative z-10 flex items-center justify-center gap-2 rounded-full py-2 text-xs font-semibold transition-all duration-200 ${
             role === 'user'
               ? 'scale-100 text-white'
@@ -429,17 +428,22 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
         <button
           type="button"
-          onClick={() => setRole('organizer')}
+          disabled
+          aria-label="Event organizer signup locked"
           className={`relative z-10 flex items-center justify-center gap-2 rounded-full py-2 text-xs font-semibold transition-all duration-200 ${
             role === 'organizer'
               ? 'scale-100 text-white'
-              : 'scale-95 text-white/60 hover:text-white/80'
+              : 'scale-95 cursor-not-allowed text-white/45'
           }`}
         >
-          <CalendarPlus className="h-3.5 w-3.5" />
-          Event organizer
+          {requestedOrganizerSignup ? <Lock className="h-3.5 w-3.5" /> : <CalendarPlus className="h-3.5 w-3.5" />}
+          Event organizer (Locked)
         </button>
       </div>
+
+      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-700">
+        Event organizer signup is currently locked on this frontend. Please continue as a user.
+      </p>
 
       <div className="space-y-4">
         <input
