@@ -3,9 +3,11 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function EventOrganizer() {
+  const router = useRouter();
+
   return (
     <motion.section
       id="events"
@@ -65,10 +67,9 @@ export default function EventOrganizer() {
             {/* CTA */}
             <Button
               className="font-albert font-medium text-lg leading-6 text-(--white) bg-brand-900 hover:bg-(--brand-navy)/90 px-8 py-3 rounded-full transition h-auto"
-              disabled
+              onClick={() => router.push('/?auth=register&role=organizer')}
             >
-              <Lock className="mr-2 h-4 w-4" />
-              Join as an Event Organizer (Locked)
+              Join as an Event Organizer
             </Button>
           </motion.div>
 

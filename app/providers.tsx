@@ -312,17 +312,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   const register = async (payload: { email: string; password: string; role: "USER" | "ORGANIZER" }) => {
-    if (payload.role === "ORGANIZER") {
-      throw new Error("Event organizer signup is currently locked on this frontend.")
-    }
-
     const response = await apiRequest<AuthResponse>("/auth/register", {
       method: "POST",
       body: JSON.stringify(payload),
     })
 
     setAccessToken(response.accessToken)
-    setActiveRole("USER")
+    setActiveRole(payload.role === "ORGANIZER" ? "ORGANIZER" : "USER")
     void hydrateForUser(response.user)
   }
 
@@ -338,13 +334,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   const googleAuth = async (idToken: string, role: "USER" | "ORGANIZER" = "USER") => {
-    if (role === "ORGANIZER") {
-      throw new Error("Event organizer signup is currently locked on this frontend.")
-    }
-
     const response = await apiRequest<AuthResponse>("/auth/google", {
       method: "POST",
-      body: JSON.stringify({ idToken, role: "USER" }),
+      body: JSON.stringify({ idToken, role }),
     })
 
     setAccessToken(response.accessToken)
