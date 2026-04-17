@@ -14,6 +14,23 @@ import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { clearAdminToken, getAdminToken } from "@/lib/admin/session"
 import type { AdminDashboardResponse, AdminPendingOrganizerUser, SafeUser } from "@/types/api"
 
+type AdminListTab = "USERS" | "ORGANIZERS"
+
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
+
+const getOrganizationName = (pending: AdminPendingOrganizerUser | undefined) => {
+  const profile = pending?.profile
+  if (!profile || typeof profile !== "object" || Array.isArray(profile)) return "N/A"
+
+  const orgName = (profile as Record<string, unknown>).org_name
+  return typeof orgName === "string" && orgName.trim().length > 0 ? orgName : "N/A"
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -22,14 +39,15 @@ export default function AdminDashboardPage() {
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null)
   const [users, setUsers] = useState<SafeUser[]>([])
   const [pendingOrganizers, setPendingOrganizers] = useState<AdminPendingOrganizerUser[]>([])
-  const [emailSearch, setEmailSearch] = useState("")
+  const [tab, setTab] = useState<AdminListTab>("USERS")
+  const [search, setSearch] = useState("")
   const [organizerSearch, setOrganizerSearch] = useState("")
 
   const refresh = useCallback(async (logoutOnFailure = true) => {
     try {
       const [dashboardData, usersData, pendingData] = await Promise.all([
         getAdminDashboard(),
-        listAdminUsers({ page: 1, limit: 25 }),
+        listAdminUsers({ page: 1, limit: 100 }),
         listPendingOrganizers(),
       ])
 
@@ -65,11 +83,24 @@ export default function AdminDashboardPage() {
     router.replace("/")
   }
 
+  const pendingById = useMemo(
+    () => new Map(pendingOrganizers.map((organizer) => [organizer.id, organizer])),
+    [pendingOrganizers]
+  )
+
   const filteredUsers = useMemo(() => {
-    const search = emailSearch.trim().toLowerCase()
-    if (!search) return users
-    return users.filter((user) => user.email.toLowerCase().includes(search))
-  }, [emailSearch, users])
+    const emailSearch = search.trim().toLowerCase()
+    const source = users.filter((user) => user.role === "USER")
+    if (!emailSearch) return source
+    return source.filter((user) => user.email.toLowerCase().includes(emailSearch))
+  }, [search, users])
+
+  const filteredOrganizers = useMemo(() => {
+    const emailSearch = search.trim().toLowerCase()
+    const source = users.filter((user) => user.role === "ORGANIZER")
+    if (!emailSearch) return source
+    return source.filter((user) => user.email.toLowerCase().includes(emailSearch))
+  }, [search, users])
 
   const pendingOrganizersWithCompletedOnboarding = useMemo(
     () => pendingOrganizers.filter((user) => user.onboardingStatus === "COMPLETED"),
@@ -182,13 +213,7 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-3 py-3">{user.email}</td>
                       <td className="px-3 py-3 text-xs font-mono text-slate-500">{user.id}</td>
-                      <td className="px-3 py-3">
-                        {new Date(user.createdAt).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
+                      <td className="px-3 py-3">{formatDate(user.createdAt)}</td>
                       <td className="px-3 py-3">
                         <Link
                           href={`/admin/89a85e00a259b262c18c8081df7217fd/organizer/${user.id}`}
@@ -206,57 +231,124 @@ export default function AdminDashboardPage() {
         </section>
 
         <section className="rounded-xl bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-slate-900">Users</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+              <button
+                type="button"
+                onClick={() => setTab("USERS")}
+                className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+                  tab === "USERS" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Users
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("ORGANIZERS")}
+                className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+                  tab === "ORGANIZERS"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Organizers
+              </button>
+            </div>
+
             <input
-              value={emailSearch}
-              onChange={(event) => setEmailSearch(event.target.value)}
-              placeholder="Search by email"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={tab === "USERS" ? "Search users by email" : "Search organizers by email"}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-72"
             />
           </div>
-          <div className="mt-4 max-h-56 overflow-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="px-3 py-2 font-medium">Email</th>
-                  <th className="px-3 py-2 font-medium">Role</th>
-                  <th className="px-3 py-2 font-medium">Onboarding</th>
-                  <th className="px-3 py-2 font-medium">Organizer Approved</th>
-                  <th className="px-3 py-2 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b border-slate-100 text-slate-700">
-                    <td className="px-3 py-3">
-                      <p>{user.email}</p>
-                      <p className="text-xs text-slate-400">{user.id}</p>
-                    </td>
-                    <td className="px-3 py-3">{user.role}</td>
-                    <td className="px-3 py-3">{user.onboardingStatus}</td>
-                    <td className="px-3 py-3">{user.organizerApproved ? "Yes" : "No"}</td>
-                    <td className="px-3 py-3">
-                      <button
-                        onClick={() => void handleDeleteUser(user.id, user.email)}
-                        disabled={busyKey === `delete:${user.id}`}
-                        className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {busyKey === `delete:${user.id}` ? "Deleting..." : "Delete"}
-                      </button>
-                    </td>
+          {tab === "USERS" ? (
+            <div className="max-h-[32rem] overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="px-3 py-2 font-medium">Email</th>
+                    <th className="px-3 py-2 font-medium">User ID</th>
+                    <th className="px-3 py-2 font-medium">Onboarding</th>
+                    <th className="px-3 py-2 font-medium">Joined On</th>
+                    <th className="px-3 py-2 font-medium">Actions</th>
                   </tr>
-                ))}
-                {filteredUsers.length === 0 ? (
-                  <tr>
-                    <td className="px-3 py-6 text-center text-slate-500" colSpan={5}>
-                      No users found.
-                    </td>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="border-b border-slate-100 text-slate-700">
+                      <td className="px-3 py-3">{user.email}</td>
+                      <td className="px-3 py-3 text-xs font-mono text-slate-500">{user.id}</td>
+                      <td className="px-3 py-3">{user.onboardingStatus}</td>
+                      <td className="px-3 py-3">{formatDate(user.createdAt)}</td>
+                      <td className="px-3 py-3">
+                        <button
+                          onClick={() => void handleDeleteUser(user.id, user.email)}
+                          disabled={busyKey === `delete:${user.id}`}
+                          className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {busyKey === `delete:${user.id}` ? "Deleting..." : "Delete"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td className="px-3 py-6 text-center text-slate-500" colSpan={5}>
+                        No users found.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="max-h-[32rem] overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="px-3 py-2 font-medium">Organization</th>
+                    <th className="px-3 py-2 font-medium">Email</th>
+                    <th className="px-3 py-2 font-medium">User ID</th>
+                    <th className="px-3 py-2 font-medium">Onboarding</th>
+                    <th className="px-3 py-2 font-medium">Approved</th>
+                    <th className="px-3 py-2 font-medium">Joined On</th>
+                    <th className="px-3 py-2 font-medium">Actions</th>
                   </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredOrganizers.map((organizer) => (
+                    <tr key={organizer.id} className="border-b border-slate-100 text-slate-700">
+                      <td className="px-3 py-3 font-semibold text-slate-900">
+                        {getOrganizationName(pendingById.get(organizer.id))}
+                      </td>
+                      <td className="px-3 py-3">{organizer.email}</td>
+                      <td className="px-3 py-3 text-xs font-mono text-slate-500">{organizer.id}</td>
+                      <td className="px-3 py-3">{organizer.onboardingStatus}</td>
+                      <td className="px-3 py-3">{organizer.organizerApproved ? "Yes" : "No"}</td>
+                      <td className="px-3 py-3">{formatDate(organizer.createdAt)}</td>
+                      <td className="px-3 py-3">
+                        <button
+                          onClick={() => void handleDeleteUser(organizer.id, organizer.email)}
+                          disabled={busyKey === `delete:${organizer.id}`}
+                          className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {busyKey === `delete:${organizer.id}` ? "Deleting..." : "Delete"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredOrganizers.length === 0 ? (
+                    <tr>
+                      <td className="px-3 py-6 text-center text-slate-500" colSpan={7}>
+                        No organizers found.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
     </div>
