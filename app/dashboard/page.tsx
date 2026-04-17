@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
           <ArtistSection />
 
-          <SuggestionsForm />
+          <SuggestionsForm autoScrollOnDraft />
 
           <EventSection
             title="Pocket-Friendly (Under Rs 499)"

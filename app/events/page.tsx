@@ -6,6 +6,7 @@ import { FaFacebook, FaInstagram, FaLinkedin, FaTwitter, FaYoutube } from "react
 import SuggestionsForm from "@/components/suggestions-form"
 import { EventList } from "@/components/events/event-list"
 import { EventsHero } from "@/components/events/hero"
+import { SuggestedEventsSection } from "@/components/events/suggested-events-section"
 import { apiRequest } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
 import type { EventData } from "@/lib/events-data"
@@ -105,18 +106,21 @@ export default function EventsPage() {
             <h2 className="text-2xl font-semibold text-(--brand-blue)">Unable to load events</h2>
             <p className="mt-3 text-gray-500">Please try again in a moment.</p>
           </section>
-        ) : hasAnyEvents ? (
+        ) : (
           <>
             <EventsHero />
-            <EventList rows={rows} />
+            {hasAnyEvents ? (
+              <EventList rows={rows} />
+            ) : (
+              <section className="flex flex-col items-center justify-center py-24 text-center">
+                <p className="mb-4 text-5xl">No events</p>
+                <h2 className="text-2xl font-semibold text-(--brand-blue)">No events available</h2>
+                <p className="mt-3 text-gray-500">Check back later or pitch an event you want to attend.</p>
+              </section>
+            )}
+            <SuggestedEventsSection />
             <SuggestionsForm />
           </>
-        ) : (
-          <section className="flex flex-col items-center justify-center py-32 text-center">
-            <p className="mb-4 text-5xl">No events</p>
-            <h2 className="text-2xl font-semibold text-(--brand-blue)">No events available</h2>
-            <p className="mt-3 text-gray-500">Check back later or explore other experiences.</p>
-          </section>
         )}
       </div>
 
