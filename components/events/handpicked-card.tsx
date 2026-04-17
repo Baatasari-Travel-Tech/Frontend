@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle, Calendar, Tag } from "lucide-react"
+import { CheckCircle, Calendar, Tag, Users } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -16,6 +16,7 @@ interface HandpickedEventCardProps {
     category: string
     date: string
     location: string
+    bookedCount?: number
     tag?: string
     chiefGuest?: string
     sponsors?: string
@@ -31,6 +32,7 @@ export function HandpickedEventCard({
     price,
     category,
     date,
+    bookedCount = 0,
     tag = "Music Festival",
     chiefGuest = "Allu Arjun",
     sponsors = "aata events",
@@ -78,9 +80,15 @@ export function HandpickedEventCard({
                         {/* Content */}
                         <div className="space-y-4">
                             {/* Date */}
-                            <div className="flex items-center gap-2 text-(--upcoming-primary-800) font-poppins font-semibold text-[14px] uppercase tracking-wider">
-                                <Calendar className="h-4 w-4" />
-                                <span>{date}</span>
+                            <div className="flex items-center justify-between gap-3 text-(--upcoming-primary-800) font-poppins font-semibold text-[14px] uppercase tracking-wider">
+                                <div className="flex min-w-0 items-center gap-2">
+                                    <Calendar className="h-4 w-4 shrink-0" />
+                                    <span className="truncate">{date}</span>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-1.5 text-(--upcoming-primary-700)">
+                                    <Users className="h-4 w-4" />
+                                    <span>{bookedCount}</span>
+                                </div>
                             </div>
 
                             {/* Title */}

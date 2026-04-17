@@ -7,6 +7,7 @@ export interface EventData {
     numericPrice: number;
     date: string;
     location: string;
+    bookedCount?: number;
     tag?: string;
     chiefGuest?: string;
     sponsors?: string;

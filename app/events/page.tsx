@@ -48,6 +48,7 @@ function toEventCardData(event: EventSummary): EventData {
     image: event.heroImageUrl || "/e1.png",
     date: formatCardDate(event.date),
     location: event.venue,
+    bookedCount: event.bookedCount ?? 0,
     tag: event.tagline ?? "Live Experience",
     chiefGuest: event.artists?.[0]?.name ?? "Special Guests",
     sponsors: "Baatasari",

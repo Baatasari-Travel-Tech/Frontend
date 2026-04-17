@@ -138,6 +138,7 @@ export type EventSummary = {
   createdAt: string;
   updatedAt: string;
   startingPrice?: number;
+  bookedCount?: number;
 };
 
 export type EventDetail = EventSummary & {
