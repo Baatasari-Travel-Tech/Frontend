@@ -2,6 +2,7 @@ import './globals.css'
 import Providers from './providers'
 import SiteShell from '../components/site-shell'
 import { Sora } from 'next/font/google'
+import { Analytics } from "@vercel/analytics/next"
 
 const sora = Sora({
   subsets: ['latin'],
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans antialiased">
         <Providers>
           <SiteShell>{children}</SiteShell>
+          <Analytics />
         </Providers>
       </body>
     </html>
