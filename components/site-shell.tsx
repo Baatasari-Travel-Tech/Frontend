@@ -111,11 +111,11 @@ function UserMenu() {
               Profile
             </Link>
             <Link
-              href="/preferences"
+              href="/history"
               className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               onClick={() => setOpen(false)}
             >
-              Preferences
+              Your Activity
             </Link>
             {canSwitchRoles && (
               <>

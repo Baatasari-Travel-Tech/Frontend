@@ -19,12 +19,6 @@ export default function OrganizerEmailVerificationPage() {
               is used, this account can switch into user mode immediately and move into the pending-approval state for
               organizer tools.
             </p>
-            <Link
-              href="/verify-email"
-              className="inline-flex w-fit items-center justify-center rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white"
-            >
-              Open verification helper
-            </Link>
           </div>
         </SectionCard>
       </PageShell>
