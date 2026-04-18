@@ -118,8 +118,8 @@ export default function EventsPage() {
                 <p className="mt-3 text-gray-500">Check back later or pitch an event you want to attend.</p>
               </section>
             )}
-            <SuggestedEventsSection />
             <SuggestionsForm />
+            <SuggestedEventsSection />
           </>
         )}
       </div>
