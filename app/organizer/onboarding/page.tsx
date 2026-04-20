@@ -47,10 +47,15 @@ const steps = [
   {
     id: 0,
     title: "Personal Details",
-    copy: "Complete your personal profile and organizer information.",
+    copy: "Complete your personal profile and account basics.",
   },
   {
     id: 1,
+    title: "Organization Details",
+    copy: "Add your organization and contact information.",
+  },
+  {
+    id: 2,
     title: "Bank Details",
     copy: "Add PAN, GST, and payout details for verification.",
   },
@@ -63,14 +68,30 @@ const stepOneFields: Array<keyof Values> = [
   "location",
   "gender",
   "profession",
+]
+
+const stepTwoFields: Array<keyof Values> = [
   "orgName",
   "description",
   "contactEmail",
   "contactPhone",
+  "primaryContactName",
+  "secondaryContactPhone",
   "address",
   "city",
   "state",
   "pincode",
+  "websiteUrl",
+  "instagramUrl",
+  "linkedinUrl",
+]
+
+const stepThreeFields: Array<keyof Values> = [
+  "panNumber",
+  "gstNumber",
+  "bankAccountName",
+  "bankAccountNumber",
+  "bankIfsc",
 ]
 
 const inputClassName =
@@ -123,6 +144,7 @@ export default function OrganizerOnboardingPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSavingStepOne, setIsSavingStepOne] = useState(false)
+  const [isSavingStepTwo, setIsSavingStepTwo] = useState(false)
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
@@ -190,7 +212,7 @@ export default function OrganizerOnboardingPage() {
       ...baseValues,
       ...(draft?.values ?? {}),
     })
-    setStep(draft?.step === 1 ? 1 : 0)
+    setStep(typeof draft?.step === "number" && draft.step >= 0 && draft.step <= 2 ? draft.step : 0)
     setAvatarPreview(profile?.avatar_url ?? DEFAULT_AVATAR)
   }, [
     form,
@@ -410,6 +432,27 @@ export default function OrganizerOnboardingPage() {
         profession: values.profession.trim(),
         avatarUrl,
       })
+      persistDraft(1, values)
+      setStep(1)
+      setNotice("Personal details saved. You can continue now or return later.")
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save your progress.")
+    } finally {
+      setIsSavingStepOne(false)
+    }
+  }
+
+  const saveStepTwo = async () => {
+    setNotice(null)
+    setError(null)
+
+    const isValid = await form.trigger(stepTwoFields)
+    if (!isValid) return
+
+    setIsSavingStepTwo(true)
+
+    try {
+      const values = form.getValues()
 
       await apiRequest("/organizer/profile", {
         method: "PUT",
@@ -418,13 +461,13 @@ export default function OrganizerOnboardingPage() {
       })
 
       await refreshOrganizerStatus()
-      persistDraft(1, values)
-      setStep(1)
-      setNotice("Step 1 saved. You can continue now or return later from this step.")
+      persistDraft(2, values)
+      setStep(2)
+      setNotice("Organization details saved. You can continue now or return later.")
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not save your progress.")
+      setError(saveError instanceof Error ? saveError.message : "Could not save your organization details.")
     } finally {
-      setIsSavingStepOne(false)
+      setIsSavingStepTwo(false)
     }
   }
 
@@ -433,6 +476,9 @@ export default function OrganizerOnboardingPage() {
     setError(null)
 
     try {
+      const isValid = await form.trigger(stepThreeFields)
+      if (!isValid) return
+
       const avatarUrl = await uploadAvatarIfNeeded()
 
       await updateProfile({
@@ -467,236 +513,238 @@ export default function OrganizerOnboardingPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-900">Organizer onboarding</p>
             <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">Complete your organizer setup</h1>
             <p className="max-w-3xl text-sm leading-6 text-slate-500">
-              We will complete your personal profile first, then collect your banking details for review. Your progress is
-              saved as you move through the flow, so you can come back and continue later.
+              Complete your personal details, organization details, and bank details in sequence. Your progress is saved as
+              you move through the flow, so you can come back and continue later.
             </p>
           </div>
 
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
-            {steps.map((item) => {
-              const isActive = step === item.id
-              const isDone = step > item.id
+          <div className="mt-6 rounded-3xl border border-slate-200/80 bg-slate-50/70 p-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              {steps.map((item) => {
+                const isActive = step === item.id
+                const isDone = step > item.id
 
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    if (item.id === 0 || organizerProfile || step > 0) {
-                      setStep(item.id)
-                    }
-                  }}
-                  className={`rounded-2xl border px-4 py-4 text-left transition ${
-                    isActive
-                      ? "border-brand-900 bg-brand-900/5 shadow-sm"
-                      : isDone
-                        ? "border-emerald-200 bg-emerald-50/70"
-                        : "border-slate-200 bg-slate-50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Step {item.id + 1}</p>
-                      <p className="mt-2 text-lg font-semibold text-slate-950">{item.title}</p>
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      if (item.id <= step) {
+                        setStep(item.id)
+                      }
+                    }}
+                    className={`rounded-2xl border px-4 py-4 text-left transition ${
+                      isActive
+                        ? "border-brand-900 bg-brand-900/5 shadow-sm"
+                        : isDone
+                          ? "border-emerald-200 bg-emerald-50/70"
+                          : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
+                          isActive
+                            ? "bg-brand-900 text-white"
+                            : isDone
+                              ? "bg-emerald-600 text-white"
+                              : "bg-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {item.id + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Step {item.id + 1}</p>
+                        <p className="mt-1 text-base font-semibold text-slate-950">{item.title}</p>
+                        <p className="mt-1 text-sm text-slate-600">{item.copy}</p>
+                      </div>
                     </div>
-                    <span
-                      className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
-                        isActive
-                          ? "bg-brand-900 text-white"
-                          : isDone
-                            ? "bg-emerald-600 text-white"
-                            : "bg-slate-200 text-slate-600"
-                      }`}
-                    >
-                      {isActive ? "Current" : isDone ? "Saved" : "Pending"}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-600">{item.copy}</p>
-                </button>
-              )
-            })}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           <form className="mt-6 grid gap-6" onSubmit={onSubmit}>
             {step === 0 ? (
-              <>
-                <section className="grid gap-4 rounded-3xl border border-slate-200/80 bg-slate-50/60 p-5 md:grid-cols-[36%_64%]">
-                  <div className="flex h-full flex-col items-center justify-between gap-5 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-                    <div className="w-full">
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Profile picture</p>
-                      <p className="mt-2 text-sm text-slate-500">This also completes your user profile.</p>
-                    </div>
+              <section className="grid gap-4 rounded-3xl border border-slate-200/80 bg-slate-50/60 p-5 md:grid-cols-[36%_64%]">
+                <div className="flex h-full flex-col items-center justify-between gap-5 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+                  <div className="w-full">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Profile picture</p>
+                    <p className="mt-2 text-sm text-slate-500">This also completes your user profile.</p>
+                  </div>
 
-                    <div className="relative h-52 w-52 overflow-hidden rounded-full border border-slate-200 bg-slate-50 shadow-[0_12px_22px_rgba(15,23,42,0.08)]">
-                      <img src={avatarPreview || DEFAULT_AVATAR} alt="Profile preview" className="h-full w-full object-cover" />
-                    </div>
+                  <div className="relative h-52 w-52 overflow-hidden rounded-full border border-slate-200 bg-slate-50 shadow-[0_12px_22px_rgba(15,23,42,0.08)]">
+                    <img src={avatarPreview || DEFAULT_AVATAR} alt="Profile preview" className="h-full w-full object-cover" />
+                  </div>
 
-                    <label className="w-full text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                      Upload image
+                  <label className="w-full text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Upload image
+                    <input
+                      className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-900/10 file:px-3 file:py-1.5 file:text-[10px] file:font-semibold file:text-brand-800 hover:file:bg-brand-900/20"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) => handleAvatarChange(event.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  <p className="text-center text-xs text-slate-400">PNG, JPG, or WEBP under 200KB (optional)</p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2 md:pr-1">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Full name *
+                    <input className={inputClassName} placeholder="Your full name" {...form.register("fullName")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.fullName?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Account email
+                    <input className={readOnlyInputClassName} type="email" value={session?.user?.email ?? ""} readOnly disabled />
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Personal phone number *
+                    <div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-brand-900 focus-within:ring-4 focus-within:ring-brand-900/10">
+                      <span className="text-sm font-semibold text-slate-500">+91</span>
                       <input
-                        className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-900/10 file:px-3 file:py-1.5 file:text-[10px] file:font-semibold file:text-brand-800 hover:file:bg-brand-900/20"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(event) => handleAvatarChange(event.target.files?.[0] ?? null)}
+                        className="ml-2 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                        placeholder="10 digit number"
+                        inputMode="numeric"
+                        maxLength={10}
+                        {...form.register("personalPhone")}
+                        onChange={(event) => form.setValue("personalPhone", event.target.value.replace(/\D/g, "").slice(0, 10), { shouldValidate: true })}
                       />
-                    </label>
-                    <p className="text-center text-xs text-slate-400">PNG, JPG, or WEBP under 200KB (optional)</p>
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-2 md:pr-1">
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Full name *
-                      <input className={inputClassName} placeholder="Your full name" {...form.register("fullName")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.fullName?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Account email
-                      <input className={readOnlyInputClassName} type="email" value={session?.user?.email ?? ""} readOnly disabled />
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Personal phone number *
-                      <div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-brand-900 focus-within:ring-4 focus-within:ring-brand-900/10">
-                        <span className="text-sm font-semibold text-slate-500">+91</span>
-                        <input
-                          className="ml-2 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                          placeholder="10 digit number"
-                          inputMode="numeric"
-                          maxLength={10}
-                          {...form.register("personalPhone")}
-                          onChange={(event) => form.setValue("personalPhone", event.target.value.replace(/\D/g, "").slice(0, 10), { shouldValidate: true })}
-                        />
-                      </div>
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.personalPhone?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Date of birth *
-                      <input type="date" className={inputClassName} {...form.register("dob")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.dob?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
-                      Location *
-                      <input className={inputClassName} placeholder="City, State" {...form.register("location")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.location?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Gender *
-                      <select className={inputClassName} {...form.register("gender")}>
-                        <option value="">Select gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Prefer not to say">Prefer not to say</option>
-                      </select>
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.gender?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Profession *
-                      <input className={inputClassName} placeholder="Your profession" {...form.register("profession")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.profession?.message ?? ""}</p>
-                    </label>
-                  </div>
-                </section>
-
-                <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
-                      <Building2 className="h-5 w-5" />
                     </div>
-                    <div>
-                      <p className="text-lg font-semibold text-slate-950">Organization details</p>
-                      <p className="mt-1 text-sm text-slate-500">These details will be reviewed by our onboarding team.</p>
-                    </div>
-                  </div>
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.personalPhone?.message ?? ""}</p>
+                  </label>
 
-                  <div className="mt-5 grid gap-3 md:grid-cols-2">
-                    <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
-                      Organization name *
-                      <input className={inputClassName} placeholder="Organization name" {...form.register("orgName")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.orgName?.message ?? ""}</p>
-                    </label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Date of birth *
+                    <input type="date" className={inputClassName} {...form.register("dob")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.dob?.message ?? ""}</p>
+                  </label>
 
-                    <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
-                      Organization description *
-                      <textarea className={textareaClassName} placeholder="Tell us about your organization" {...form.register("description")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.description?.message ?? ""}</p>
-                    </label>
+                  <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                    Location *
+                    <input className={inputClassName} placeholder="City, State" {...form.register("location")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.location?.message ?? ""}</p>
+                  </label>
 
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Contact email *
-                      <input className={inputClassName} placeholder="contact@organization.com" {...form.register("contactEmail")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.contactEmail?.message ?? ""}</p>
-                    </label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Gender *
+                    <select className={inputClassName} {...form.register("gender")}>
+                      <option value="">Select gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.gender?.message ?? ""}</p>
+                  </label>
 
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Contact phone *
-                      <input className={inputClassName} placeholder="Organizer contact number" {...form.register("contactPhone")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.contactPhone?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Primary contact name
-                      <input className={inputClassName} placeholder="Primary contact person" {...form.register("primaryContactName")} />
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Secondary contact phone
-                      <input className={inputClassName} placeholder="Optional backup number" {...form.register("secondaryContactPhone")} />
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
-                      Address *
-                      <input className={inputClassName} placeholder="Street address" {...form.register("address")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.address?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      City *
-                      <input className={inputClassName} placeholder="City" {...form.register("city")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.city?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      State *
-                      <input className={inputClassName} placeholder="State" {...form.register("state")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.state?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Pincode *
-                      <input className={inputClassName} placeholder="Pincode" {...form.register("pincode")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.pincode?.message ?? ""}</p>
-                    </label>
-
-                    <div className="hidden md:block" />
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Website
-                      <input className={inputClassName} placeholder="https://your-website.com" {...form.register("websiteUrl")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.websiteUrl?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      Instagram
-                      <input className={inputClassName} placeholder="https://instagram.com/your-handle" {...form.register("instagramUrl")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.instagramUrl?.message ?? ""}</p>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-slate-700">
-                      LinkedIn
-                      <input className={inputClassName} placeholder="https://linkedin.com/company/your-page" {...form.register("linkedinUrl")} />
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.linkedinUrl?.message ?? ""}</p>
-                    </label>
-                  </div>
-                </section>
-              </>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Profession *
+                    <input className={inputClassName} placeholder="Your profession" {...form.register("profession")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.profession?.message ?? ""}</p>
+                  </label>
+                </div>
+              </section>
             ) : null}
 
             {step === 1 ? (
+              <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-slate-950">Organization details</p>
+                    <p className="mt-1 text-sm text-slate-500">These details will be reviewed by our onboarding team.</p>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                    Organization name *
+                    <input className={inputClassName} placeholder="Organization name" {...form.register("orgName")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.orgName?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                    Organization description *
+                    <textarea className={textareaClassName} placeholder="Tell us about your organization" {...form.register("description")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.description?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Contact email *
+                    <input className={inputClassName} placeholder="contact@organization.com" {...form.register("contactEmail")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.contactEmail?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Contact phone *
+                    <input className={inputClassName} placeholder="Organizer contact number" {...form.register("contactPhone")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.contactPhone?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Primary contact name
+                    <input className={inputClassName} placeholder="Primary contact person" {...form.register("primaryContactName")} />
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Secondary contact phone
+                    <input className={inputClassName} placeholder="Optional backup number" {...form.register("secondaryContactPhone")} />
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                    Address *
+                    <input className={inputClassName} placeholder="Street address" {...form.register("address")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.address?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    City *
+                    <input className={inputClassName} placeholder="City" {...form.register("city")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.city?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    State *
+                    <input className={inputClassName} placeholder="State" {...form.register("state")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.state?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Pincode *
+                    <input className={inputClassName} placeholder="Pincode" {...form.register("pincode")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.pincode?.message ?? ""}</p>
+                  </label>
+
+                  <div className="hidden md:block" />
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Website
+                    <input className={inputClassName} placeholder="https://your-website.com" {...form.register("websiteUrl")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.websiteUrl?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Instagram
+                    <input className={inputClassName} placeholder="https://instagram.com/your-handle" {...form.register("instagramUrl")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.instagramUrl?.message ?? ""}</p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    LinkedIn
+                    <input className={inputClassName} placeholder="https://linkedin.com/company/your-page" {...form.register("linkedinUrl")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.linkedinUrl?.message ?? ""}</p>
+                  </label>
+                </div>
+              </section>
+            ) : null}
+
+            {step === 2 ? (
               <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                 <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
                   <div>
@@ -775,10 +823,10 @@ export default function OrganizerOnboardingPage() {
               <p className="text-sm text-slate-500">You can leave this flow and come back later. Your latest step is preserved.</p>
 
               <div className="flex flex-wrap items-center gap-3">
-                {step === 1 ? (
+                {step > 0 ? (
                   <button
                     type="button"
-                    onClick={() => setStep(0)}
+                    onClick={() => setStep((current) => Math.max(current - 1, 0))}
                     className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     Back
@@ -793,6 +841,15 @@ export default function OrganizerOnboardingPage() {
                     className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
                   >
                     {isSavingStepOne ? "Saving..." : "Save & Continue"}
+                  </button>
+                ) : step === 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => void saveStepTwo()}
+                    disabled={isSavingStepTwo}
+                    className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
+                  >
+                    {isSavingStepTwo ? "Saving..." : "Save & Continue"}
                   </button>
                 ) : (
                   <button
