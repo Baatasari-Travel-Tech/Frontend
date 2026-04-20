@@ -47,17 +47,14 @@ const steps = [
   {
     id: 0,
     title: "Personal Details",
-    copy: "Complete your personal profile and account basics.",
   },
   {
     id: 1,
     title: "Organization Details",
-    copy: "Add your organization and contact information.",
   },
   {
     id: 2,
     title: "Bank Details",
-    copy: "Add PAN, GST, and payout details for verification.",
   },
 ]
 
@@ -510,11 +507,10 @@ export default function OrganizerOnboardingPage() {
       <main className="page-x py-6 sm:py-8">
         <div className="rounded-[2rem] border border-white/60 bg-white/90 p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur md:p-6">
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-900">Organizer onboarding</p>
-            <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">Complete your organizer setup</h1>
+            <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">Organizer Onboarding</h1>
             <p className="max-w-3xl text-sm leading-6 text-slate-500">
-              Complete your personal details, organization details, and bank details in sequence. Your progress is saved as
-              you move through the flow, so you can come back and continue later.
+              Complete your personal details, organization details, and bank details.
+              <p>Your progress is saved as you move through the flow, so you can come back and continue later.</p>
             </p>
           </div>
 
@@ -556,7 +552,6 @@ export default function OrganizerOnboardingPage() {
                       <div className="min-w-0">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Step {item.id + 1}</p>
                         <p className="mt-1 text-base font-semibold text-slate-950">{item.title}</p>
-                        <p className="mt-1 text-sm text-slate-600">{item.copy}</p>
                       </div>
                     </div>
                   </button>
@@ -571,7 +566,6 @@ export default function OrganizerOnboardingPage() {
                 <div className="flex h-full flex-col items-center justify-between gap-5 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                   <div className="w-full">
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Profile picture</p>
-                    <p className="mt-2 text-sm text-slate-500">This also completes your user profile.</p>
                   </div>
 
                   <div className="relative h-52 w-52 overflow-hidden rounded-full border border-slate-200 bg-slate-50 shadow-[0_12px_22px_rgba(15,23,42,0.08)]">
@@ -658,7 +652,6 @@ export default function OrganizerOnboardingPage() {
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-slate-950">Organization details</p>
-                    <p className="mt-1 text-sm text-slate-500">These details will be reviewed by our onboarding team.</p>
                   </div>
                 </div>
 
@@ -754,9 +747,6 @@ export default function OrganizerOnboardingPage() {
                       </div>
                       <div>
                         <p className="text-lg font-semibold text-slate-950">Bank and tax details</p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          These details help us validate your organization and prepare payouts.
-                        </p>
                       </div>
                     </div>
 
@@ -797,15 +787,6 @@ export default function OrganizerOnboardingPage() {
                       <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
                         <ShieldCheck className="h-5 w-5" />
                       </div>
-                      <div>
-                        <p className="text-lg font-semibold text-slate-950">What happens next</p>
-                        <div className="mt-3 grid gap-3 text-sm leading-6 text-slate-600">
-                          <p>Your account will move to email verification right after submit.</p>
-                          <p>After verification, you will land on the approval pending page.</p>
-                          <p>Our onboarding team will contact you for document verification and organization verification.</p>
-                          <p>Please keep your PAN, GST, and organization details ready.</p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -820,7 +801,6 @@ export default function OrganizerOnboardingPage() {
             ) : null}
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-2">
-              <p className="text-sm text-slate-500">You can leave this flow and come back later. Your latest step is preserved.</p>
 
               <div className="flex flex-wrap items-center gap-3">
                 {step > 0 ? (
