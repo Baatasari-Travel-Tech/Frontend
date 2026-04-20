@@ -16,7 +16,7 @@ import { AuthModalRoot } from '@/components/auth/auth-modal'
 import { useAuthModal } from '@/components/auth/auth-modal-context'
 
 function UserMenu() {
-  const { activeRole, userRoles, switchRole, profile } = useAuth()
+  const { activeRole, userRoles, switchRole, profile, user } = useAuth()
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [showRoles, setShowRoles] = useState(false)
@@ -40,6 +40,8 @@ function UserMenu() {
     userRoles.some((record) => record.role === role)
   )
   const canSwitchRoles = hasOrganizerRole && switchableRoles.length > 1
+  const isOrganizerEmailUnverified = activeRole === 'EVENT_ORGANIZER' && user?.emailVerified === false
+  const showActivityLink = activeRole === 'USER'
 
   const handleSwitch = async (role: AppRole) => {
     if (role === activeRole || busy || !switchableRoles.includes(role)) return
@@ -110,23 +112,31 @@ function UserMenu() {
             >
               Profile
             </Link>
-            <Link
-              href="/history"
-              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              onClick={() => setOpen(false)}
-            >
-              Your Activity
-            </Link>
+            {showActivityLink && (
+              <Link
+                href="/history"
+                className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                onClick={() => setOpen(false)}
+              >
+                Your Activity
+              </Link>
+            )}
             {canSwitchRoles && (
               <>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() => setShowRoles(s => !s)}
+                  disabled={isOrganizerEmailUnverified}
                 >
                   <span>Switch to</span>
                   <ArrowLeftRight className="h-4 w-4 text-slate-500" />
                 </button>
+                {isOrganizerEmailUnverified && (
+                  <p className="px-3 pt-1 text-xs text-slate-500">
+                    Verify your email to switch profiles.
+                  </p>
+                )}
                 {showRoles && (
                   <div className="mt-1 grid gap-1 rounded-xl bg-slate-50 p-2">
                     {switchableRoles.map(role => {
@@ -150,7 +160,7 @@ function UserMenu() {
                               : 'text-slate-700 hover:bg-white'
                           }`}
                           onClick={() => handleSwitch(role)}
-                          disabled={isActive || busy}
+                          disabled={isActive || busy || isOrganizerEmailUnverified}
                         >
                           <span>{ROLE_LABELS[role]}</span>
                           <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${chipClass}`}>
