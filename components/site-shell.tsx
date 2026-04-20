@@ -212,9 +212,9 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     } finally {
       setLogoutKey((prev) => prev + 1)
       if (typeof window !== 'undefined') {
-        window.location.replace(`/?auth=login&logout=${Date.now()}`)
+        window.location.replace('/')
       } else {
-        router.replace('/?auth=login')
+        router.replace('/')
         router.refresh()
       }
     }
