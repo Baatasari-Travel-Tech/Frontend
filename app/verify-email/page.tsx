@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
 
 export default function VerifyEmailPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { bootstrap } = useAuth()
   const token = searchParams.get("token")
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -26,15 +28,16 @@ export default function VerifyEmailPage() {
       method: "POST",
       body: JSON.stringify({ token }),
     })
-      .then(() => {
+      .then(async () => {
         setStatus("success")
+        await bootstrap().catch(() => undefined)
         setTimeout(() => router.replace("/organizer/pending"), 1200)
       })
       .catch((error) => {
         setStatus("error")
         setErrorMessage(error instanceof Error ? error.message : "Could not verify email.")
       })
-  }, [router, token])
+  }, [bootstrap, router, token])
 
   return (
     <main className="page-x flex min-h-[calc(100dvh-96px)] items-center justify-center py-12">
@@ -42,6 +45,9 @@ export default function VerifyEmailPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-900">Organizer verification</p>
         <h1 className="mt-3 font-bricolage text-4xl text-slate-950">Email Verification</h1>
         <p className="mt-4 text-sm text-slate-600">{errorMessage ?? message}</p>
+        {status === "success" ? (
+          <p className="mt-3 text-xs uppercase tracking-[0.24em] text-slate-400">Redirecting to approval pending</p>
+        ) : null}
       </div>
     </main>
   )
