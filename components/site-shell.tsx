@@ -232,7 +232,8 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     if (activeRole === 'EVENT_ORGANIZER') {
       const organizerOnboarded = organizerRoleRecord?.onboarding_completed === true
       if (!organizerOnboarded) return getRoleOnboarding('EVENT_ORGANIZER')
-      if (organizerVerificationStatus !== 'APPROVED') return '/'
+      if (organizerVerificationStatus === 'EMAIL_NOT_VERIFIED') return '/organizer/email-verification'
+      if (organizerVerificationStatus !== 'APPROVED') return '/organizer/pending'
       return getRoleDashboard('EVENT_ORGANIZER')
     }
 

@@ -1,10 +1,34 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
+import { useAuth } from "@/app/providers"
 
 export default function OrganizerPendingPage() {
+  const router = useRouter()
+  const { user, organizerVerificationStatus } = useAuth()
+
+  useEffect(() => {
+    if (!user || user.role !== "ORGANIZER") return
+
+    if (user.onboardingStatus !== "COMPLETED") {
+      router.replace("/organizer/onboarding")
+      return
+    }
+
+    if (organizerVerificationStatus === "EMAIL_NOT_VERIFIED") {
+      router.replace("/organizer/email-verification")
+      return
+    }
+
+    if (organizerVerificationStatus === "APPROVED") {
+      router.replace("/organizer/dashboard")
+    }
+  }, [organizerVerificationStatus, router, user])
+
   return (
     <ProtectedRoute requireOnboarding={false}>
       <PageShell
@@ -25,10 +49,10 @@ export default function OrganizerPendingPage() {
                 Please keep your PAN, GST, and organization details ready so the review can move quickly.
               </div>
               <Link
-                href="/dashboard"
+                href="/organizer/profile"
                 className="inline-flex w-fit items-center justify-center rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white"
               >
-                Open user side
+                Open organizer profile
               </Link>
             </div>
           </SectionCard>
@@ -39,11 +63,17 @@ export default function OrganizerPendingPage() {
                 Use the switch role option in the navbar profile dropdown to move back to the user side whenever you want.
               </div>
               <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Continue browsing events, managing your personal profile, and using all user-facing features while approval is in progress.
+                Your organizer profile stays available here so you can review the onboarding details you already submitted.
               </div>
               <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
                 Organizer dashboard access, event creation, analytics, and management tools will unlock after approval.
               </div>
+              <Link
+                href="/dashboard"
+                className="inline-flex w-fit items-center justify-center rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700"
+              >
+                Open user side
+              </Link>
             </div>
           </SectionCard>
         </div>

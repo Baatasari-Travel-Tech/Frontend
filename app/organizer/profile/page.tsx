@@ -28,7 +28,7 @@ const schema = z.object({
 type Values = z.infer<typeof schema>
 
 export default function OrganizerProfilePage() {
-  const { organizerProfile } = useAuth()
+  const { organizerProfile, profile } = useAuth()
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [kycFile, setKycFile] = useState<File | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -137,8 +137,8 @@ export default function OrganizerProfilePage() {
   })
 
   return (
-    <ProtectedRoute requireOrganizer>
-      <PageShell eyebrow="Organizer profile" title="Keep your organizer identity current" description="These details power organizer-facing screens and public-facing event credibility.">
+    <ProtectedRoute requireOrganizer allowPendingOrganizer>
+      <PageShell eyebrow="Organizer profile" title="Keep your organizer identity current" description="This page stays available after email verification so you can review and update the same organizer details you shared during onboarding.">
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <SectionCard title="Organizer details">
             <form className="grid gap-5" onSubmit={onSubmit}>
@@ -196,13 +196,17 @@ export default function OrganizerProfilePage() {
             </form>
           </SectionCard>
 
-          <SectionCard title="Organizer trust signals">
+          <SectionCard title="Onboarding summary">
             <div className="grid gap-3 text-sm leading-6 text-slate-600">
               <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Updated brand and document assets help future moderation and internal review workflows stay consistent.
+                <p className="font-semibold text-slate-900">Personal details</p>
+                <p className="mt-1">Name: {profile?.full_name ?? "Not added yet"}</p>
+                <p>Phone: {profile?.phone ?? "Not added yet"}</p>
+                <p>Location: {profile?.location ?? "Not added yet"}</p>
+                <p>Profession: {profile?.profession ?? "Not added yet"}</p>
               </div>
               <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Public event trust benefits from clear organizer branding and contact details.
+                Updated brand and document assets help moderation and verification stay consistent while your organizer account is pending approval.
               </div>
             </div>
           </SectionCard>

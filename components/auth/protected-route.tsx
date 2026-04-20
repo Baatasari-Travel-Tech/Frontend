@@ -11,6 +11,7 @@ type ProtectedRouteProps = {
   requireOrganizer?: boolean
   requireAdmin?: boolean
   requireTalentPaid?: boolean
+  allowPendingOrganizer?: boolean
 }
 
 export function ProtectedRoute({
@@ -19,6 +20,7 @@ export function ProtectedRoute({
   requireOrganizer = false,
   requireAdmin = false,
   requireTalentPaid = false,
+  allowPendingOrganizer = false,
 }: ProtectedRouteProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -57,7 +59,7 @@ export function ProtectedRoute({
         return
       }
 
-      if (organizerVerificationStatus !== "APPROVED") {
+      if (organizerVerificationStatus !== "APPROVED" && !allowPendingOrganizer) {
         router.replace("/organizer/pending")
         return
       }
@@ -76,6 +78,7 @@ export function ProtectedRoute({
     pathname,
     profile?.global_onboarding_completed,
     requireAdmin,
+    allowPendingOrganizer,
     requireOnboarding,
     requireOrganizer,
     requireTalentPaid,

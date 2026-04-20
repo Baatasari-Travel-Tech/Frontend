@@ -26,6 +26,14 @@ export function resolveUserHome(params: {
     return "/organizer/dashboard"
   }
 
+  if (user.role === "ORGANIZER" && userReady && organizerVerificationStatus === "EMAIL_NOT_VERIFIED") {
+    return "/organizer/email-verification"
+  }
+
+  if (user.role === "ORGANIZER" && userReady && organizerVerificationStatus !== "APPROVED") {
+    return "/organizer/pending"
+  }
+
   const hasTalentRole = userRoles.some((record) => record.role === "TALENT")
   if (activeRole === "TALENT" && hasTalentRole) {
     return "/talent/dashboard"

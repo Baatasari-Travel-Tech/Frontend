@@ -1,7 +1,6 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
-import { usePathname } from "next/navigation"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
 import { isAdminRoutePath } from "@/lib/admin/routes"
@@ -151,7 +150,6 @@ export function useAuth(): AuthCtx {
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
   const [isLoadingOrganizerStatus, setIsLoadingOrganizerStatus] = useState(false)
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false)
@@ -293,13 +291,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }, [clearSession, hydrateForUser, setAccessToken, setBootstrapping])
 
   useEffect(() => {
-    if (isAdminRoutePath(pathname)) {
+    if (typeof window !== "undefined" && isAdminRoutePath(window.location.pathname)) {
       setBootstrapping(false)
       return
     }
 
     void bootstrap()
-  }, [bootstrap, pathname, setBootstrapping])
+  }, [bootstrap, setBootstrapping])
 
   const login = async (payload: { email: string; password: string }) => {
     const response = await apiRequest<AuthResponse>("/auth/login", {
@@ -308,7 +306,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     })
 
     setAccessToken(response.accessToken)
-    void hydrateForUser(response.user)
+    await hydrateForUser(response.user)
   }
 
   const register = async (payload: { email: string; password: string; role: "USER" | "ORGANIZER" }) => {
@@ -319,7 +317,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
     setAccessToken(response.accessToken)
     setActiveRole(payload.role === "ORGANIZER" ? "ORGANIZER" : "USER")
-    void hydrateForUser(response.user)
+    await hydrateForUser(response.user)
   }
 
   const logout = async () => {
@@ -341,7 +339,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
     setAccessToken(response.accessToken)
     setActiveRole(response.user.role === "ORGANIZER" ? "ORGANIZER" : "USER")
-    void hydrateForUser(response.user)
+    await hydrateForUser(response.user)
   }
 
   const switchRole = async (role: AppRole) => {
