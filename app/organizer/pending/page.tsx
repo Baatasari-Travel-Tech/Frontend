@@ -68,12 +68,6 @@ export default function OrganizerPendingPage() {
               <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
                 Organizer dashboard access, event creation, analytics, and management tools will unlock after approval.
               </div>
-              <Link
-                href="/dashboard"
-                className="inline-flex w-fit items-center justify-center rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700"
-              >
-                Open user side
-              </Link>
             </div>
           </SectionCard>
         </div>
