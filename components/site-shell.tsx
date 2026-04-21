@@ -42,6 +42,7 @@ function UserMenu() {
   const canSwitchRoles = hasOrganizerRole && switchableRoles.length > 1
   const isOrganizerEmailUnverified = activeRole === 'EVENT_ORGANIZER' && user?.emailVerified === false
   const showActivityLink = activeRole === 'USER'
+  const profileHref = activeRole === 'EVENT_ORGANIZER' ? '/organizer/profile' : '/profile'
 
   const handleSwitch = async (role: AppRole) => {
     if (role === activeRole || busy || !switchableRoles.includes(role)) return
@@ -106,7 +107,7 @@ function UserMenu() {
         <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
           <div className="grid gap-1">
             <Link
-              href="/profile"
+              href={profileHref}
               className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               onClick={() => setOpen(false)}
             >
@@ -354,4 +355,3 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
     </AuthModalRoot>
   )
 }
-
