@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { FaFacebook, FaInstagram, FaLinkedin, FaTwitter, FaYoutube } from "react-icons/fa"
+import { FaInstagram, FaLinkedin, FaTwitter } from "react-icons/fa"
 import SuggestionsForm from "@/components/suggestions-form"
 import { EventList } from "@/components/events/event-list"
 import { EventsHero } from "@/components/events/hero"
@@ -174,16 +174,10 @@ export default function EventsPage() {
                 <FaInstagram className="h-5 w-5" />
               </a>
               <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800" href="#">
-                <FaFacebook className="h-5 w-5" />
-              </a>
-              <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800" href="#">
-                <FaTwitter className="h-5 w-5" />
-              </a>
-              <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800" href="#">
                 <FaLinkedin className="h-5 w-5" />
               </a>
               <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800" href="#">
-                <FaYoutube className="h-5 w-5" />
+                <FaTwitter className="h-5 w-5" />
               </a>
             </div>
           </div>

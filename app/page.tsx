@@ -6,7 +6,7 @@ import { useAuth } from '@/app/providers'
 import { getRoleDashboard, getRoleOnboarding } from '@/lib/roles'
 import Hero from "@/components/about/hero"
 import Features from "@/components/about/features"
-import { FaFacebook, FaTwitter, FaLinkedin, FaYoutube, FaInstagram} from "react-icons/fa";
+import { FaTwitter, FaLinkedin, FaInstagram} from "react-icons/fa";
 import Image from "next/image";
 import SuggestionsForm from "@/components/suggestions-form"
 import EventOrganizer from "@/components/about/organizer"
@@ -122,16 +122,10 @@ export default function AboutPage() {
                       <FaInstagram className="h-5 w-5" />
                     </a>
                     <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800">
-                      <FaFacebook className="h-5 w-5" />
-                    </a>
-                    <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800">
-                      <FaTwitter className="h-5 w-5" />
-                    </a>
-                    <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800">
                       <FaLinkedin className="h-5 w-5" />
                     </a>
                     <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800">
-                      <FaYoutube className="h-5 w-5" />
+                      <FaTwitter className="h-5 w-5" />
                     </a>
                   </div>
 
