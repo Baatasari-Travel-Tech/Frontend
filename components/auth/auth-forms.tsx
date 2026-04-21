@@ -133,6 +133,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const { googleReady, prompt } = useGoogleIdentity(async (credential) => {
     setError(null)
@@ -149,6 +150,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
       setError(message)
     } finally {
       setLoading(false)
+      setGoogleLoading(false)
       setIsAuthenticating(false)
     }
   })
@@ -193,6 +195,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
 
   const handleGoogle = async () => {
     setError(null)
+    setGoogleLoading(true)
 
     try {
       logAuth('login:google:start')
@@ -201,6 +204,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
       const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
       logAuthError('login:google:prompt-error', { message })
       setError(message)
+      setGoogleLoading(false)
     }
   }
 
@@ -270,9 +274,10 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
         <button
           className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
           onClick={() => void handleGoogle()}
-          disabled={loading || !googleReady}
+          disabled={loading || googleLoading || !googleReady}
         >
-          <GoogleIcon /> Continue with Google
+          {googleLoading ? <InlineSpinner /> : <GoogleIcon />}
+          {googleLoading ? 'Opening Google...' : 'Continue with Google'}
         </button>
       </div>
 
@@ -317,6 +322,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   const [role, setRole] = useState<'user' | 'organizer'>(initialRole)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
 
   const selectedRole: 'USER' | 'ORGANIZER' = role === 'organizer' ? 'ORGANIZER' : 'USER'
@@ -336,6 +342,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       setError(message)
     } finally {
       setLoading(false)
+      setGoogleLoading(false)
       setIsAuthenticating(false)
     }
   })
@@ -376,6 +383,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
   const handleGoogle = async () => {
     setError(null)
+    setGoogleLoading(true)
 
     try {
       logAuth('register:google:start', { role: selectedRole })
@@ -384,6 +392,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
       logAuthError('register:google:prompt-error', { message, role: selectedRole })
       setError(message)
+      setGoogleLoading(false)
     }
   }
 
@@ -539,11 +548,11 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
       <button
         onClick={() => void handleGoogle()}
-        disabled={loading || !googleReady}
+        disabled={loading || googleLoading || !googleReady}
         className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
       >
-        <GoogleIcon />
-        Continue with Google
+        {googleLoading ? <InlineSpinner /> : <GoogleIcon />}
+        {googleLoading ? 'Opening Google...' : 'Continue with Google'}
       </button>
 
       <div className="space-y-2 text-center text-sm text-slate-500">

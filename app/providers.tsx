@@ -244,10 +244,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }, [setTalentProfile])
 
   const hydrateForUser = useCallback(async (currentUser: SafeUser) => {
-    const nextActiveRole: ActiveRole =
-      currentUser.role === "ORGANIZER" && useAuthStore.getState().activeRole === "ORGANIZER"
-        ? "ORGANIZER"
-        : "USER"
+    const nextActiveRole: ActiveRole = currentUser.role === "ORGANIZER" ? "ORGANIZER" : "USER"
 
     setUser(currentUser)
     setActiveRole(nextActiveRole)
