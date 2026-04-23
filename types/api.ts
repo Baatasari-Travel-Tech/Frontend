@@ -210,7 +210,11 @@ export type TalentProfile = {
 };
 
 export type AdminUserListResponse = {
-  users: SafeUser[];
+  users: Array<
+    SafeUser & {
+      organizationName: string | null;
+    }
+  >;
   total: number;
   page: number;
   limit: number;

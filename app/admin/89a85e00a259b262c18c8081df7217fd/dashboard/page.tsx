@@ -16,6 +16,9 @@ import { clearAdminToken, getAdminToken } from "@/lib/admin/session"
 import type { AdminDashboardResponse, AdminPendingOrganizerUser, SafeUser } from "@/types/api"
 
 type AdminListTab = "USERS" | "ORGANIZERS"
+type AdminDashboardUser = SafeUser & {
+  organizationName: string | null
+}
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString("en-IN", {
@@ -24,7 +27,7 @@ const formatDate = (value: string) =>
     year: "numeric",
   })
 
-const getOrganizationName = (pending: AdminPendingOrganizerUser | undefined) => {
+const getPendingOrganizationName = (pending: AdminPendingOrganizerUser | undefined) => {
   const profile = pending?.profile
   if (!profile || typeof profile !== "object" || Array.isArray(profile)) return "N/A"
 
@@ -38,7 +41,7 @@ export default function AdminDashboardPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null)
-  const [users, setUsers] = useState<SafeUser[]>([])
+  const [users, setUsers] = useState<AdminDashboardUser[]>([])
   const [pendingOrganizers, setPendingOrganizers] = useState<AdminPendingOrganizerUser[]>([])
   const [tab, setTab] = useState<AdminListTab>("USERS")
   const [search, setSearch] = useState("")
@@ -113,18 +116,21 @@ export default function AdminDashboardPage() {
     return source.filter((user) => user.email.toLowerCase().includes(emailSearch))
   }, [search, users])
 
-  const pendingOrganizersWithCompletedOnboarding = useMemo(
-    () => pendingOrganizers.filter((user) => user.onboardingStatus === "COMPLETED"),
+  const pendingOrganizersEligibleForApproval = useMemo(
+    () =>
+      pendingOrganizers.filter(
+        (user) => user.onboardingStatus === "COMPLETED" && user.emailVerified
+      ),
     [pendingOrganizers]
   )
 
   const filteredPendingOrganizers = useMemo(() => {
     const search = organizerSearch.trim().toLowerCase()
-    if (!search) return pendingOrganizersWithCompletedOnboarding
-    return pendingOrganizersWithCompletedOnboarding.filter((user) =>
+    if (!search) return pendingOrganizersEligibleForApproval
+    return pendingOrganizersEligibleForApproval.filter((user) =>
       user.email.toLowerCase().includes(search)
     )
-  }, [organizerSearch, pendingOrganizersWithCompletedOnboarding])
+  }, [organizerSearch, pendingOrganizersEligibleForApproval])
 
   const cards = useMemo(() => {
     if (!dashboard) return []
@@ -132,9 +138,9 @@ export default function AdminDashboardPage() {
     return [
       { label: "Total users", value: dashboard.stats.totalUsers },
       { label: "Organizers", value: dashboard.stats.organizerCount },
-      { label: "Pending approvals", value: pendingOrganizersWithCompletedOnboarding.length },
+      { label: "Pending approvals", value: pendingOrganizersEligibleForApproval.length },
     ]
-  }, [dashboard, pendingOrganizersWithCompletedOnboarding.length])
+  }, [dashboard, pendingOrganizersEligibleForApproval.length])
 
   const handleDeleteUser = async (id: string, email: string) => {
     const isConfirmed = window.confirm(`Delete user ${email}? This action cannot be undone.`)
@@ -343,7 +349,8 @@ export default function AdminDashboardPage() {
                   {filteredOrganizers.map((organizer) => (
                     <tr key={organizer.id} className="border-b border-slate-100 text-slate-700">
                       <td className="px-3 py-3 font-semibold text-slate-900">
-                        {getOrganizationName(pendingById.get(organizer.id))}
+                        {organizer.organizationName?.trim() ||
+                          getPendingOrganizationName(pendingById.get(organizer.id))}
                       </td>
                       <td className="px-3 py-3">{organizer.email}</td>
                       <td className="px-3 py-3 text-xs font-mono text-slate-500">{organizer.id}</td>
