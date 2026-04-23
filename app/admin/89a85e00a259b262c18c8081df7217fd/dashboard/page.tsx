@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { RefreshCw } from "lucide-react"
 import {
   deleteAdminUser,
   getAdminDashboard,
@@ -42,6 +43,7 @@ export default function AdminDashboardPage() {
   const [tab, setTab] = useState<AdminListTab>("USERS")
   const [search, setSearch] = useState("")
   const [organizerSearch, setOrganizerSearch] = useState("")
+  const [refreshing, setRefreshing] = useState(false)
 
   const refresh = useCallback(async (logoutOnFailure = true) => {
     try {
@@ -81,6 +83,15 @@ export default function AdminDashboardPage() {
   const handleLogout = () => {
     clearAdminToken()
     router.replace("/")
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    try {
+      await refresh()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   const pendingById = useMemo(
@@ -154,12 +165,24 @@ export default function AdminDashboardPage() {
               {dashboard?.message ?? "Manage users and organizer approvals."}
             </p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleRefresh()}
+              disabled={refreshing}
+              aria-label="Refresh dashboard data"
+              title="Refresh dashboard data"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
+            <button
+              onClick={handleLogout}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {error ? (
