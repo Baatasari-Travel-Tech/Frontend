@@ -389,7 +389,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                     {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                   </button>
                   <button
-                    className="hidden items-center justify-center rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-100 hover:text-red-800 md:inline-flex"
+                    className="hidden items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 md:inline-flex"
                     onClick={() => void handleLogout()}
                   >
                     Logout
