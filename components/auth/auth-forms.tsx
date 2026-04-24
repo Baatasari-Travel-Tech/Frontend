@@ -57,8 +57,6 @@ type GoogleWindow = Window & {
   }
 }
 
-const GOOGLE_PROMPT_TIMEOUT_MS = 4000
-
 const resolveGoogleNotDisplayedMessage = (reason: string) => {
   if (reason === 'browser_not_supported') {
     return 'Google sign-in is not supported in this browser. Please use email/password instead.'
@@ -86,6 +84,16 @@ const resolveAuthDestination = (searchParams: { get: (key: string) => string | n
   const redirect = searchParams.get('redirect')
   if (redirect && redirect.startsWith('/')) return redirect
   return resolvePostAuthDestination()
+}
+
+const resolveGoogleOAuthRedirectUrl = (role: 'USER' | 'ORGANIZER', redirectPath: string) => {
+  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? ''
+  const params = new URLSearchParams()
+  params.set('role', role)
+  if (redirectPath.startsWith('/')) {
+    params.set('redirect', redirectPath)
+  }
+  return `${base}/api/v1/auth/google/redirect?${params.toString()}`
 }
 
 const useGoogleIdentity = (onCredential: (credential: string) => Promise<void>) => {
@@ -158,16 +166,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const googleTimeoutRef = useRef<number | null>(null)
-
-  const clearGoogleTimeout = () => {
-    if (googleTimeoutRef.current !== null) {
-      window.clearTimeout(googleTimeoutRef.current)
-      googleTimeoutRef.current = null
-    }
-  }
-
-  useEffect(() => () => clearGoogleTimeout(), [])
+  const autoPromptedRef = useRef(false)
 
   const { googleReady, prompt } = useGoogleIdentity(async (credential) => {
     setError(null)
@@ -183,7 +182,6 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
       logAuthError('login:google:error', { message })
       setError(message)
     } finally {
-      clearGoogleTimeout()
       setLoading(false)
       setGoogleLoading(false)
       setIsAuthenticating(false)
@@ -228,63 +226,55 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
     }
   }
 
-  const handleGoogle = async () => {
+  useEffect(() => {
+    if (!googleReady || autoPromptedRef.current) return
+
+    autoPromptedRef.current = true
+    logAuth('login:google:auto-prompt')
+    void prompt((notification) => {
+      try {
+        if (notification.isNotDisplayed()) {
+          const reason = notification.getNotDisplayedReason()
+          logAuthError('login:google:auto-not-displayed', { reason })
+          if (reason === 'browser_not_supported') {
+            setError(resolveGoogleNotDisplayedMessage(reason))
+          }
+          return
+        }
+
+        if (notification.isSkippedMoment()) {
+          const reason = notification.getSkippedReason()
+          logAuth('login:google:auto-skipped', { reason })
+          return
+        }
+
+        if (notification.isDismissedMoment()) {
+          const reason = notification.getDismissedReason()
+          logAuth('login:google:auto-dismissed', { reason })
+        }
+      } catch (momentError) {
+        const message = momentError instanceof Error ? momentError.message : 'Unknown prompt state error.'
+        logAuthError('login:google:auto-moment-error', { message })
+      }
+    }).catch((authError) => {
+      const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
+      logAuthError('login:google:auto-prompt-error', { message })
+    })
+  }, [googleReady, prompt])
+
+  const handleGoogle = () => {
     setError(null)
     setGoogleLoading(true)
-    clearGoogleTimeout()
-
-    googleTimeoutRef.current = window.setTimeout(() => {
-      setGoogleLoading(false)
-      logAuth('login:google:prompt-timeout')
-    }, GOOGLE_PROMPT_TIMEOUT_MS)
+    logAuth('login:google:redirect-start')
 
     try {
-      logAuth('login:google:start')
-      await prompt((notification) => {
-        try {
-          if (notification.isNotDisplayed()) {
-            const reason = notification.getNotDisplayedReason()
-            setError(resolveGoogleNotDisplayedMessage(reason))
-            logAuthError('login:google:not-displayed', { reason })
-            clearGoogleTimeout()
-            setGoogleLoading(false)
-            return
-          }
-
-          if (notification.isSkippedMoment()) {
-            const reason = notification.getSkippedReason()
-            logAuth('login:google:skipped', { reason })
-            clearGoogleTimeout()
-            setGoogleLoading(false)
-            return
-          }
-
-          if (notification.isDismissedMoment()) {
-            const reason = notification.getDismissedReason()
-            logAuth('login:google:dismissed', { reason })
-            if (reason !== 'credential_returned') {
-              clearGoogleTimeout()
-              setGoogleLoading(false)
-            }
-            return
-          }
-
-          if (notification.isDisplayMoment() && notification.isDisplayed()) {
-            clearGoogleTimeout()
-            setGoogleLoading(false)
-          }
-        } catch (momentError) {
-          const message = momentError instanceof Error ? momentError.message : 'Unknown prompt state error.'
-          logAuthError('login:google:moment-error', { message })
-          clearGoogleTimeout()
-          setGoogleLoading(false)
-        }
-      })
+      const redirectPath = resolveAuthDestination(searchParams)
+      const googleUrl = resolveGoogleOAuthRedirectUrl('USER', redirectPath)
+      window.location.assign(googleUrl)
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
-      logAuthError('login:google:prompt-error', { message })
+      logAuthError('login:google:redirect-error', { message })
       setError(message)
-      clearGoogleTimeout()
       setGoogleLoading(false)
     }
   }
@@ -355,7 +345,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
         <button
           className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
           onClick={() => void handleGoogle()}
-          disabled={loading || googleLoading || !googleReady}
+          disabled={loading || googleLoading}
         >
           {googleLoading ? <InlineSpinner /> : <GoogleIcon />}
           {googleLoading ? 'Opening Google...' : 'Continue with Google'}
@@ -405,18 +395,10 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
-  const googleTimeoutRef = useRef<number | null>(null)
-
-  const clearGoogleTimeout = () => {
-    if (googleTimeoutRef.current !== null) {
-      window.clearTimeout(googleTimeoutRef.current)
-      googleTimeoutRef.current = null
-    }
-  }
-
-  useEffect(() => () => clearGoogleTimeout(), [])
 
   const selectedRole: 'USER' | 'ORGANIZER' = role === 'organizer' ? 'ORGANIZER' : 'USER'
+  const autoPromptedOnOpenRef = useRef(false)
+  const previousRoleRef = useRef<'USER' | 'ORGANIZER'>(selectedRole)
 
   const { googleReady, prompt } = useGoogleIdentity(async (credential) => {
     setError(null)
@@ -432,7 +414,6 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       logAuthError('register:google:error', { message, role: selectedRole })
       setError(message)
     } finally {
-      clearGoogleTimeout()
       setLoading(false)
       setGoogleLoading(false)
       setIsAuthenticating(false)
@@ -473,63 +454,66 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
     }
   }
 
-  const handleGoogle = async () => {
+  useEffect(() => {
+    if (!googleReady) return
+
+    const switchedToOrganizer =
+      previousRoleRef.current === 'USER' && selectedRole === 'ORGANIZER'
+    previousRoleRef.current = selectedRole
+
+    const shouldPrompt = !autoPromptedOnOpenRef.current || switchedToOrganizer
+    if (!shouldPrompt) return
+
+    autoPromptedOnOpenRef.current = true
+    logAuth('register:google:auto-prompt', {
+      role: selectedRole,
+      trigger: switchedToOrganizer ? 'role-switch' : 'modal-open',
+    })
+
+    void prompt((notification) => {
+      try {
+        if (notification.isNotDisplayed()) {
+          const reason = notification.getNotDisplayedReason()
+          logAuthError('register:google:auto-not-displayed', { reason, role: selectedRole })
+          if (reason === 'browser_not_supported') {
+            setError(resolveGoogleNotDisplayedMessage(reason))
+          }
+          return
+        }
+
+        if (notification.isSkippedMoment()) {
+          const reason = notification.getSkippedReason()
+          logAuth('register:google:auto-skipped', { reason, role: selectedRole })
+          return
+        }
+
+        if (notification.isDismissedMoment()) {
+          const reason = notification.getDismissedReason()
+          logAuth('register:google:auto-dismissed', { reason, role: selectedRole })
+        }
+      } catch (momentError) {
+        const message = momentError instanceof Error ? momentError.message : 'Unknown prompt state error.'
+        logAuthError('register:google:auto-moment-error', { message, role: selectedRole })
+      }
+    }).catch((authError) => {
+      const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
+      logAuthError('register:google:auto-prompt-error', { message, role: selectedRole })
+    })
+  }, [googleReady, prompt, selectedRole])
+
+  const handleGoogle = () => {
     setError(null)
     setGoogleLoading(true)
-    clearGoogleTimeout()
-
-    googleTimeoutRef.current = window.setTimeout(() => {
-      setGoogleLoading(false)
-      logAuth('register:google:prompt-timeout', { role: selectedRole })
-    }, GOOGLE_PROMPT_TIMEOUT_MS)
+    logAuth('register:google:redirect-start', { role: selectedRole })
 
     try {
-      logAuth('register:google:start', { role: selectedRole })
-      await prompt((notification) => {
-        try {
-          if (notification.isNotDisplayed()) {
-            const reason = notification.getNotDisplayedReason()
-            setError(resolveGoogleNotDisplayedMessage(reason))
-            logAuthError('register:google:not-displayed', { reason, role: selectedRole })
-            clearGoogleTimeout()
-            setGoogleLoading(false)
-            return
-          }
-
-          if (notification.isSkippedMoment()) {
-            const reason = notification.getSkippedReason()
-            logAuth('register:google:skipped', { reason, role: selectedRole })
-            clearGoogleTimeout()
-            setGoogleLoading(false)
-            return
-          }
-
-          if (notification.isDismissedMoment()) {
-            const reason = notification.getDismissedReason()
-            logAuth('register:google:dismissed', { reason, role: selectedRole })
-            if (reason !== 'credential_returned') {
-              clearGoogleTimeout()
-              setGoogleLoading(false)
-            }
-            return
-          }
-
-          if (notification.isDisplayMoment() && notification.isDisplayed()) {
-            clearGoogleTimeout()
-            setGoogleLoading(false)
-          }
-        } catch (momentError) {
-          const message = momentError instanceof Error ? momentError.message : 'Unknown prompt state error.'
-          logAuthError('register:google:moment-error', { message, role: selectedRole })
-          clearGoogleTimeout()
-          setGoogleLoading(false)
-        }
-      })
+      const redirectPath = resolveAuthDestination(searchParams)
+      const googleUrl = resolveGoogleOAuthRedirectUrl(selectedRole, redirectPath)
+      window.location.assign(googleUrl)
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
-      logAuthError('register:google:prompt-error', { message, role: selectedRole })
+      logAuthError('register:google:redirect-error', { message, role: selectedRole })
       setError(message)
-      clearGoogleTimeout()
       setGoogleLoading(false)
     }
   }
@@ -686,7 +670,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
       <button
         onClick={() => void handleGoogle()}
-        disabled={loading || googleLoading || !googleReady}
+        disabled={loading || googleLoading}
         className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
       >
         {googleLoading ? <InlineSpinner /> : <GoogleIcon />}
