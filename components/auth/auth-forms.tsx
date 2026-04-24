@@ -27,6 +27,18 @@ type GoogleCredentialResponse = {
   credential?: string
 }
 
+type GooglePromptMomentNotification = {
+  isDisplayMoment: () => boolean
+  isDisplayed: () => boolean
+  isNotDisplayed: () => boolean
+  getNotDisplayedReason: () => string
+  isSkippedMoment: () => boolean
+  getSkippedReason: () => string
+  isDismissedMoment: () => boolean
+  getDismissedReason: () => string
+  getMomentType: () => string
+}
+
 type GoogleIdConfiguration = {
   client_id: string
   callback: (response: GoogleCredentialResponse) => void
@@ -34,7 +46,7 @@ type GoogleIdConfiguration = {
 
 type GoogleIdApi = {
   initialize: (config: GoogleIdConfiguration) => void
-  prompt: () => void
+  prompt: (momentListener?: (notification: GooglePromptMomentNotification) => void) => void
 }
 
 type GoogleWindow = Window & {
@@ -43,6 +55,16 @@ type GoogleWindow = Window & {
       id?: GoogleIdApi
     }
   }
+}
+
+const GOOGLE_PROMPT_TIMEOUT_MS = 4000
+
+const resolveGoogleNotDisplayedMessage = (reason: string) => {
+  if (reason === 'browser_not_supported') {
+    return 'Google sign-in is not supported in this browser. Please use email/password instead.'
+  }
+
+  return 'Google sign-in was blocked or unavailable. Please allow it in your browser and try again.'
 }
 
 const getOrganizerVerificationStatus = () => {
@@ -99,7 +121,9 @@ const useGoogleIdentity = (onCredential: (credential: string) => Promise<void>) 
     return () => script.removeEventListener('load', handleLoad)
   }, [])
 
-  const prompt = async () => {
+  const prompt = async (
+    momentListener?: (notification: GooglePromptMomentNotification) => void,
+  ) => {
     const google = (window as GoogleWindow).google
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
@@ -116,7 +140,7 @@ const useGoogleIdentity = (onCredential: (credential: string) => Promise<void>) 
       },
     })
 
-    google.accounts.id.prompt()
+    google.accounts.id.prompt(momentListener)
   }
 
   return { googleReady, prompt }
@@ -134,6 +158,16 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const googleTimeoutRef = useRef<number | null>(null)
+
+  const clearGoogleTimeout = () => {
+    if (googleTimeoutRef.current !== null) {
+      window.clearTimeout(googleTimeoutRef.current)
+      googleTimeoutRef.current = null
+    }
+  }
+
+  useEffect(() => () => clearGoogleTimeout(), [])
 
   const { googleReady, prompt } = useGoogleIdentity(async (credential) => {
     setError(null)
@@ -149,6 +183,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
       logAuthError('login:google:error', { message })
       setError(message)
     } finally {
+      clearGoogleTimeout()
       setLoading(false)
       setGoogleLoading(false)
       setIsAuthenticating(false)
@@ -196,14 +231,60 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
   const handleGoogle = async () => {
     setError(null)
     setGoogleLoading(true)
+    clearGoogleTimeout()
+
+    googleTimeoutRef.current = window.setTimeout(() => {
+      setGoogleLoading(false)
+      logAuth('login:google:prompt-timeout')
+    }, GOOGLE_PROMPT_TIMEOUT_MS)
 
     try {
       logAuth('login:google:start')
-      await prompt()
+      await prompt((notification) => {
+        try {
+          if (notification.isNotDisplayed()) {
+            const reason = notification.getNotDisplayedReason()
+            setError(resolveGoogleNotDisplayedMessage(reason))
+            logAuthError('login:google:not-displayed', { reason })
+            clearGoogleTimeout()
+            setGoogleLoading(false)
+            return
+          }
+
+          if (notification.isSkippedMoment()) {
+            const reason = notification.getSkippedReason()
+            logAuth('login:google:skipped', { reason })
+            clearGoogleTimeout()
+            setGoogleLoading(false)
+            return
+          }
+
+          if (notification.isDismissedMoment()) {
+            const reason = notification.getDismissedReason()
+            logAuth('login:google:dismissed', { reason })
+            if (reason !== 'credential_returned') {
+              clearGoogleTimeout()
+              setGoogleLoading(false)
+            }
+            return
+          }
+
+          if (notification.isDisplayMoment() && notification.isDisplayed()) {
+            clearGoogleTimeout()
+            setGoogleLoading(false)
+          }
+        } catch (momentError) {
+          const message = momentError instanceof Error ? momentError.message : 'Unknown prompt state error.'
+          logAuthError('login:google:moment-error', { message })
+          clearGoogleTimeout()
+          setGoogleLoading(false)
+        }
+      })
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
       logAuthError('login:google:prompt-error', { message })
       setError(message)
+      clearGoogleTimeout()
       setGoogleLoading(false)
     }
   }
@@ -324,6 +405,16 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
+  const googleTimeoutRef = useRef<number | null>(null)
+
+  const clearGoogleTimeout = () => {
+    if (googleTimeoutRef.current !== null) {
+      window.clearTimeout(googleTimeoutRef.current)
+      googleTimeoutRef.current = null
+    }
+  }
+
+  useEffect(() => () => clearGoogleTimeout(), [])
 
   const selectedRole: 'USER' | 'ORGANIZER' = role === 'organizer' ? 'ORGANIZER' : 'USER'
 
@@ -341,6 +432,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       logAuthError('register:google:error', { message, role: selectedRole })
       setError(message)
     } finally {
+      clearGoogleTimeout()
       setLoading(false)
       setGoogleLoading(false)
       setIsAuthenticating(false)
@@ -384,14 +476,60 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   const handleGoogle = async () => {
     setError(null)
     setGoogleLoading(true)
+    clearGoogleTimeout()
+
+    googleTimeoutRef.current = window.setTimeout(() => {
+      setGoogleLoading(false)
+      logAuth('register:google:prompt-timeout', { role: selectedRole })
+    }, GOOGLE_PROMPT_TIMEOUT_MS)
 
     try {
       logAuth('register:google:start', { role: selectedRole })
-      await prompt()
+      await prompt((notification) => {
+        try {
+          if (notification.isNotDisplayed()) {
+            const reason = notification.getNotDisplayedReason()
+            setError(resolveGoogleNotDisplayedMessage(reason))
+            logAuthError('register:google:not-displayed', { reason, role: selectedRole })
+            clearGoogleTimeout()
+            setGoogleLoading(false)
+            return
+          }
+
+          if (notification.isSkippedMoment()) {
+            const reason = notification.getSkippedReason()
+            logAuth('register:google:skipped', { reason, role: selectedRole })
+            clearGoogleTimeout()
+            setGoogleLoading(false)
+            return
+          }
+
+          if (notification.isDismissedMoment()) {
+            const reason = notification.getDismissedReason()
+            logAuth('register:google:dismissed', { reason, role: selectedRole })
+            if (reason !== 'credential_returned') {
+              clearGoogleTimeout()
+              setGoogleLoading(false)
+            }
+            return
+          }
+
+          if (notification.isDisplayMoment() && notification.isDisplayed()) {
+            clearGoogleTimeout()
+            setGoogleLoading(false)
+          }
+        } catch (momentError) {
+          const message = momentError instanceof Error ? momentError.message : 'Unknown prompt state error.'
+          logAuthError('register:google:moment-error', { message, role: selectedRole })
+          clearGoogleTimeout()
+          setGoogleLoading(false)
+        }
+      })
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : 'Google sign-in failed. Please try again.'
       logAuthError('register:google:prompt-error', { message, role: selectedRole })
       setError(message)
+      clearGoogleTimeout()
       setGoogleLoading(false)
     }
   }

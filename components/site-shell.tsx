@@ -190,7 +190,7 @@ function UserMenu({
             {showLogout && onLogout ? (
               <button
                 type="button"
-                className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                className="flex w-full items-center justify-between rounded-xl bg-red-50/60 px-3 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                 onClick={() => void handleMenuLogout()}
                 disabled={busy}
               >
@@ -373,6 +373,12 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                 </>
               ) : (
                 <>
+                  <div className="md:hidden">
+                    <UserMenu showLogout onLogout={handleLogout} />
+                  </div>
+                  <div className="hidden md:block">
+                    <UserMenu />
+                  </div>
                   <button
                     type="button"
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 md:hidden"
@@ -382,9 +388,8 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                   >
                     {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                   </button>
-                  <UserMenu />
                   <button
-                    className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
+                    className="hidden items-center justify-center rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-100 hover:text-red-800 md:inline-flex"
                     onClick={() => void handleLogout()}
                   >
                     Logout
@@ -395,19 +400,19 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
               <>
                 <button
                   type="button"
+                  className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
+                  onClick={() => openModal('register')}
+                >
+                  Get started
+                </button>
+                <button
+                  type="button"
                   className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 md:hidden"
                   onClick={() => setMobileMenuOpen((prev) => !prev)}
                   aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                   aria-expanded={mobileMenuOpen}
                 >
                   {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
-                  onClick={() => openModal('register')}
-                >
-                  Get started
                 </button>
               </>
             )}
