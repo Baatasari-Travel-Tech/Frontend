@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { useAuth } from '@/app/providers'
-import { ArrowLeftRight } from 'lucide-react'
+import { ArrowLeftRight, Bell, Menu, Plus, X } from 'lucide-react'
 import LoadingScreen from '@/components/loading-screen'
 import { isAdminRoutePath } from '@/lib/admin/routes'
 import {
@@ -15,7 +15,13 @@ import {
 import { AuthModalRoot } from '@/components/auth/auth-modal'
 import { useAuthModal } from '@/components/auth/auth-modal-context'
 
-function UserMenu() {
+function UserMenu({
+  showLogout = false,
+  onLogout,
+}: {
+  showLogout?: boolean
+  onLogout?: () => Promise<void>
+}) {
   const { activeRole, userRoles, switchRole, profile, user } = useAuth()
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -67,6 +73,13 @@ function UserMenu() {
     .slice(0, 2)
     .map(part => part[0]?.toUpperCase())
     .join('')
+
+  const handleMenuLogout = async () => {
+    if (!onLogout || busy) return
+    setOpen(false)
+    setShowRoles(false)
+    await onLogout()
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -174,6 +187,16 @@ function UserMenu() {
                 )}
               </>
             )}
+            {showLogout && onLogout ? (
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                onClick={() => void handleMenuLogout()}
+                disabled={busy}
+              >
+                Logout
+              </button>
+            ) : null}
           </div>
         </div>
       )}
@@ -184,6 +207,7 @@ function UserMenu() {
 function SiteShellContent({ children }: { children: React.ReactNode }) {
   const [booting, setBooting] = useState(true)
   const [hideLoader, setHideLoader] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { session, activeRole, userRoles, organizerVerificationStatus, logout } = useAuth()
   const [logoutKey, setLogoutKey] = useState(0)
   const router = useRouter()
@@ -217,6 +241,10 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     router.replace(params.size ? `${pathname}?${params}` : pathname)
   }, [open, searchParams, pathname, router])
 
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [pathname, session?.user, activeRole])
+
   const handleLogout = async () => {
     try {
       await logout()
@@ -233,15 +261,17 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
 
   const isActive = (path: string) => pathname === path
   const showTalents = Boolean(session?.user) && activeRole === 'USER'
+  const isOrganizerActive = Boolean(session?.user) && activeRole === 'EVENT_ORGANIZER'
   const activeRoleRecord = userRoles.find((record) => record.role === activeRole)
   const userRoleRecord = userRoles.find((record) => record.role === 'USER')
   const organizerRoleRecord = userRoles.find((record) => record.role === 'EVENT_ORGANIZER')
+  const organizerOnboarded = organizerRoleRecord?.onboarding_completed === true
+  const isOrganizerApproved = organizerOnboarded && organizerVerificationStatus === 'APPROVED'
 
   const resolveHomeHref = (): string => {
     if (!session?.user) return '/'
 
     if (activeRole === 'EVENT_ORGANIZER') {
-      const organizerOnboarded = organizerRoleRecord?.onboarding_completed === true
       if (!organizerOnboarded) return getRoleOnboarding('EVENT_ORGANIZER')
       if (organizerVerificationStatus === 'EMAIL_NOT_VERIFIED') return '/organizer/email-verification'
       if (organizerVerificationStatus !== 'APPROVED') return '/organizer/pending'
@@ -302,32 +332,76 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
             />
             <span className="text-lg font-semibold tracking-tight">Baatasari</span>
           </Link>
-          <nav className="hidden flex-1 items-center justify-center gap-8 text-sm font-medium text-slate-700 md:flex">
-            {navLinks.map(link => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`pb-1 transition hover:text-slate-900 ${
-                  isActive(link.href) ? 'text-slate-900 font-semibold border-b-2 border-slate-900' : ''
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          {!isOrganizerActive && (
+            <nav className="hidden flex-1 items-center justify-center gap-8 text-sm font-medium text-slate-700 md:flex">
+              {navLinks.map(link => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`pb-1 transition hover:text-slate-900 ${
+                    isActive(link.href) ? 'text-slate-900 font-semibold border-b-2 border-slate-900' : ''
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          )}
           <div className="flex items-center gap-2 md:gap-3" key={logoutKey}>
             {session?.user ? (
-              <>
-                <UserMenu />
-                <button
-                  className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
-                  onClick={() => void handleLogout()}
-                >
-                  Logout
-                </button>
-              </>
+              isOrganizerActive ? (
+                <>
+                  {isOrganizerApproved ? (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="Notifications"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                      >
+                        <Bell className="h-5 w-5" />
+                      </button>
+                      <Link
+                        href="/organizer/create-event"
+                        className="inline-flex items-center justify-center gap-1 rounded-full bg-[#0c1D37] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span className="hidden sm:inline">Create Event</span>
+                      </Link>
+                    </>
+                  ) : null}
+                  <UserMenu showLogout onLogout={handleLogout} />
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 md:hidden"
+                    onClick={() => setMobileMenuOpen((prev) => !prev)}
+                    aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                    aria-expanded={mobileMenuOpen}
+                  >
+                    {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  </button>
+                  <UserMenu />
+                  <button
+                    className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
+                    onClick={() => void handleLogout()}
+                  >
+                    Logout
+                  </button>
+                </>
+              )
             ) : (
               <>
+                <button
+                  type="button"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 md:hidden"
+                  onClick={() => setMobileMenuOpen((prev) => !prev)}
+                  aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                  aria-expanded={mobileMenuOpen}
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
                 <button
                   type="button"
                   className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
@@ -339,6 +413,26 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </div>
+        {!isOrganizerActive && mobileMenuOpen && (
+          <nav className="border-t border-slate-200 bg-white px-4 py-3 md:hidden">
+            <div className="grid gap-2">
+              {navLinks.map((link) => (
+                <Link
+                  key={`mobile-${link.href}`}
+                  href={link.href}
+                  className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                    isActive(link.href)
+                      ? 'bg-slate-100 text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
       </header>
 
       <main className="min-h-[70dvh]">{children}</main>
