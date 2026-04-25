@@ -1,8 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
   MapPin,
@@ -55,9 +55,11 @@ type CreateOrderResponse = {
 
 export default function EventDetailPage() {
   const params = useParams<{ id: string }>()
+  const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { session, user, profile } = useAuth()
-  const { openModal } = useAuthModal()
+  const { open, openModal } = useAuthModal()
 
   const [guestName, setGuestName] = useState(profile?.full_name ?? "")
   const [guestPhone, setGuestPhone] = useState(profile?.phone ?? "")
@@ -80,6 +82,26 @@ export default function EventDetailPage() {
   const isLoggedIn = Boolean(session?.user)
   const guestEmail = session?.user?.email ?? ""
 
+  const openBookingAuthModal = (mode: "login" | "register") => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (params.get("redirect") !== pathname) {
+      params.set("redirect", pathname)
+      const nextHref = params.size ? `${pathname}?${params.toString()}` : pathname
+      router.replace(nextHref, { scroll: false })
+    }
+    openModal(mode)
+  }
+
+  useEffect(() => {
+    if (open || isLoggedIn) return
+    if (searchParams.get("redirect") !== pathname) return
+
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("redirect")
+    const nextHref = params.size ? `${pathname}?${params.toString()}` : pathname
+    router.replace(nextHref, { scroll: false })
+  }, [isLoggedIn, open, pathname, router, searchParams])
+
   const selectedTier = useMemo(() => {
     if (!event) return undefined
     const tiers = event.ticketTiers ?? []
@@ -97,7 +119,7 @@ export default function EventDetailPage() {
   const handleCheckout = async (eventDetail: EventDetail) => {
     if (!isLoggedIn) {
       setCheckoutError("Please register or login first.")
-      openModal("register")
+      openBookingAuthModal("register")
       return
     }
 
@@ -434,14 +456,14 @@ export default function EventDetailPage() {
                     <div className="mt-5 grid grid-cols-2 gap-3">
                       <Button
                         type="button"
-                        onClick={() => openModal("login")}
+                        onClick={() => openBookingAuthModal("login")}
                         className="rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                       >
                         Login
                       </Button>
                       <Button
                         type="button"
-                        onClick={() => openModal("register")}
+                        onClick={() => openBookingAuthModal("register")}
                         className="rounded-xl bg-brand-900 text-white hover:bg-brand-800"
                       >
                         Register
