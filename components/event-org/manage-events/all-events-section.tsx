@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react"
 import {
   Search,
   ChevronLeft,
@@ -8,15 +8,13 @@ import {
   ChevronDown,
   Calendar,
   Filter,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
-import { ALL_EVENTS_DATA, type EventItem } from "./manage-events";
-import { EventFormData } from "../data/create-event-data";
-import { cn } from "@/lib/utils";
-
-// shadcn Table components (make sure you installed: `npx shadcn-ui@latest add table`) [web:128]
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
+import type { EventDetail } from "@/types/api"
+import { toAllManageEvents, type AllManageEvent } from "./manage-events"
 import {
   Table,
   TableBody,
@@ -24,63 +22,67 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/table"
 
-export function AllEventsSection() {
-  const router = useRouter();
-  const [currentPage, setCurrentPage] = useState(1);
+type AllEventsSectionProps = {
+  events?: EventDetail[]
+  isLoading?: boolean
+  errorMessage?: string | null
+}
 
-  const events = useMemo(() => {
-    return currentPage === 1 ? ALL_EVENTS_DATA.page1 : ALL_EVENTS_DATA.page2;
-  }, [currentPage]);
+const PAGE_SIZE = 5
 
-  const handleAction = (event: EventItem, e: React.MouseEvent) => {
-    e.stopPropagation();
+export function AllEventsSection({
+  events = [],
+  isLoading = false,
+  errorMessage = null,
+}: AllEventsSectionProps) {
+  const router = useRouter()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
 
-    const formData: Partial<EventFormData> = {
-      eventName: event.name,
-      category: event.category,
-      description: `Description for ${event.name}`,
-      date: event.date,
-      time: "",
-      endTime: "",
-      venue: "",
-      googleMapsUrl: "",
-      personnel: "",
-      tagline: "",
-      contactInfo: { mobile: "", email: "", website: "", additionalLinks: "" },
-    };
+  const rows = useMemo(() => toAllManageEvents(events), [events])
 
-    if (event.action === "Repeat") {
-      formData.date = "";
-      formData.time = "";
-      formData.endTime = "";
-    }
+  const filteredRows = useMemo(() => {
+    if (!searchQuery.trim()) return rows
 
-    localStorage.setItem("eventFormData", JSON.stringify(formData));
-    const actionUrlParam = event.action.toLowerCase();
-    router.push(`/create-event?startDirectly=true&action=${actionUrlParam}`);
-  };
+    const q = searchQuery.trim().toLowerCase()
+    return rows.filter((event) =>
+      [event.name, event.category, event.date, event.status]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    )
+  }, [rows, searchQuery])
 
-  const handleRowClick = (event: EventItem) => {
-    const analyticsData = {
-      eventName: event.name,
-      date: event.date,
-      category: event.category,
-      status: event.status,
-    };
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
 
-    localStorage.setItem("analyticsEventData", JSON.stringify(analyticsData));
-    router.push("/analytics");
-  };
+  const pagedRows = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PAGE_SIZE
+    return filteredRows.slice(start, start + PAGE_SIZE)
+  }, [filteredRows, safeCurrentPage])
+
+  const handleAction = (event: AllManageEvent, clickEvent: React.MouseEvent) => {
+    clickEvent.stopPropagation()
+    localStorage.setItem("eventFormData", JSON.stringify(event.formData))
+    const actionUrlParam = event.action.toLowerCase()
+    router.push(
+      `/organizer/create-event?startDirectly=true&action=${actionUrlParam}&eventId=${encodeURIComponent(
+        event.id
+      )}`
+    )
+  }
+
+  const handleRowClick = (event: AllManageEvent) => {
+    localStorage.setItem("analyticsEventData", JSON.stringify(event.analyticsData))
+    router.push("/organizer/analytics")
+  }
 
   return (
     <section className="rounded-xl border overflow-hidden bg-(--events-white)">
-      {/* Header */}
       <div className="px-4 sm:px-6 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-(--upcoming-primary-700)">
-        <h3 className="text-(--events-white) font-medium text-lg">
-          All Events
-        </h3>
+        <h3 className="text-(--events-white) font-medium text-lg">All Events</h3>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
           <div className="relative w-full sm:w-auto">
@@ -89,6 +91,11 @@ export function AllEventsSection() {
               className="absolute left-3 top-1/2 -translate-y-1/2 text-(--events-white)/70"
             />
             <Input
+              value={searchQuery}
+              onChange={(inputEvent) => {
+                setSearchQuery(inputEvent.target.value)
+                setCurrentPage(1)
+              }}
               placeholder="Search Events"
               className="pl-9 h-10 w-full sm:w-56 bg-(--upcoming-primary-700) text-(--events-white) placeholder:text-(--events-white)/70 border border-(--events-white)/40"
             />
@@ -111,7 +118,6 @@ export function AllEventsSection() {
         </div>
       </div>
 
-      {/* Table (shadcn) */}
       <div className="overflow-x-auto">
         <Table className="w-full">
           <TableHeader>
@@ -143,63 +149,82 @@ export function AllEventsSection() {
           </TableHeader>
 
           <TableBody>
-            {events.map((event, idx) => (
-              <TableRow
-                key={idx}
-                className="border-b border-(--events-gray-200) cursor-pointer transition-colors"
-                onClick={() => handleRowClick(event)}
-              >
-                <TableCell className="px-6 py-4 text-sm text-(--events-gray-700)">
-                  {event.date}
-                </TableCell>
-
-                <TableCell className="px-6 py-4 text-sm text-(--events-gray-700)">
-                  {event.name}
-                </TableCell>
-
-                <TableCell className="px-6 py-4 text-sm text-(--events-gray-700)">
-                  {event.category}
-                </TableCell>
-
-                <TableCell className="px-6 py-4 text-sm">
-                  <span
-                    className={cn(
-                      event.status === "Ongoing" && "text-(--events-green-600)",
-                      event.status === "Upcoming" && "text-(--events-blue-600)",
-                      event.status !== "Ongoing" &&
-                      event.status !== "Upcoming" &&
-                      "text-(--events-gray-500)"
-                    )}
-                  >
-                    {event.status}
-                  </span>
-                </TableCell>
-
-                <TableCell className="px-6 py-4 text-sm">
-                  <Button
-                    size="sm"
-                    onClick={(e) => handleAction(event, e)}
-                    className={cn(
-                      "text-(--events-white) px-6 rounded-full",
-                      "bg-blue-soft"
-                    )}
-                  >
-                    {event.action}
-                  </Button>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">
+                  Loading events...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : errorMessage ? (
+              <TableRow>
+                <TableCell colSpan={5} className="px-6 py-8 text-center text-sm text-red-600">
+                  {errorMessage}
+                </TableCell>
+              </TableRow>
+            ) : pagedRows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">
+                  {searchQuery.trim()
+                    ? "No events match your search."
+                    : "No events found. Create your first event to populate this table."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              pagedRows.map((event) => (
+                <TableRow
+                  key={event.id}
+                  className="border-b border-(--events-gray-200) cursor-pointer transition-colors"
+                  onClick={() => handleRowClick(event)}
+                >
+                  <TableCell className="px-6 py-4 text-sm text-(--events-gray-700)">
+                    {event.date}
+                  </TableCell>
+
+                  <TableCell className="px-6 py-4 text-sm text-(--events-gray-700)">
+                    {event.name}
+                  </TableCell>
+
+                  <TableCell className="px-6 py-4 text-sm text-(--events-gray-700)">
+                    {event.category}
+                  </TableCell>
+
+                  <TableCell className="px-6 py-4 text-sm">
+                    <span
+                      className={cn(
+                        event.status === "Ongoing" && "text-(--events-green-600)",
+                        event.status === "Upcoming" && "text-(--events-blue-600)",
+                        event.status === "Past" && "text-(--events-gray-500)"
+                      )}
+                    >
+                      {event.status}
+                    </span>
+                  </TableCell>
+
+                  <TableCell className="px-6 py-4 text-sm">
+                    <Button
+                      size="sm"
+                      onClick={(clickEvent) => handleAction(event, clickEvent)}
+                      className={cn(
+                        "text-(--events-white) px-6 rounded-full",
+                        "bg-blue-soft"
+                      )}
+                    >
+                      {event.action}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Pagination */}
       <div className="px-6 py-4 flex items-center justify-between border-t border-(--events-gray-200)">
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+          disabled={safeCurrentPage === 1}
           className="flex items-center gap-2"
         >
           <ChevronLeft size={16} />
@@ -207,40 +232,28 @@ export function AllEventsSection() {
         </Button>
 
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentPage(1)}
-            className={cn(
-              "px-3 py-1 rounded border text-sm font-medium",
-              currentPage === 1
-                ? "border-(--events-gray-400) bg-(--events-gray-100)"
-                : "border-(--bg-blue-soft) bg-(--events-white)"
-            )}
-          >
-            1
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCurrentPage(2)}
-            className={cn(
-              "px-3 py-1 rounded border text-sm font-medium",
-              currentPage === 2
-                ? "border-(--events-gray-400) bg-(--events-gray-100)"
-                : "border-(--events-gray-300) bg-(--events-white)"
-            )}
-          >
-            2
-          </button>
+          {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+            <button
+              key={page}
+              type="button"
+              onClick={() => setCurrentPage(page)}
+              className={cn(
+                "px-3 py-1 rounded border text-sm font-medium",
+                safeCurrentPage === page
+                  ? "border-(--events-gray-400) bg-(--events-gray-100)"
+                  : "border-(--events-gray-300) bg-(--events-white)"
+              )}
+            >
+              {page}
+            </button>
+          ))}
         </div>
 
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setCurrentPage(Math.min(2, currentPage + 1))}
-          disabled={currentPage === 2
-
-          }
+          onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
+          disabled={safeCurrentPage === totalPages}
           className="flex items-center gap-2"
         >
           Next
@@ -248,5 +261,5 @@ export function AllEventsSection() {
         </Button>
       </div>
     </section>
-  );
+  )
 }

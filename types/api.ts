@@ -98,6 +98,7 @@ export type OrganizerEventTicketTier = {
   name: string;
   description?: string | null;
   quantity: number;
+  soldCount?: number;
   price: number;
   perks?: string[];
   saleStartsAt?: string | null;
