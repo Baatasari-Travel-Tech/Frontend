@@ -15,6 +15,7 @@ import {
   Flag,
 } from "lucide-react"
 import { useAuth } from "@/app/providers"
+import { useAuthModal } from "@/components/auth/auth-modal-context"
 import { apiRequest } from "@/lib/api/client"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { loadRazorpayScript } from "@/lib/payments/razorpay"
@@ -55,14 +56,8 @@ type CreateOrderResponse = {
 export default function EventDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
-  const { session, user, profile, login, register } = useAuth()
-
-  const [authMode, setAuthMode] = useState<"register" | "login">("register")
-  const [authEmail, setAuthEmail] = useState("")
-  const [authPassword, setAuthPassword] = useState("")
-  const [authConfirmPassword, setAuthConfirmPassword] = useState("")
-  const [authLoading, setAuthLoading] = useState(false)
-  const [authError, setAuthError] = useState<string | null>(null)
+  const { session, user, profile } = useAuth()
+  const { openModal } = useAuthModal()
 
   const [guestName, setGuestName] = useState(profile?.full_name ?? "")
   const [guestPhone, setGuestPhone] = useState(profile?.phone ?? "")
@@ -99,39 +94,10 @@ export default function EventDetailPage() {
   const platformFee = useMemo(() => Number((subtotal * 0.02).toFixed(2)), [subtotal])
   const totalAmount = useMemo(() => Number((subtotal + taxAmount + platformFee).toFixed(2)), [platformFee, subtotal, taxAmount])
 
-  const handleAuth = async () => {
-    setAuthError(null)
-
-    if (!authEmail || !authPassword) {
-      setAuthError("Please fill email and password.")
-      return
-    }
-
-    if (authMode === "register" && authPassword !== authConfirmPassword) {
-      setAuthError("Passwords do not match.")
-      return
-    }
-
-    setAuthLoading(true)
-    try {
-      if (authMode === "login") {
-        await login({ email: authEmail, password: authPassword })
-      } else {
-        await register({ email: authEmail, password: authPassword, role: "USER" })
-      }
-      setAuthPassword("")
-      setAuthConfirmPassword("")
-      setAuthError(null)
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Authentication failed.")
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-
   const handleCheckout = async (eventDetail: EventDetail) => {
     if (!isLoggedIn) {
       setCheckoutError("Please register or login first.")
+      openModal("register")
       return
     }
 
@@ -458,72 +424,29 @@ export default function EventDetailPage() {
 
               {!isLoggedIn ? (
                 <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/45 backdrop-blur-[2px] p-5">
-                  <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-                    <div className="mb-4 flex gap-2">
-                      <button
+                  <div className="w-full max-w-md rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-2xl">
+                    <div className="text-center">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Continue Booking</p>
+                      <h3 className="mt-2 text-xl font-semibold text-slate-900">Login or create an account</h3>
+                      <p className="mt-2 text-sm text-slate-600">Use your account to unlock the ticket checkout form.</p>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      <Button
                         type="button"
-                        onClick={() => setAuthMode("register")}
-                        className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                          authMode === "register" ? "bg-brand-900 text-white" : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        Register
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAuthMode("login")}
-                        className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                          authMode === "login" ? "bg-brand-900 text-white" : "bg-slate-100 text-slate-700"
-                        }`}
+                        onClick={() => openModal("login")}
+                        className="rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                       >
                         Login
-                      </button>
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => openModal("register")}
+                        className="rounded-xl bg-brand-900 text-white hover:bg-brand-800"
+                      >
+                        Register
+                      </Button>
                     </div>
-
-                    <div className="space-y-3">
-                      <Input
-                        type="email"
-                        placeholder="Email"
-                        value={authEmail}
-                        onChange={(inputEvent) => setAuthEmail(inputEvent.target.value)}
-                        className="w-full"
-                      />
-                      <Input
-                        type="password"
-                        placeholder="Password"
-                        value={authPassword}
-                        onChange={(inputEvent) => setAuthPassword(inputEvent.target.value)}
-                        className="w-full"
-                      />
-                      {authMode === "register" ? (
-                        <Input
-                          type="password"
-                          placeholder="Confirm password"
-                          value={authConfirmPassword}
-                          onChange={(inputEvent) => setAuthConfirmPassword(inputEvent.target.value)}
-                          className="w-full"
-                        />
-                      ) : null}
-                    </div>
-
-                    {authError ? (
-                      <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">{authError}</p>
-                    ) : null}
-
-                    <Button
-                      type="button"
-                      onClick={() => void handleAuth()}
-                      disabled={authLoading}
-                      className="mt-4 w-full rounded-lg bg-brand-900 text-white hover:bg-brand-800 disabled:opacity-60"
-                    >
-                      {authLoading
-                        ? authMode === "register"
-                          ? "Registering..."
-                          : "Signing in..."
-                        : authMode === "register"
-                          ? "Register to Continue"
-                          : "Login to Continue"}
-                    </Button>
                   </div>
                 </div>
               ) : null}
