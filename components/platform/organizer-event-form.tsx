@@ -5,7 +5,6 @@ import { z } from "zod"
 import { useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Camera, Plus, Trash2 } from "lucide-react"
-import { uploadFile } from "@/lib/api/uploads"
 import type { EventDetail } from "@/types/api"
 
 const tierSchema = z.object({
@@ -111,15 +110,6 @@ export function OrganizerEventForm({
     setMessage(null)
 
     try {
-      let heroImageUrl = initialEvent?.heroImageUrl ?? null
-      let heroImagePublicId = initialEvent?.heroImagePublicId ?? null
-
-      if (heroFile) {
-        const upload = await uploadFile(heroFile, "eventAsset")
-        heroImageUrl = upload.secureUrl
-        heroImagePublicId = upload.publicId
-      }
-
       await onSubmit({
         title: values.title,
         description: values.description,
@@ -131,8 +121,7 @@ export function OrganizerEventForm({
         startTime: values.startTime || null,
         endTime: values.endTime || null,
         googleMapsUrl: values.googleMapsUrl || null,
-        heroImageUrl,
-        heroImagePublicId,
+        eventPhoto: heroFile,
         published: true,
         ticketTiers: values.ticketTiers.map((tier) => ({
           id: tier.id,

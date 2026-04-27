@@ -316,9 +316,9 @@ const EventPage: React.FC<EventPageProps> = ({
     if (name === "eventPhoto") {
       const file = files?.[0];
       if (file) {
-        const validTypes = ["image/jpeg", "image/png", "image/gif"];
+        const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
         if (!validTypes.includes(file.type)) {
-          setPhotoError("Please upload a JPG, PNG, or GIF file.");
+          setPhotoError("Please upload a JPG, PNG, GIF, or WEBP file.");
           setPhotoPreview(null);
           setFormData((prev) => ({ ...prev, eventPhoto: null }));
           return;
@@ -342,14 +342,14 @@ const EventPage: React.FC<EventPageProps> = ({
 
     if (name === "additionalPhotos") {
       const filesArray = Array.from(files || []);
-      const validTypes = ["image/jpeg", "image/png", "image/gif"];
+      const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
       const previews: string[] = [];
       const filteredFiles: File[] = [];
       let error = "";
 
       filesArray.forEach((file) => {
         if (!validTypes.includes(file.type)) {
-          error = "Please upload only JPG, PNG, or GIF files.";
+          error = "Please upload only JPG, PNG, GIF, or WEBP files.";
           return;
         }
         if (file.size > 5 * 1024 * 1024) {

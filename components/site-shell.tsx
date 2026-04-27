@@ -8,6 +8,7 @@ import { useAuth } from '@/app/providers'
 import { ArrowLeftRight, Bell, Menu, Plus, X } from 'lucide-react'
 import LoadingScreen from '@/components/loading-screen'
 import { isAdminRoutePath } from '@/lib/admin/routes'
+import { DEFAULT_AVATAR_IMAGE } from '@/lib/avatar'
 import {
   type AppRole, ROLE_LABELS,
   getRoleDashboard, getRoleOnboarding,
@@ -65,14 +66,20 @@ function UserMenu({
     setBusy(false)
   }
 
-  const avatarUrl = profile?.avatar_url ?? undefined
-  const showAvatar = Boolean(avatarUrl) && failedAvatarUrl !== avatarUrl
+  const avatarUrl = profile?.avatar_url ?? null
+  const displayAvatarUrl =
+    !avatarUrl || failedAvatarUrl === avatarUrl ? DEFAULT_AVATAR_IMAGE : avatarUrl
+  const showAvatar = failedAvatarUrl !== displayAvatarUrl
   const initials = (profile?.full_name ?? profile?.email ?? 'User')
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
     .map(part => part[0]?.toUpperCase())
     .join('')
+
+  useEffect(() => {
+    setFailedAvatarUrl(null)
+  }, [avatarUrl])
 
   const handleMenuLogout = async () => {
     if (!onLogout || busy) return
@@ -93,14 +100,14 @@ function UserMenu({
         <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100">
           {showAvatar ? (
             <Image
-              src={avatarUrl!}
+              src={displayAvatarUrl}
               alt="User avatar"
               width={36}
               height={36}
               className="h-full w-full object-cover"
               unoptimized
               onError={() => {
-                if (avatarUrl) setFailedAvatarUrl(avatarUrl)
+                setFailedAvatarUrl(displayAvatarUrl)
               }}
             />
           ) : (
@@ -274,6 +281,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     if (activeRole === 'EVENT_ORGANIZER') {
       if (!organizerOnboarded) return getRoleOnboarding('EVENT_ORGANIZER')
       if (organizerVerificationStatus === 'EMAIL_NOT_VERIFIED') return '/organizer/email-verification'
+      if (organizerVerificationStatus === 'DOCUMENTS_REQUIRED') return '/organizer/document-upload'
       if (organizerVerificationStatus !== 'APPROVED') return '/organizer/pending'
       return getRoleDashboard('EVENT_ORGANIZER')
     }

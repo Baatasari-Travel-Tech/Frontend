@@ -9,37 +9,72 @@ import { Building2, Landmark, ShieldCheck } from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
-import { uploadFile } from "@/lib/api/uploads"
+import { uploadOrganizerAvatarImage } from "@/lib/api/uploads"
+import { DEFAULT_AVATAR_IMAGE, getAvatarImageUrl } from "@/lib/avatar"
 
 const DRAFT_STORAGE_KEY = "organizer-onboarding-draft-v2"
-const DEFAULT_AVATAR = "/avatar.webp"
+const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024
+const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
-const schema = z.object({
-  fullName: z.string().min(2, "Enter your full name"),
-  personalPhone: z.string().regex(/^\d{10}$/, "Enter a valid 10 digit phone number"),
-  dob: z.string().min(1, "Select your date of birth"),
-  location: z.string().min(2, "Enter your location"),
-  gender: z.string().min(1, "Select your gender"),
-  profession: z.string().min(2, "Enter your profession"),
-  orgName: z.string().min(2, "Enter your organization name"),
-  description: z.string().min(20, "Add a stronger organization description"),
-  contactEmail: z.string().email("Enter a valid contact email"),
-  contactPhone: z.string().min(6, "Enter a valid contact number"),
-  primaryContactName: z.string().optional(),
-  secondaryContactPhone: z.string().optional(),
-  address: z.string().min(4, "Enter your address"),
-  city: z.string().min(2, "Enter your city"),
-  state: z.string().min(2, "Enter your state"),
-  pincode: z.string().min(4, "Enter your pincode"),
-  websiteUrl: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
-  instagramUrl: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
-  linkedinUrl: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
-  panNumber: z.string().min(5, "Enter the PAN number"),
-  gstNumber: z.string().optional(),
-  bankAccountName: z.string().min(2, "Enter the account holder name"),
-  bankAccountNumber: z.string().min(6, "Enter a valid account number"),
-  bankIfsc: z.string().min(4, "Enter a valid IFSC code"),
-})
+const schema = z
+  .object({
+    entityType: z.enum(["ORGANIZATION", "INDIVIDUAL"]).default("ORGANIZATION"),
+    fullName: z.string().min(2, "Enter your full name"),
+    personalPhone: z.string().regex(/^\d{10}$/, "Enter a valid 10 digit phone number"),
+    dob: z.string().min(1, "Select your date of birth"),
+    location: z.string().min(2, "Enter your location"),
+    gender: z.string().min(1, "Select your gender"),
+    profession: z.string().min(2, "Enter your profession"),
+    orgName: z.string().optional(),
+    description: z.string().optional(),
+    contactEmail: z.string().optional(),
+    contactPhone: z.string().optional(),
+    primaryContactName: z.string().optional(),
+    secondaryContactPhone: z.string().optional(),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    pincode: z.string().optional(),
+    websiteUrl: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
+    instagramUrl: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
+    linkedinUrl: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
+    panNumber: z.string().min(5, "Enter the PAN number"),
+    gstNumber: z.string().optional(),
+    bankAccountName: z.string().min(2, "Enter the account holder name"),
+    bankAccountNumber: z.string().min(6, "Enter a valid account number"),
+    bankIfsc: z.string().min(4, "Enter a valid IFSC code"),
+  })
+  .superRefine((value, ctx) => {
+    if (value.entityType === "INDIVIDUAL") return
+    const requiredFields: Array<keyof Omit<typeof value, "entityType">> = [
+      "orgName",
+      "description",
+      "contactEmail",
+      "contactPhone",
+      "address",
+      "city",
+      "state",
+      "pincode",
+    ]
+    for (const field of requiredFields) {
+      const fieldValue = value[field]
+      if (!fieldValue || !String(fieldValue).trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: "This field is required.",
+        })
+      }
+    }
+
+    if (value.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.contactEmail)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["contactEmail"],
+        message: "Enter a valid contact email",
+      })
+    }
+  })
 
 type Values = z.infer<typeof schema>
 
@@ -58,7 +93,10 @@ const steps = [
   },
 ]
 
+const individualSteps = [steps[0], steps[2]]
+
 const stepOneFields: Array<keyof Values> = [
+  "entityType",
   "fullName",
   "personalPhone",
   "dob",
@@ -130,7 +168,7 @@ export default function OrganizerOnboardingPage() {
 
   const [step, setStep] = useState(0)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(DEFAULT_AVATAR)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(DEFAULT_AVATAR_IMAGE)
   const [cropSource, setCropSource] = useState<string | null>(null)
   const [isCropOpen, setIsCropOpen] = useState(false)
   const [cropZoom, setCropZoom] = useState(1)
@@ -149,6 +187,7 @@ export default function OrganizerOnboardingPage() {
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
+      entityType: "ORGANIZATION",
       fullName: "",
       personalPhone: "",
       dob: "",
@@ -176,8 +215,19 @@ export default function OrganizerOnboardingPage() {
     },
   })
 
+  const entityType = form.watch("entityType")
+  const showOrganizationStep = entityType !== "INDIVIDUAL"
+  const activeSteps = showOrganizationStep ? steps : individualSteps
+
+  useEffect(() => {
+    if (!showOrganizationStep && step === 1) {
+      setStep(2)
+    }
+  }, [showOrganizationStep, step])
+
   useEffect(() => {
     const baseValues: Values = {
+      entityType: organizerProfile?.entityType ?? "ORGANIZATION",
       fullName: profile?.full_name ?? "",
       personalPhone: stripIndianCode(profile?.phone),
       dob: profile?.dob ?? "",
@@ -209,8 +259,15 @@ export default function OrganizerOnboardingPage() {
       ...baseValues,
       ...(draft?.values ?? {}),
     })
-    setStep(typeof draft?.step === "number" && draft.step >= 0 && draft.step <= 2 ? draft.step : 0)
-    setAvatarPreview(profile?.avatar_url ?? DEFAULT_AVATAR)
+    const normalizedDraftStep = typeof draft?.step === "number" && draft.step >= 0 && draft.step <= 2 ? draft.step : 0
+    const draftEntityType =
+      (draft?.values?.entityType as Values["entityType"] | undefined) ?? baseValues.entityType
+    if (draftEntityType === "INDIVIDUAL" && normalizedDraftStep === 1) {
+      setStep(2)
+    } else {
+      setStep(normalizedDraftStep)
+    }
+    setAvatarPreview(profile?.avatar_url ?? DEFAULT_AVATAR_IMAGE)
   }, [
     form,
     organizerProfile?.address,
@@ -221,6 +278,7 @@ export default function OrganizerOnboardingPage() {
     organizerProfile?.contactEmail,
     organizerProfile?.contactPhone,
     organizerProfile?.description,
+    organizerProfile?.entityType,
     organizerProfile?.gstNumber,
     organizerProfile?.instagramUrl,
     organizerProfile?.linkedinUrl,
@@ -288,14 +346,13 @@ export default function OrganizerOnboardingPage() {
     setError(null)
     if (!file) return
 
-    const allowedTypes = ["image/png", "image/jpeg", "image/webp"]
-    if (!allowedTypes.includes(file.type)) {
-      setError("Only PNG, JPG, or WEBP images are allowed.")
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      setError("Only PNG, JPG, GIF, or WEBP images are allowed.")
       return
     }
 
-    if (file.size > 200 * 1024) {
-      setError("Image must be under 200KB.")
+    if (file.size > MAX_AVATAR_FILE_SIZE) {
+      setError("Image must be 5MB or less.")
       return
     }
 
@@ -354,7 +411,7 @@ export default function OrganizerOnboardingPage() {
 
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.85))
 
-    if (!blob || blob.size > 200 * 1024) {
+    if (!blob || blob.size > MAX_AVATAR_FILE_SIZE) {
       setError("Cropped image is too large. Try zooming out.")
       return
     }
@@ -373,24 +430,28 @@ export default function OrganizerOnboardingPage() {
 
   const uploadAvatarIfNeeded = async () => {
     if (!avatarFile) {
-      return profile?.avatar_url ?? null
+      return
     }
 
-    const upload = await uploadFile(avatarFile, "avatar")
+    if (!user?.id) {
+      throw new Error("Authentication required.")
+    }
+
+    const upload = await uploadOrganizerAvatarImage(avatarFile)
     setAvatarFile(null)
-    setAvatarPreview(upload.secureUrl)
-    return upload.secureUrl
+    setAvatarPreview(getAvatarImageUrl("organizers", user.id, upload.version))
   }
 
   const buildOrganizerPayload = (values: Values) => ({
-    orgName: values.orgName.trim(),
-    description: values.description.trim(),
-    contactEmail: values.contactEmail.trim(),
-    contactPhone: values.contactPhone.trim(),
-    address: values.address.trim(),
-    city: values.city.trim(),
-    state: values.state.trim(),
-    pincode: values.pincode.trim(),
+    entityType: values.entityType,
+    orgName: values.entityType === "INDIVIDUAL" ? null : values.orgName?.trim() || null,
+    description: values.entityType === "INDIVIDUAL" ? null : values.description?.trim() || null,
+    contactEmail: values.entityType === "INDIVIDUAL" ? null : values.contactEmail?.trim() || null,
+    contactPhone: values.entityType === "INDIVIDUAL" ? null : values.contactPhone?.trim() || null,
+    address: values.entityType === "INDIVIDUAL" ? null : values.address?.trim() || null,
+    city: values.entityType === "INDIVIDUAL" ? null : values.city?.trim() || null,
+    state: values.entityType === "INDIVIDUAL" ? null : values.state?.trim() || null,
+    pincode: values.entityType === "INDIVIDUAL" ? null : values.pincode?.trim() || null,
     panNumber: values.panNumber.trim() || null,
     gstNumber: values.gstNumber?.trim() || null,
     bankAccountName: values.bankAccountName.trim() || null,
@@ -418,7 +479,7 @@ export default function OrganizerOnboardingPage() {
 
     try {
       const values = form.getValues()
-      const avatarUrl = await uploadAvatarIfNeeded()
+      await uploadAvatarIfNeeded()
 
       await updateProfile({
         fullName: values.fullName.trim(),
@@ -427,11 +488,16 @@ export default function OrganizerOnboardingPage() {
         location: values.location.trim(),
         gender: values.gender,
         profession: values.profession.trim(),
-        avatarUrl,
       })
-      persistDraft(1, values)
-      setStep(1)
-      setNotice("Personal details saved. You can continue now or return later.")
+      if (values.entityType === "INDIVIDUAL") {
+        persistDraft(2, values)
+        setStep(2)
+        setNotice("Personal details saved. Organization step skipped for individual onboarding.")
+      } else {
+        persistDraft(1, values)
+        setStep(1)
+        setNotice("Personal details saved. You can continue now or return later.")
+      }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save your progress.")
     } finally {
@@ -476,7 +542,7 @@ export default function OrganizerOnboardingPage() {
       const isValid = await form.trigger(stepThreeFields)
       if (!isValid) return
 
-      const avatarUrl = await uploadAvatarIfNeeded()
+      await uploadAvatarIfNeeded()
 
       await updateProfile({
         fullName: values.fullName.trim(),
@@ -485,14 +551,17 @@ export default function OrganizerOnboardingPage() {
         location: values.location.trim(),
         gender: values.gender,
         profession: values.profession.trim(),
-        avatarUrl,
       })
 
       await completeRoleOnboarding("EVENT_ORGANIZER", buildOrganizerPayload(values))
       clearDraft()
 
       if (user?.emailVerified) {
-        router.replace("/organizer/pending")
+        if (user.organizerDocumentsSubmitted) {
+          router.replace("/organizer/pending")
+          return
+        }
+        router.replace("/organizer/document-upload")
         return
       }
 
@@ -509,14 +578,14 @@ export default function OrganizerOnboardingPage() {
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">Organizer Onboarding</h1>
             <p className="max-w-3xl text-sm leading-6 text-slate-500">
-              Complete your personal details, organization details, and bank details.
+              Complete your personal details and bank details. Organization details are required only for organization onboarding.
               <p>Your progress is saved as you move through the flow, so you can come back and continue later.</p>
             </p>
           </div>
 
           <div className="mt-6 rounded-3xl border border-slate-200/80 bg-slate-50/70 p-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              {steps.map((item) => {
+            <div className={`grid gap-3 ${activeSteps.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+              {activeSteps.map((item, index) => {
                 const isActive = step === item.id
                 const isDone = step > item.id
 
@@ -547,10 +616,10 @@ export default function OrganizerOnboardingPage() {
                               : "bg-slate-200 text-slate-600"
                         }`}
                       >
-                        {item.id + 1}
+                        {index + 1}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Step {item.id + 1}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Step {index + 1}</p>
                         <p className="mt-1 text-base font-semibold text-slate-950">{item.title}</p>
                       </div>
                     </div>
@@ -569,7 +638,15 @@ export default function OrganizerOnboardingPage() {
                   </div>
 
                   <div className="relative h-52 w-52 overflow-hidden rounded-full border border-slate-200 bg-slate-50 shadow-[0_12px_22px_rgba(15,23,42,0.08)]">
-                    <img src={avatarPreview || DEFAULT_AVATAR} alt="Profile preview" className="h-full w-full object-cover" />
+                    <img
+                      src={avatarPreview || DEFAULT_AVATAR_IMAGE}
+                      alt="Profile preview"
+                      className="h-full w-full object-cover"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null
+                        event.currentTarget.src = DEFAULT_AVATAR_IMAGE
+                      }}
+                    />
                   </div>
 
                   <label className="w-full text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -577,11 +654,11 @@ export default function OrganizerOnboardingPage() {
                     <input
                       className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-900/10 file:px-3 file:py-1.5 file:text-[10px] file:font-semibold file:text-brand-800 hover:file:bg-brand-900/20"
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
                       onChange={(event) => handleAvatarChange(event.target.files?.[0] ?? null)}
                     />
                   </label>
-                  <p className="text-center text-xs text-slate-400">PNG, JPG, or WEBP under 200KB (optional)</p>
+                  <p className="text-center text-xs text-slate-400">PNG, JPG, GIF, or WEBP up to 5MB (optional)</p>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 md:pr-1">
@@ -640,11 +717,36 @@ export default function OrganizerOnboardingPage() {
                     <input className={inputClassName} placeholder="Your profession" {...form.register("profession")} />
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.profession?.message ?? ""}</p>
                   </label>
+
+                  <div className="md:col-span-2">
+                    <p className="text-sm font-semibold text-slate-700">Onboarding type</p>
+                    <p className="mt-1 text-xs text-slate-500">Default is organization. Switch to individual to skip organization details.</p>
+                    <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-white p-1">
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("entityType", "ORGANIZATION", { shouldValidate: true })}
+                        className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                          entityType === "ORGANIZATION" ? "bg-brand-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        Organization
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("entityType", "INDIVIDUAL", { shouldValidate: true })}
+                        className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                          entityType === "INDIVIDUAL" ? "bg-brand-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        Individual
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </section>
             ) : null}
 
-            {step === 1 ? (
+            {step === 1 && showOrganizationStep ? (
               <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                 <div className="flex items-start gap-3">
                   <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
@@ -805,7 +907,12 @@ export default function OrganizerOnboardingPage() {
                 {step > 0 ? (
                   <button
                     type="button"
-                    onClick={() => setStep((current) => Math.max(current - 1, 0))}
+                    onClick={() =>
+                      setStep((current) => {
+                        if (!showOrganizationStep && current === 2) return 0
+                        return Math.max(current - 1, 0)
+                      })
+                    }
                     className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     Back

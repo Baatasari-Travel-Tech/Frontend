@@ -24,6 +24,11 @@ export default function OrganizerPendingPage() {
       return
     }
 
+    if (organizerVerificationStatus === "DOCUMENTS_REQUIRED") {
+      router.replace("/organizer/document-upload")
+      return
+    }
+
     if (organizerVerificationStatus === "APPROVED") {
       router.replace("/organizer/dashboard")
     }
@@ -34,13 +39,13 @@ export default function OrganizerPendingPage() {
       <PageShell
         eyebrow="Organizer approval"
         title="Your organizer account is pending review"
-        description="Your onboarding and email verification are complete. Our onboarding team will now review your organization before organizer tools are unlocked."
+        description="Your onboarding, email verification, and compliance document upload are complete. Our onboarding team will now review your organization before organizer tools are unlocked."
       >
         <div className="grid gap-6 lg:grid-cols-2">
           <SectionCard title="Current status">
             <div className="grid gap-3 text-sm leading-6 text-slate-600">
               <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-4 text-amber-800">
-                Organizer onboarding is complete and your email has been verified. The remaining step is approval from our onboarding team.
+                Organizer onboarding, email verification, and required document upload are complete. The remaining step is approval from our onboarding team.
               </div>
               <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
                 A member of our onboarding team will contact you for document verification and organization verification.

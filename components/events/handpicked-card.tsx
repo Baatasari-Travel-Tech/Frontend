@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -40,7 +40,12 @@ export function HandpickedEventCard({
     highlights = ["Rockstar Devi Sri Prasad", "Rockstar Devi Sri Prasad", "Rockstar Devi Sri Prasad"]
 }: HandpickedEventCardProps) {
     const [showDetails, setShowDetails] = useState(false)
+    const [imageSrc, setImageSrc] = useState(image)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+    useEffect(() => {
+        setImageSrc(image)
+    }, [image])
 
     const handleMouseEnter = useCallback(() => {
         timerRef.current = setTimeout(() => {
@@ -69,11 +74,12 @@ export function HandpickedEventCard({
                         {/* Image Container */}
                         <div className="relative aspect-square w-full mb-4 overflow-hidden rounded-4xl">
                             <Image
-                                src={image}
+                                src={imageSrc}
                                 alt={title}
                                 fill
                                 unoptimized
                                 className={`object-cover transition-transform duration-500 ${showDetails ? "scale-105" : ""}`}
+                                onError={() => setImageSrc("/e1.png")}
                             />
                         </div>
 

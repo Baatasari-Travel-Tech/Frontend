@@ -22,12 +22,17 @@ export function resolveUserHome(params: {
   if (user.role === "ORGANIZER" && activeRole === "EVENT_ORGANIZER") {
     if (!userReady) return "/organizer/onboarding"
     if (organizerVerificationStatus === "EMAIL_NOT_VERIFIED") return "/organizer/email-verification"
+    if (organizerVerificationStatus === "DOCUMENTS_REQUIRED") return "/organizer/document-upload"
     if (organizerVerificationStatus !== "APPROVED") return "/organizer/pending"
     return "/organizer/dashboard"
   }
 
   if (user.role === "ORGANIZER" && userReady && organizerVerificationStatus === "EMAIL_NOT_VERIFIED") {
     return "/organizer/email-verification"
+  }
+
+  if (user.role === "ORGANIZER" && userReady && organizerVerificationStatus === "DOCUMENTS_REQUIRED") {
+    return "/organizer/document-upload"
   }
 
   if (user.role === "ORGANIZER" && userReady && organizerVerificationStatus !== "APPROVED") {

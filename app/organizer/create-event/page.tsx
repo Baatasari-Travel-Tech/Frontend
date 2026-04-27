@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import EventPage from "@/components/event-org/EventPage"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import type { EventFormData } from "@/components/event-org/data/create-event-data"
-import { uploadFile } from "@/lib/api/uploads"
+import { uploadEventCoverImage } from "@/lib/api/uploads"
 import { apiRequest } from "@/lib/api/client"
 import type { EventDetail } from "@/types/api"
 
@@ -142,9 +142,7 @@ const normalizeSponsors = (sponsors: EventFormData["sponsors"]) => {
 }
 
 const buildCreateEventPayload = (
-  formData: EventFormData,
-  heroImage?: { secureUrl: string; publicId: string },
-  existingEvent?: EventDetail
+  formData: EventFormData
 ) => {
   const tiers = buildTicketTiers(formData)
   const capacity = tiers.reduce((total, tier) => total + tier.quantity, 0)
@@ -195,8 +193,6 @@ const buildCreateEventPayload = (
     guidelines: {
       text: formData.guidelines || "",
     },
-    heroImageUrl: heroImage?.secureUrl ?? existingEvent?.heroImageUrl ?? null,
-    heroImagePublicId: heroImage?.publicId ?? existingEvent?.heroImagePublicId ?? null,
     published: true,
     ticketTiers: tiers,
   }
@@ -218,34 +214,27 @@ function CreateEventContent() {
       startDirectly={startDirectly}
       action={action}
       onSubmit={async (formData) => {
-        let heroImage: { secureUrl: string; publicId: string } | undefined
-        if (formData.eventPhoto) {
-          heroImage = await uploadFile(formData.eventPhoto, "eventAsset")
-        }
-
-        let existingEvent: EventDetail | undefined
-        if (isUpdateFlow && eventId) {
-          const existingResponse = await apiRequest<{ data: { event: EventDetail } }>(
-            `/organizer/events/${eventId}`,
-            { auth: true }
-          )
-          existingEvent = existingResponse.data.event
-        }
-
-        const payload = buildCreateEventPayload(formData, heroImage, existingEvent)
+        const payload = buildCreateEventPayload(formData)
+        let persistedEventId = eventId ?? ""
 
         if (isUpdateFlow && eventId) {
-          await apiRequest(`/organizer/events/${eventId}`, {
+          const response = await apiRequest<{ data: { event: EventDetail } }>(`/organizer/events/${eventId}`, {
             method: "PUT",
             auth: true,
             body: JSON.stringify(payload),
           })
+          persistedEventId = response.data.event.id
         } else {
-          await apiRequest("/organizer/events", {
+          const response = await apiRequest<{ data: { event: EventDetail } }>("/organizer/events", {
             method: "POST",
             auth: true,
             body: JSON.stringify(payload),
           })
+          persistedEventId = response.data.event.id
+        }
+
+        if (formData.eventPhoto && persistedEventId) {
+          await uploadEventCoverImage(persistedEventId, formData.eventPhoto)
         }
 
         router.push("/organizer/manage-events")

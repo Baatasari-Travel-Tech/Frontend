@@ -205,6 +205,9 @@ export function UpcomingEventsSection({
                       height={260}
                       className="rounded-lg object-cover mx-auto lg:mx-0"
                       unoptimized
+                      onError={(imageEvent) => {
+                        imageEvent.currentTarget.src = "/event-img.svg"
+                      }}
                     />
                     <p className="text-center text-sm font-medium mt-3 text-(--upcoming-gray-700)">
                       {event.title}

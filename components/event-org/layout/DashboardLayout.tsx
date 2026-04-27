@@ -11,7 +11,12 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const hideSidebar = ["/organizer/email-verification", "/organizer/onboarding", "/organizer/pending"].includes(pathname);
+  const hideSidebar = [
+    "/organizer/email-verification",
+    "/organizer/onboarding",
+    "/organizer/document-upload",
+    "/organizer/pending"
+  ].includes(pathname);
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col overflow-x-hidden">

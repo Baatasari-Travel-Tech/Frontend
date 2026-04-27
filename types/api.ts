@@ -8,6 +8,7 @@ export type SafeUser = {
   role: BackendRole;
   onboardingStatus: OnboardingStatus;
   emailVerified: boolean;
+  organizerDocumentsSubmitted: boolean;
   organizerApproved: boolean;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +56,7 @@ export type LegacyProfile = {
 };
 
 export type OrganizerProfile = {
+  entityType: "ORGANIZATION" | "INDIVIDUAL";
   orgName: string | null;
   description: string | null;
   contactEmail: string | null;
@@ -77,6 +79,14 @@ export type OrganizerProfile = {
   logoPublicId: string | null;
   kycDocUrl: string | null;
   kycDocPublicId: string | null;
+  gstDeclarationMode: "HAS_GSTIN" | "NO_GSTIN" | null;
+  gstDetails: Array<{ gstin: string; state: string }>;
+  undertakingAccepted: boolean;
+  undertakingState: string | null;
+  panDocumentKey: string | null;
+  agreementDocumentKey: string | null;
+  agreementDownloadedAt: string | null;
+  documentsSubmittedAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 };

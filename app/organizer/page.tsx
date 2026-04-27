@@ -29,6 +29,11 @@ export default function OrganizerIndexPage() {
       return
     }
 
+    if (organizerVerificationStatus === "DOCUMENTS_REQUIRED") {
+      router.replace("/organizer/document-upload")
+      return
+    }
+
     router.replace(organizerVerificationStatus === "APPROVED" ? "/organizer/dashboard" : "/organizer/pending")
   }, [organizerVerificationStatus, router, user])
 

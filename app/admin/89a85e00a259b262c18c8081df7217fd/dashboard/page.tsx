@@ -119,7 +119,10 @@ export default function AdminDashboardPage() {
   const pendingOrganizersEligibleForApproval = useMemo(
     () =>
       pendingOrganizers.filter(
-        (user) => user.onboardingStatus === "COMPLETED" && user.emailVerified
+        (user) =>
+          user.onboardingStatus === "COMPLETED" &&
+          user.emailVerified &&
+          user.organizerDocumentsSubmitted
       ),
     [pendingOrganizers]
   )

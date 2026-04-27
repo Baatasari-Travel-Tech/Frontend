@@ -8,6 +8,7 @@ import { EventList } from "@/components/events/event-list"
 import { EventsHero } from "@/components/events/hero"
 import { SuggestedEventsSection } from "@/components/events/suggested-events-section"
 import { apiRequest } from "@/lib/api/client"
+import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { formatCurrency } from "@/lib/format"
 import type { EventData } from "@/lib/events-data"
 import type { EventSummary } from "@/types/api"
@@ -46,7 +47,7 @@ function toEventCardData(event: EventSummary): EventData {
     price: readablePrice,
     numericPrice: lowestPrice,
     category: event.category ?? "Live Event",
-    image: event.heroImageUrl || "/e1.png",
+    image: getEventCoverImageUrl(event.id, event.updatedAt),
     date: formatCardDate(event.date),
     location: event.venue,
     bookedCount: event.bookedCount ?? 0,

@@ -28,6 +28,7 @@ export default function AboutPage() {
             const organizerOnboarded = organizerRoleRecord?.onboarding_completed === true
             if (!organizerOnboarded) return getRoleOnboarding('EVENT_ORGANIZER')
             if (organizerVerificationStatus === 'EMAIL_NOT_VERIFIED') return '/organizer/email-verification'
+            if (organizerVerificationStatus === 'DOCUMENTS_REQUIRED') return '/organizer/document-upload'
             if (organizerVerificationStatus !== 'APPROVED') return '/organizer/pending'
             return getRoleDashboard('EVENT_ORGANIZER')
         }

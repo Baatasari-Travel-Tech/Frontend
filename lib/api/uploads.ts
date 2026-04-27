@@ -2,7 +2,7 @@
 
 import { apiRequest } from "@/lib/api/client"
 
-type UploadTarget = "avatar" | "organizerLogo" | "organizerKycPdf" | "eventAsset"
+type UploadTarget = "organizerLogo" | "organizerKycPdf"
 
 type PresignedUploadPayload = {
   objectKey: string
@@ -38,4 +38,55 @@ export async function uploadFile(file: File, target: UploadTarget) {
     secureUrl: response.publicUrl,
     publicId: response.objectKey,
   }
+}
+
+type AvatarUploadResponse = {
+  data: {
+    avatar: {
+      objectKey: string
+      publicUrl: string | null
+      version: number
+    }
+  }
+}
+
+const uploadAvatarImage = async (path: "/user/avatar" | "/organizer/avatar", file: File) => {
+  const response = await apiRequest<AvatarUploadResponse>(path, {
+    method: "PUT",
+    auth: true,
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  })
+
+  return response.data.avatar
+}
+
+export const uploadUserAvatarImage = (file: File) => uploadAvatarImage("/user/avatar", file)
+
+export const uploadOrganizerAvatarImage = (file: File) => uploadAvatarImage("/organizer/avatar", file)
+
+type EventCoverUploadResponse = {
+  data: {
+    cover: {
+      eventId: string
+      objectKey: string
+      publicUrl: string
+      version: number
+    }
+  }
+}
+
+export async function uploadEventCoverImage(eventId: string, file: File) {
+  const response = await apiRequest<EventCoverUploadResponse>(`/organizer/events/${eventId}/cover`, {
+    method: "PUT",
+    auth: true,
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  })
+
+  return response.data.cover
 }

@@ -9,7 +9,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
 import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
-import { uploadFile } from "@/lib/api/uploads"
+import { uploadFile, uploadOrganizerAvatarImage } from "@/lib/api/uploads"
 
 const schema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -150,15 +150,13 @@ export default function OrganizerProfilePage() {
     setError(null)
 
     try {
-      let avatarUrl = profile?.avatar_url ?? null
       let logoUrl = organizerProfile?.logoUrl ?? null
       let logoPublicId = organizerProfile?.logoPublicId ?? null
       let kycDocUrl = organizerProfile?.kycDocUrl ?? null
       let kycDocPublicId = organizerProfile?.kycDocPublicId ?? null
 
       if (avatarFile) {
-        const upload = await uploadFile(avatarFile, "avatar")
-        avatarUrl = upload.secureUrl
+        await uploadOrganizerAvatarImage(avatarFile)
       }
 
       if (logoFile) {
@@ -180,21 +178,45 @@ export default function OrganizerProfilePage() {
         location: values.location.trim(),
         gender: values.gender,
         profession: values.profession.trim(),
-        avatarUrl,
       })
 
       await apiRequest("/organizer/profile", {
         method: "PUT",
         auth: true,
         body: JSON.stringify({
-          orgName: values.orgName.trim(),
-          description: values.description.trim(),
-          contactEmail: values.contactEmail.trim(),
-          contactPhone: values.contactPhone.trim(),
-          address: values.address.trim(),
-          city: values.city.trim(),
-          state: values.state.trim(),
-          pincode: values.pincode.trim(),
+          entityType: organizerProfile?.entityType ?? "ORGANIZATION",
+          orgName:
+            (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+              ? null
+              : values.orgName.trim() || null,
+          description:
+            (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+              ? null
+              : values.description.trim() || null,
+          contactEmail:
+            (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+              ? null
+              : values.contactEmail.trim() || null,
+          contactPhone:
+            (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+              ? null
+              : values.contactPhone.trim() || null,
+          address:
+            (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+              ? null
+              : values.address.trim() || null,
+          city:
+            (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+              ? null
+              : values.city.trim() || null,
+          state:
+            (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+              ? null
+              : values.state.trim() || null,
+          pincode:
+            (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+              ? null
+              : values.pincode.trim() || null,
           panNumber: values.panNumber.trim() || null,
           gstNumber: values.gstNumber?.trim() || null,
           bankAccountName: values.bankAccountName.trim() || null,

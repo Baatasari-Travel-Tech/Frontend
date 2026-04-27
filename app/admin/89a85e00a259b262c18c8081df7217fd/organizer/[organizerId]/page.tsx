@@ -9,6 +9,7 @@ import {
   isAdminAuthFailure,
   listPendingOrganizers,
 } from "@/lib/api/admin"
+import { API_URL } from "@/lib/api"
 import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { clearAdminToken, getAdminToken } from "@/lib/admin/session"
 import type { AdminOrganizerDetailsResponse, OrganizerProfile } from "@/types/api"
@@ -55,6 +56,7 @@ const formatDateTime = (value: string | null | undefined) => {
 const readString = (value: unknown) => (typeof value === "string" && value.trim() ? value : null)
 
 const mapPendingProfileToOrganizerProfile = (profile: Record<string, unknown>): OrganizerProfile => ({
+  entityType: (readString(profile.entity_type) as OrganizerProfile["entityType"]) ?? "ORGANIZATION",
   orgName: readString(profile.org_name),
   description: readString(profile.description),
   contactEmail: readString(profile.contact_email),
@@ -77,6 +79,26 @@ const mapPendingProfileToOrganizerProfile = (profile: Record<string, unknown>): 
   logoPublicId: readString(profile.logo_public_id),
   kycDocUrl: readString(profile.kyc_doc_url),
   kycDocPublicId: readString(profile.kyc_doc_public_id),
+  gstDeclarationMode: (readString(profile.gst_declaration_mode) as OrganizerProfile["gstDeclarationMode"]) ?? null,
+  gstDetails:
+    Array.isArray(profile.gst_details) &&
+    profile.gst_details.every(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        "gstin" in item &&
+        typeof (item as { gstin?: unknown }).gstin === "string" &&
+        "state" in item &&
+        typeof (item as { state?: unknown }).state === "string"
+    )
+      ? (profile.gst_details as OrganizerProfile["gstDetails"])
+      : [],
+  undertakingAccepted: profile.undertaking_accepted === true,
+  undertakingState: readString(profile.undertaking_state),
+  panDocumentKey: readString(profile.pan_document_key),
+  agreementDocumentKey: readString(profile.agreement_document_key),
+  agreementDownloadedAt: readString(profile.agreement_downloaded_at),
+  documentsSubmittedAt: readString(profile.documents_submitted_at),
   createdAt: readString(profile.created_at),
   updatedAt: readString(profile.updated_at),
 })
@@ -123,6 +145,8 @@ export default function OrganizerProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [details, setDetails] = useState<AdminOrganizerDetailsResponse | null>(null)
+  const [panPreviewUrl, setPanPreviewUrl] = useState<string | null>(null)
+  const [agreementPreviewUrl, setAgreementPreviewUrl] = useState<string | null>(null)
 
   const refresh = useCallback(
     async (logoutOnFailure = true) => {
@@ -158,6 +182,7 @@ export default function OrganizerProfilePage() {
                 role: matchedOrganizer.role,
                 onboardingStatus: matchedOrganizer.onboardingStatus,
                 emailVerified: matchedOrganizer.emailVerified,
+                organizerDocumentsSubmitted: matchedOrganizer.organizerDocumentsSubmitted,
                 organizerApproved: matchedOrganizer.organizerApproved,
                 createdAt: matchedOrganizer.createdAt,
                 updatedAt: matchedOrganizer.updatedAt,
@@ -199,6 +224,45 @@ export default function OrganizerProfilePage() {
     void refresh()
   }, [refresh, router])
 
+  useEffect(() => {
+    let cancelled = false
+    const objectUrls: string[] = []
+
+    const loadPreview = async (type: "pan" | "agreement", setter: (value: string | null) => void) => {
+      try {
+        const token = getAdminToken()
+        if (!token || !details?.user?.id) {
+          setter(null)
+          return
+        }
+        const response = await fetch(`${API_URL}/api/v1/admin/organizers/${details.user.id}/documents/${type}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (!response.ok) {
+          setter(null)
+          return
+        }
+        const blob = await response.blob()
+        if (cancelled) return
+        const objectUrl = URL.createObjectURL(blob)
+        objectUrls.push(objectUrl)
+        setter(objectUrl)
+      } catch {
+        setter(null)
+      }
+    }
+
+    void loadPreview("pan", setPanPreviewUrl)
+    void loadPreview("agreement", setAgreementPreviewUrl)
+
+    return () => {
+      cancelled = true
+      objectUrls.forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [details?.user?.id])
+
   const handleApprove = async () => {
     if (!organizerId) return
 
@@ -231,14 +295,13 @@ export default function OrganizerProfilePage() {
   }
 
   const { user, userProfile, organizerProfile } = details
-  const kycDocUrl = organizerProfile?.kycDocUrl
-  const inlinePdfUrl = kycDocUrl ? (kycDocUrl.includes("#") ? kycDocUrl : `${kycDocUrl}#toolbar=1`) : null
 
   const accountItems: DetailItem[] = [
     { label: "Email", value: user.email },
     { label: "Role", value: user.role },
     { label: "Onboarding status", value: user.onboardingStatus },
     { label: "Email verified", value: formatBoolean(user.emailVerified) },
+    { label: "Documents submitted", value: formatBoolean(user.organizerDocumentsSubmitted) },
     { label: "Organizer approved", value: formatBoolean(user.organizerApproved) },
     { label: "Account created", value: formatDateTime(user.createdAt) },
     { label: "Last updated", value: formatDateTime(user.updatedAt) },
@@ -257,6 +320,7 @@ export default function OrganizerProfilePage() {
   ]
 
   const organizerItems: DetailItem[] = [
+    { label: "Entity type", value: organizerProfile?.entityType ?? null },
     { label: "Organization name", value: organizerProfile?.orgName ?? null },
     { label: "Organization description", value: organizerProfile?.description ?? null },
     { label: "Contact email", value: organizerProfile?.contactEmail ?? null },
@@ -275,11 +339,25 @@ export default function OrganizerProfilePage() {
   const complianceItems: DetailItem[] = [
     { label: "PAN number", value: organizerProfile?.panNumber ?? null },
     { label: "GST number", value: organizerProfile?.gstNumber ?? null },
+    { label: "GST declaration mode", value: organizerProfile?.gstDeclarationMode ?? null },
+    { label: "Undertaking accepted", value: formatBoolean(organizerProfile?.undertakingAccepted === true) },
+    { label: "Undertaking state", value: organizerProfile?.undertakingState ?? null },
+    {
+      label: "GST details",
+      value:
+        organizerProfile?.gstDetails?.length
+          ? organizerProfile.gstDetails.map((entry) => `${entry.gstin} (${entry.state})`).join(", ")
+          : null,
+    },
     { label: "Bank account name", value: organizerProfile?.bankAccountName ?? null },
     { label: "Bank account number", value: organizerProfile?.bankAccountNumber ?? null },
     { label: "Bank IFSC", value: organizerProfile?.bankIfsc ?? null },
     { label: "Logo URL", value: organizerProfile?.logoUrl ?? null, isLink: true },
     { label: "KYC document URL", value: organizerProfile?.kycDocUrl ?? null, isLink: true },
+    { label: "PAN document key", value: organizerProfile?.panDocumentKey ?? null },
+    { label: "Agreement document key", value: organizerProfile?.agreementDocumentKey ?? null },
+    { label: "Agreement downloaded at", value: formatDateTime(organizerProfile?.agreementDownloadedAt) },
+    { label: "Documents submitted at", value: formatDateTime(organizerProfile?.documentsSubmittedAt) },
     { label: "Organizer profile updated", value: formatDateTime(organizerProfile?.updatedAt) },
   ]
 
@@ -316,27 +394,33 @@ export default function OrganizerProfilePage() {
         <DetailGrid title="Compliance and Bank Details" items={complianceItems} />
 
         <section className="rounded-xl bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">KYC PDF Preview</h2>
-          {!inlinePdfUrl ? (
-            <p className="mt-3 text-sm text-slate-600">No KYC PDF has been uploaded yet.</p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              <p className="text-sm text-slate-600">
-                The PDF is embedded below so it can be reviewed directly in the browser without downloading.
-              </p>
-              <div className="overflow-hidden rounded-lg border border-slate-200">
-                <iframe title="Organizer KYC PDF" src={inlinePdfUrl} className="h-170 w-full bg-slate-50" />
-              </div>
-              <a
-                href={kycDocUrl ?? undefined}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex w-fit rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Open KYC PDF in new tab
-              </a>
+          <h2 className="text-lg font-semibold text-slate-900">Private Compliance Document Preview</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Documents are streamed from private storage through backend authorization checks.
+          </p>
+
+          <div className="mt-4 grid gap-5 lg:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-slate-800">PAN PDF</p>
+              {panPreviewUrl ? (
+                <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <iframe title="Organizer PAN PDF" src={panPreviewUrl} className="h-[520px] w-full bg-slate-50" />
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">PAN PDF not uploaded yet.</p>
+              )}
             </div>
-          )}
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-slate-800">Signed Agreement PDF</p>
+              {agreementPreviewUrl ? (
+                <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <iframe title="Organizer Agreement PDF" src={agreementPreviewUrl} className="h-[520px] w-full bg-slate-50" />
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">Agreement PDF not uploaded yet.</p>
+              )}
+            </div>
+          </div>
         </section>
       </div>
     </div>

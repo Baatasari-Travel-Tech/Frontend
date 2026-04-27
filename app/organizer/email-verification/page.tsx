@@ -18,8 +18,18 @@ export default function OrganizerEmailVerificationPage() {
       return
     }
 
-    if (organizerVerificationStatus === "APPROVED" || user.emailVerified) {
+    if (organizerVerificationStatus === "APPROVED") {
+      router.replace("/organizer/dashboard")
+      return
+    }
+
+    if (organizerVerificationStatus === "PENDING") {
       router.replace("/organizer/pending")
+      return
+    }
+
+    if (organizerVerificationStatus === "DOCUMENTS_REQUIRED" || user.emailVerified) {
+      router.replace("/organizer/document-upload")
     }
   }, [organizerVerificationStatus, router, user])
 
@@ -28,19 +38,19 @@ export default function OrganizerEmailVerificationPage() {
       <PageShell
         eyebrow="Organizer verification"
         title="Verify your email to continue"
-        description="Your verification email is sent only after organizer onboarding is completed. Once you verify it, we will move you to the approval pending stage."
+        description="Your verification email is sent only after organizer onboarding is completed. Once you verify it, you will continue to document upload."
       >
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <SectionCard title="Next step" description="Please open your inbox and use the verification link from Baatasari.">
             <div className="grid gap-4 text-sm leading-6 text-slate-600">
               <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                After verification, you will land on the approval pending page while our onboarding team reviews your account.
+                After verification, you will land on the document upload page before approval review begins.
               </div>
               <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
                 We do not show resend here. If there is any issue with the verification email, please contact us and our team will help you directly.
               </div>
               <a
-                href="mailto:contactus@baatasari.com"
+                href="mailto:contact-us@baatasari.com"
                 className="inline-flex w-fit items-center justify-center rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
               >
                 Contact us

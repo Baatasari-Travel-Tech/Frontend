@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { useAuth } from "@/app/providers"
-import { uploadFile } from "@/lib/api/uploads"
+import { uploadUserAvatarImage } from "@/lib/api/uploads"
+import { DEFAULT_AVATAR_IMAGE, getAvatarImageUrl } from "@/lib/avatar"
 
 export default function ProfilePage() {
-  const { profile, session, updateProfile } = useAuth()
+  const { profile, session, updateProfile, user } = useAuth()
 
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -27,8 +28,8 @@ export default function ProfilePage() {
   const [offsetStart, setOffsetStart] = useState({ x: 0, y: 0 })
   const [cropImage, setCropImage] = useState<HTMLImageElement | null>(null)
 
-  const MAX_FILE_SIZE = 200 * 1024
-  const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"]
+  const MAX_FILE_SIZE = 5 * 1024 * 1024
+  const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -38,8 +39,6 @@ export default function ProfilePage() {
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
 
-  const DEFAULT_AVATAR = "/avatar.webp"
-
   useEffect(() => {
     setEmail(session?.user?.email ?? profile?.email ?? "")
     setName(profile?.full_name ?? "")
@@ -48,7 +47,7 @@ export default function ProfilePage() {
     setLocation(profile?.location ?? "")
     setGender(profile?.gender ?? "")
     setProfession(profile?.profession ?? "")
-    setAvatarPreview(profile?.avatar_url ?? DEFAULT_AVATAR)
+    setAvatarPreview(profile?.avatar_url ?? DEFAULT_AVATAR_IMAGE)
   }, [profile, session?.user?.email])
 
   useEffect(() => {
@@ -93,7 +92,7 @@ export default function ProfilePage() {
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setError("Image must be under 200KB.")
+      setError("Image must be 5MB or less.")
       return
     }
 
@@ -185,10 +184,14 @@ export default function ProfilePage() {
     }
 
     try {
-      let avatarUrl = profile?.avatar_url || null
       if (avatarFile) {
-        const upload = await uploadFile(avatarFile, "avatar")
-        avatarUrl = upload.secureUrl
+        if (!user?.id) {
+          throw new Error("Authentication required.")
+        }
+
+        const upload = await uploadUserAvatarImage(avatarFile)
+        setAvatarPreview(getAvatarImageUrl("users", user.id, upload.version))
+        setAvatarFile(null)
       }
 
       await updateProfile({
@@ -198,7 +201,6 @@ export default function ProfilePage() {
         location: location.trim(),
         gender: gender.trim(),
         profession: profession.trim(),
-        avatarUrl,
       })
 
       setMessage("Profile updated successfully.")
@@ -230,7 +232,15 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="relative h-52 w-52 overflow-hidden rounded-full border border-slate-200 bg-slate-50 shadow-[0_12px_22px_rgba(15,23,42,0.08)]">
-                  <img src={avatarPreview || DEFAULT_AVATAR} alt="Profile preview" className="h-full w-full object-cover" />
+                  <img
+                    src={avatarPreview || DEFAULT_AVATAR_IMAGE}
+                    alt="Profile preview"
+                    className="h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null
+                      event.currentTarget.src = DEFAULT_AVATAR_IMAGE
+                    }}
+                  />
                 </div>
 
                 <label className="w-full text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -238,11 +248,11 @@ export default function ProfilePage() {
                   <input
                     className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-900/10 file:px-3 file:py-1.5 file:text-[10px] file:font-semibold file:text-brand-800 hover:file:bg-brand-900/20"
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
                     onChange={(event) => handleAvatarChange(event.target.files?.[0] ?? null)}
                   />
                 </label>
-                <p className="text-center text-xs text-slate-400">PNG, JPG, or WEBP under 200KB (optional)</p>
+                <p className="text-center text-xs text-slate-400">PNG, JPG, GIF, or WEBP up to 5MB (optional)</p>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2 md:pr-1">

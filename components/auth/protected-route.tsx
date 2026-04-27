@@ -59,6 +59,11 @@ export function ProtectedRoute({
         return
       }
 
+      if (organizerVerificationStatus === "DOCUMENTS_REQUIRED") {
+        router.replace("/organizer/document-upload")
+        return
+      }
+
       if (organizerVerificationStatus !== "APPROVED" && !allowPendingOrganizer) {
         router.replace("/organizer/pending")
         return

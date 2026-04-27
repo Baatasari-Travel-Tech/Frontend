@@ -85,6 +85,7 @@ const normalizeLegacyProfile = (user: SafeUser | null, profile: UserProfile | nu
 const getOrganizerVerificationStatus = (user: SafeUser | null) => {
   if (!user || user.role !== "ORGANIZER") return null
   if (!user.emailVerified) return "EMAIL_NOT_VERIFIED"
+  if (!user.organizerDocumentsSubmitted) return "DOCUMENTS_REQUIRED"
   if (!user.organizerApproved) return "PENDING"
   return "APPROVED"
 }
@@ -107,12 +108,6 @@ const mapProfilePayload = (payload: Record<string, unknown>) => ({
         ? payload.fullName
         : undefined,
   phone: typeof payload.phone === "string" ? payload.phone : undefined,
-  avatarUrl:
-    typeof payload.avatar_url === "string"
-      ? payload.avatar_url
-      : typeof payload.avatarUrl === "string"
-        ? payload.avatarUrl
-        : undefined,
   dob: typeof payload.dob === "string" ? payload.dob : undefined,
   location: typeof payload.location === "string" ? payload.location : undefined,
   gender: typeof payload.gender === "string" ? payload.gender : undefined,

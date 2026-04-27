@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/app/providers"
 import { useAuthModal } from "@/components/auth/auth-modal-context"
 import { apiRequest } from "@/lib/api/client"
+import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { loadRazorpayScript } from "@/lib/payments/razorpay"
 import type { ApiError, EventDetail } from "@/types/api"
@@ -79,8 +80,14 @@ export default function EventDetailPage() {
   })
 
   const event = eventQuery.data
+  const [coverImageSrc, setCoverImageSrc] = useState("/e1.png")
   const isLoggedIn = Boolean(session?.user)
   const guestEmail = session?.user?.email ?? ""
+
+  useEffect(() => {
+    if (!event) return
+    setCoverImageSrc(getEventCoverImageUrl(event.id, event.updatedAt))
+  }, [event])
 
   const openBookingAuthModal = (mode: "login" | "register") => {
     const params = new URLSearchParams(searchParams.toString())
@@ -256,12 +263,13 @@ export default function EventDetailPage() {
           <div className="space-y-6 sm:space-y-8">
             <div className="relative overflow-hidden rounded-2xl shadow-lg h-[calc(100dvh-9rem)] w-full">
               <Image
-                src={event.heroImageUrl || "/e1.png"}
+                src={coverImageSrc}
                 alt={event.title}
                 fill
                 className="object-cover object-center"
                 priority
                 unoptimized
+                onError={() => setCoverImageSrc("/e1.png")}
               />
               <div className="absolute inset-0 bg-linear-to-t from-[#0C1D37]/70 to-transparent" />
             </div>

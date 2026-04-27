@@ -1,4 +1,5 @@
 import type { EventFormData } from "@/components/event-org/data/create-event-data"
+import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { formatCurrency } from "@/lib/format"
 import type { EventDetail } from "@/types/api"
 
@@ -318,7 +319,7 @@ const toUpcomingCard = (event: EventDetail): UpcomingManageEvent => {
     aboutDescription: event.description,
     highlightsTitle: "Event Highlights",
     highlights,
-    posterImage: event.heroImageUrl || "/event-img.svg",
+    posterImage: getEventCoverImageUrl(event.id, event.updatedAt),
     stats: {
       registrations: String(soldCount),
       revenue: formatCurrency(revenue),

@@ -69,6 +69,7 @@ const getOrganizerVerificationStatus = () => {
   const currentUser = useAuthStore.getState().user
   if (!currentUser || currentUser.role !== 'ORGANIZER') return null
   if (!currentUser.emailVerified) return 'EMAIL_NOT_VERIFIED'
+  if (!currentUser.organizerDocumentsSubmitted) return 'DOCUMENTS_REQUIRED'
   if (!currentUser.organizerApproved) return 'PENDING'
   return 'APPROVED'
 }

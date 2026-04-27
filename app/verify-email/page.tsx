@@ -31,7 +31,7 @@ export default function VerifyEmailPage() {
       .then(async () => {
         setStatus("success")
         await bootstrap().catch(() => undefined)
-        setTimeout(() => router.replace("/organizer/pending"), 1200)
+        setTimeout(() => router.replace("/organizer/document-upload"), 1200)
       })
       .catch((error) => {
         setStatus("error")
@@ -46,7 +46,7 @@ export default function VerifyEmailPage() {
         <h1 className="mt-3 font-bricolage text-4xl text-slate-950">Email Verification</h1>
         <p className="mt-4 text-sm text-slate-600">{errorMessage ?? message}</p>
         {status === "success" ? (
-          <p className="mt-3 text-xs uppercase tracking-[0.24em] text-slate-400">Redirecting to approval pending</p>
+          <p className="mt-3 text-xs uppercase tracking-[0.24em] text-slate-400">Redirecting to document upload</p>
         ) : null}
       </div>
     </main>

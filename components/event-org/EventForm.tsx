@@ -124,7 +124,7 @@ const EventForm: React.FC<EventFormProps> = ({
                         type="file"
                         name="eventPhoto"
                         onChange={handleInputChange}
-                        accept="image/jpeg,image/png,image/gif"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
                         className="hidden"
                       />
 
@@ -150,7 +150,7 @@ const EventForm: React.FC<EventFormProps> = ({
                     <p className="text-sm font-semibold text-gray-900 text-center">
                       Upload a high-quality image for your event
                     </p>
-                    <p className="text-sm font-semibold text-gray-900 text-center">Formats: PNG, JPG, JPEG</p>
+                    <p className="text-sm font-semibold text-gray-900 text-center">Formats: PNG, JPG, JPEG, WEBP</p>
                     <p className="text-sm font-semibold text-gray-900 text-center">Accepted aspect ratio: 2:3 (Portrait)</p>
                   </div>
                 </div>
