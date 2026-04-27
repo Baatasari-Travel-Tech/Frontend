@@ -579,7 +579,9 @@ export default function OrganizerOnboardingPage() {
             <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">Organizer Onboarding</h1>
             <p className="max-w-3xl text-sm leading-6 text-slate-500">
               Complete your personal details and bank details. Organization details are required only for organization onboarding.
-              <p>Your progress is saved as you move through the flow, so you can come back and continue later.</p>
+            </p>
+            <p className="max-w-3xl text-sm leading-6 text-slate-500">
+              Your progress is saved as you move through the flow, so you can come back and continue later.
             </p>
           </div>
 
