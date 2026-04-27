@@ -152,7 +152,7 @@ const sanitizeSponsorList = (value: unknown) => {
   return sponsors.length > 0 ? sponsors : [{ ...DEFAULT_SPONSOR_ENTRY }]
 }
 
-const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => {
+export const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => {
   const requirements = asRecord(event.requirements)
   const contactInfo = asRecord(event.contactInfo)
   const audienceRange = asRecord(event.audienceRange)

@@ -156,6 +156,14 @@ export type EventDetail = EventSummary & {
   ticketTiers: OrganizerEventTicketTier[];
 };
 
+export type OrganizerAnalytics = {
+  totalEvents: number;
+  totalCapacity: number;
+  nextEventDate: string | null;
+  paidOrders: number;
+  grossRevenue: number;
+};
+
 export type SuggestedEventSummary = {
   id: string;
   creatorUserId: string;

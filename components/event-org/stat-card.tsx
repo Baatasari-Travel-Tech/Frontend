@@ -7,11 +7,12 @@ interface StatCardProps {
   iconColor: string
   value: string
   label: string
-  trend: {
+  trend?: {
     direction: "up" | "down"
     percentage: string
     comparisonText: string
   }
+  context?: string
 }
 
 export function StatCard({
@@ -21,9 +22,10 @@ export function StatCard({
   value,
   label,
   trend,
+  context,
 }: StatCardProps) {
-  const TrendIcon = trend.direction === "up" ? ArrowUp : ArrowDown
-  const trendColor = trend.direction === "up" ? "text-primary" : "text-destructive"
+  const TrendIcon = trend ? (trend.direction === "up" ? ArrowUp : ArrowDown) : null
+  const trendColor = trend?.direction === "down" ? "text-destructive" : "text-primary"
 
   return (
     <Card className="w-full">
@@ -39,15 +41,19 @@ export function StatCard({
             </p>
             <p className="text-sm text-muted-foreground truncate">{label}</p>
 
-            <div className="flex items-center gap-1 mt-2 min-w-0">
-              <TrendIcon className={`h-3 w-3 ${trendColor} shrink-0`} />
-              <span className={`text-xs ${trendColor} font-medium shrink-0`}>
-                {trend.percentage}
-              </span>
-              <span className="text-xs text-muted-foreground truncate">
-                {trend.comparisonText}
-              </span>
-            </div>
+            {trend && TrendIcon ? (
+              <div className="flex items-center gap-1 mt-2 min-w-0">
+                <TrendIcon className={`h-3 w-3 ${trendColor} shrink-0`} />
+                <span className={`text-xs ${trendColor} font-medium shrink-0`}>
+                  {trend.percentage}
+                </span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {trend.comparisonText}
+                </span>
+              </div>
+            ) : context ? (
+              <p className="mt-2 text-xs text-muted-foreground">{context}</p>
+            ) : null}
           </div>
         </div>
       </CardContent>

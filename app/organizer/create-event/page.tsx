@@ -1,10 +1,11 @@
 "use client"
 
-import React, { Suspense } from "react"
+import React, { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import EventPage from "@/components/event-org/EventPage"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import type { EventFormData } from "@/components/event-org/data/create-event-data"
+import { toEventFormDraft } from "@/components/event-org/manage-events/manage-events"
 import { uploadEventCoverImage } from "@/lib/api/uploads"
 import { apiRequest } from "@/lib/api/client"
 import type { EventDetail } from "@/types/api"
@@ -207,39 +208,98 @@ function CreateEventContent() {
   const action = searchParams.get("action")?.toLowerCase() ?? null
   const startDirectly = mode === "create" || searchParams.get("startDirectly") === "true"
   const isUpdateFlow = Boolean(eventId) && (action === "edit" || action === "reschedule")
+  const [isHydratingEvent, setIsHydratingEvent] = useState(() => Boolean(eventId))
+  const [prefillError, setPrefillError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    const hydrateDraftFromEvent = async () => {
+      if (!eventId) {
+        setIsHydratingEvent(false)
+        setPrefillError(null)
+        return
+      }
+
+      setIsHydratingEvent(true)
+      setPrefillError(null)
+
+      try {
+        localStorage.removeItem("eventFormData")
+        localStorage.removeItem("eventFormCurrentStep")
+        localStorage.removeItem("eventFormOpenSections")
+
+        const response = await apiRequest<{ data: { event: EventDetail } }>(`/organizer/events/${eventId}`, {
+          auth: true,
+        })
+
+        if (!active) return
+        localStorage.setItem("eventFormData", JSON.stringify(toEventFormDraft(response.data.event)))
+      } catch (error) {
+        if (!active) return
+        setPrefillError(error instanceof Error ? error.message : "Unable to load event details.")
+      } finally {
+        if (active) {
+          setIsHydratingEvent(false)
+        }
+      }
+    }
+
+    void hydrateDraftFromEvent()
+
+    return () => {
+      active = false
+    }
+  }, [eventId])
+
+  if (isHydratingEvent) {
+    return (
+      <div className="w-full rounded-xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-600">
+        Loading event details...
+      </div>
+    )
+  }
 
   return (
-    <EventPage
-      isDashboardMode
-      startDirectly={startDirectly}
-      action={action}
-      onSubmit={async (formData) => {
-        const payload = buildCreateEventPayload(formData)
-        let persistedEventId = eventId ?? ""
+    <div className="w-full flex flex-col gap-4">
+      {prefillError ? (
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {prefillError}
+        </p>
+      ) : null}
 
-        if (isUpdateFlow && eventId) {
-          const response = await apiRequest<{ data: { event: EventDetail } }>(`/organizer/events/${eventId}`, {
-            method: "PUT",
-            auth: true,
-            body: JSON.stringify(payload),
-          })
-          persistedEventId = response.data.event.id
-        } else {
-          const response = await apiRequest<{ data: { event: EventDetail } }>("/organizer/events", {
-            method: "POST",
-            auth: true,
-            body: JSON.stringify(payload),
-          })
-          persistedEventId = response.data.event.id
-        }
+      <EventPage
+        isDashboardMode
+        startDirectly={startDirectly}
+        action={action}
+        onSubmit={async (formData) => {
+          const payload = buildCreateEventPayload(formData)
+          let persistedEventId = eventId ?? ""
 
-        if (formData.eventPhoto && persistedEventId) {
-          await uploadEventCoverImage(persistedEventId, formData.eventPhoto)
-        }
+          if (isUpdateFlow && eventId) {
+            const response = await apiRequest<{ data: { event: EventDetail } }>(`/organizer/events/${eventId}`, {
+              method: "PUT",
+              auth: true,
+              body: JSON.stringify(payload),
+            })
+            persistedEventId = response.data.event.id
+          } else {
+            const response = await apiRequest<{ data: { event: EventDetail } }>("/organizer/events", {
+              method: "POST",
+              auth: true,
+              body: JSON.stringify(payload),
+            })
+            persistedEventId = response.data.event.id
+          }
 
-        router.push("/organizer/manage-events")
-      }}
-    />
+          if (formData.eventPhoto && persistedEventId) {
+            await uploadEventCoverImage(persistedEventId, formData.eventPhoto)
+          }
+
+          router.push("/organizer/manage-events")
+        }}
+      />
+    </div>
   )
 }
 
