@@ -60,10 +60,18 @@ type RequestOptions = RequestInit & {
   auth?: boolean
   retryOn401?: boolean
   activeRole?: ActiveRole | null
+  timeoutMs?: number
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { auth = false, retryOn401 = auth, activeRole, headers, ...init } = options
+  const {
+    auth = false,
+    retryOn401 = auth,
+    activeRole,
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+    headers,
+    ...init
+  } = options
   const token = useAuthStore.getState().accessToken
   const roleHeader = activeRole ?? useAuthStore.getState().activeRole
   const finalHeaders = new Headers(headers)
@@ -89,7 +97,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const controller = init.signal ? null : new AbortController()
     const timeout =
       controller
-        ? setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
+        ? setTimeout(() => controller.abort(), timeoutMs)
         : null
 
     try {

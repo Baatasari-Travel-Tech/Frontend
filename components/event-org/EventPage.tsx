@@ -28,6 +28,7 @@ interface EventPageProps {
   isDashboardMode?: boolean;
   startDirectly?: boolean;
   action?: string | null;
+  contactInfoPrefill?: Partial<EventFormData["contactInfo"]>;
   onSubmit?: (formData: EventFormData) => Promise<void>;
 }
 
@@ -101,6 +102,7 @@ const EventPage: React.FC<EventPageProps> = ({
   isDashboardMode = false,
   startDirectly = false,
   action = null,
+  contactInfoPrefill,
   onSubmit,
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(() => {
@@ -189,6 +191,42 @@ const EventPage: React.FC<EventPageProps> = ({
       } catch { }
     }
   }, [action, startDirectly]);
+
+  useEffect(() => {
+    if (!contactInfoPrefill) return;
+
+    setFormData((prev) => {
+      const current = prev.contactInfo ?? {
+        mobile: "",
+        email: "",
+        website: "",
+        additionalLinks: "",
+      };
+
+      const next = {
+        mobile: current.mobile?.trim() ? current.mobile : (contactInfoPrefill.mobile?.trim() ?? current.mobile),
+        email: current.email?.trim() ? current.email : (contactInfoPrefill.email?.trim() ?? current.email),
+        website: current.website?.trim() ? current.website : (contactInfoPrefill.website?.trim() ?? current.website),
+        additionalLinks: current.additionalLinks?.trim()
+          ? current.additionalLinks
+          : (contactInfoPrefill.additionalLinks?.trim() ?? current.additionalLinks),
+      };
+
+      if (
+        next.mobile === current.mobile &&
+        next.email === current.email &&
+        next.website === current.website &&
+        next.additionalLinks === current.additionalLinks
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        contactInfo: next,
+      };
+    });
+  }, [contactInfoPrefill]);
 
   // Persist form data (debounced)
   useEffect(() => {

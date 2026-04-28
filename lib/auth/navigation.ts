@@ -24,7 +24,7 @@ export function resolveUserHome(params: {
     if (organizerVerificationStatus === "EMAIL_NOT_VERIFIED") return "/organizer/email-verification"
     if (organizerVerificationStatus === "DOCUMENTS_REQUIRED") return "/organizer/document-upload"
     if (organizerVerificationStatus !== "APPROVED") return "/organizer/pending"
-    return "/organizer/dashboard"
+    return "/organizer/analytics"
   }
 
   if (user.role === "ORGANIZER" && userReady && organizerVerificationStatus === "EMAIL_NOT_VERIFIED") {

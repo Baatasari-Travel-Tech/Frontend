@@ -34,7 +34,7 @@ export default function OrganizerIndexPage() {
       return
     }
 
-    router.replace(organizerVerificationStatus === "APPROVED" ? "/organizer/dashboard" : "/organizer/pending")
+    router.replace(organizerVerificationStatus === "APPROVED" ? "/organizer/analytics" : "/organizer/pending")
   }, [organizerVerificationStatus, router, user])
 
   return null

@@ -2,17 +2,15 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BarChart3, Building2, CalendarPlus2, ClipboardList, MailCheck, PanelRightClose, Store, UserCircle2 } from "lucide-react"
+import { BarChart3, Building2, CalendarPlus2, ClipboardList, PanelRightClose, UserCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const organizerNav = [
+  { href: "/organizer/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/organizer/dashboard", label: "Dashboard", icon: Building2 },
   { href: "/organizer/create-event", label: "Create Event", icon: CalendarPlus2 },
   { href: "/organizer/manage-events", label: "Manage Events", icon: ClipboardList },
-  { href: "/organizer/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/organizer/profile", label: "Profile", icon: UserCircle2 },
-  { href: "/organizer/stalls", label: "Stalls", icon: Store },
-  { href: "/organizer/artist-request", label: "Artist Requests", icon: MailCheck },
 ]
 
 export function OrganizerShell({ children }: { children: React.ReactNode }) {

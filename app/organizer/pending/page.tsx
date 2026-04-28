@@ -30,7 +30,7 @@ export default function OrganizerPendingPage() {
     }
 
     if (organizerVerificationStatus === "APPROVED") {
-      router.replace("/organizer/dashboard")
+      router.replace("/organizer/analytics")
     }
   }, [organizerVerificationStatus, router, user])
 

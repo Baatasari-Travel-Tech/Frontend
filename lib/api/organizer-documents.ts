@@ -28,6 +28,7 @@ export const uploadOrganizerDocument = async (documentType: OrganizerDocumentTyp
     {
       method: "PUT",
       auth: true,
+      timeoutMs: 60000,
       headers: {
         "Content-Type": "application/pdf",
       },

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { Suspense, useEffect, useState } from "react"
+import React, { Suspense, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import EventPage from "@/components/event-org/EventPage"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -8,6 +8,7 @@ import type { EventFormData } from "@/components/event-org/data/create-event-dat
 import { toEventFormDraft } from "@/components/event-org/manage-events/manage-events"
 import { uploadEventCoverImage } from "@/lib/api/uploads"
 import { apiRequest } from "@/lib/api/client"
+import { useAuth } from "@/app/providers"
 import type { EventDetail } from "@/types/api"
 
 type TicketTierPayload = {
@@ -16,6 +17,8 @@ type TicketTierPayload = {
   quantity: number
   price: number
 }
+
+type EventContactInfoPrefill = Partial<EventFormData["contactInfo"]>
 
 const toNumber = (value: string | number | undefined | null, fallback = 0) => {
   const parsed = Number(value)
@@ -199,9 +202,20 @@ const buildCreateEventPayload = (
   }
 }
 
+const normalizeIndianMobile = (value: string | null | undefined) => {
+  const raw = value?.trim() ?? ""
+  if (!raw) return ""
+
+  const digits = raw.replace(/\D/g, "")
+  if (digits.length === 10) return `+91 ${digits}`
+  if (digits.length === 12 && digits.startsWith("91")) return `+91 ${digits.slice(2)}`
+  return raw
+}
+
 function CreateEventContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, profile, organizerProfile } = useAuth()
 
   const mode = searchParams.get("mode")
   const eventId = searchParams.get("eventId")
@@ -210,6 +224,28 @@ function CreateEventContent() {
   const isUpdateFlow = Boolean(eventId) && (action === "edit" || action === "reschedule")
   const [isHydratingEvent, setIsHydratingEvent] = useState(() => Boolean(eventId))
   const [prefillError, setPrefillError] = useState<string | null>(null)
+
+  const contactInfoPrefill = useMemo<EventContactInfoPrefill>(() => {
+    const additionalLinks = [organizerProfile?.instagramUrl, organizerProfile?.linkedinUrl]
+      .map((link) => link?.trim() ?? "")
+      .filter((link) => link.length > 0)
+      .join(", ")
+
+    return {
+      mobile: normalizeIndianMobile(organizerProfile?.contactPhone ?? profile?.phone),
+      email: organizerProfile?.contactEmail?.trim() || user?.email || "",
+      website: organizerProfile?.websiteUrl?.trim() || "",
+      additionalLinks,
+    }
+  }, [
+    organizerProfile?.contactEmail,
+    organizerProfile?.contactPhone,
+    organizerProfile?.instagramUrl,
+    organizerProfile?.linkedinUrl,
+    organizerProfile?.websiteUrl,
+    profile?.phone,
+    user?.email,
+  ])
 
   useEffect(() => {
     let active = true
@@ -272,6 +308,7 @@ function CreateEventContent() {
         isDashboardMode
         startDirectly={startDirectly}
         action={action}
+        contactInfoPrefill={!eventId ? contactInfoPrefill : undefined}
         onSubmit={async (formData) => {
           const payload = buildCreateEventPayload(formData)
           let persistedEventId = eventId ?? ""

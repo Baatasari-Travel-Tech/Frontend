@@ -11,6 +11,7 @@ import { useAuth } from "@/app/providers"
 import { INDIA_STATES } from "@/lib/india-states"
 import {
   completeOrganizerDocuments,
+  fetchOrganizerDocumentBlob,
   uploadOrganizerDocument,
 } from "@/lib/api/organizer-documents"
 
@@ -48,6 +49,17 @@ const formatValue = (value: string | null | undefined, fallback = "Not provided"
   return nextValue && nextValue.length > 0 ? nextValue : fallback
 }
 
+const triggerPdfDownload = (blob: Blob, fileName: string) => {
+  const downloadUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = downloadUrl
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500)
+}
+
 export default function OrganizerDocumentUploadPage() {
   const router = useRouter()
   const { user, profile, organizerProfile, organizerVerificationStatus, refreshOrganizerStatus } = useAuth()
@@ -62,6 +74,7 @@ export default function OrganizerDocumentUploadPage() {
   const [panUploaded, setPanUploaded] = useState(false)
   const [agreementDownloaded, setAgreementDownloaded] = useState(false)
   const [isBuildingAgreement, setIsBuildingAgreement] = useState(false)
+  const [agreementModalOpen, setAgreementModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -78,6 +91,7 @@ export default function OrganizerDocumentUploadPage() {
   const drawingRef = useRef(false)
   const drawPointRef = useRef<{ x: number; y: number } | null>(null)
   const uploadObjectUrlRef = useRef<string | null>(null)
+  const undertakingDirtyRef = useRef(false)
 
   const organizerDisplayName = useMemo(() => {
     const fullName = profile?.full_name?.trim()
@@ -102,6 +116,7 @@ export default function OrganizerDocumentUploadPage() {
 
   const organizerEntityTypeLabel =
     organizerProfile?.entityType === "INDIVIDUAL" ? "Individual" : "Organization"
+  const hasStoredAgreement = Boolean(organizerProfile?.agreementDocumentKey)
 
   useEffect(() => {
     if (!user) return
@@ -122,7 +137,7 @@ export default function OrganizerDocumentUploadPage() {
       return
     }
     if (organizerVerificationStatus === "APPROVED") {
-      router.replace("/organizer/dashboard")
+      router.replace("/organizer/analytics")
     }
   }, [organizerVerificationStatus, router, user])
 
@@ -142,8 +157,11 @@ export default function OrganizerDocumentUploadPage() {
         }))
       )
     }
-    setUndertakingAccepted(organizerProfile.undertakingAccepted)
-    setUndertakingState(organizerProfile.undertakingState ?? "")
+    const profileUndertakingState = organizerProfile.undertakingState ?? ""
+    if (!undertakingDirtyRef.current || organizerProfile.undertakingAccepted || profileUndertakingState.length > 0) {
+      setUndertakingAccepted(organizerProfile.undertakingAccepted)
+      setUndertakingState(profileUndertakingState)
+    }
     setPanUploaded(Boolean(organizerProfile.panDocumentKey))
     setAgreementDownloaded(Boolean(organizerProfile.agreementDownloadedAt))
   }, [organizerProfile])
@@ -155,6 +173,15 @@ export default function OrganizerDocumentUploadPage() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!isDeclarationOpen && !signatureModalOpen && !agreementModalOpen) return
+    const { overflow } = document.body.style
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = overflow
+    }
+  }, [agreementModalOpen, isDeclarationOpen, signatureModalOpen])
 
   const renderUploadPreview = useCallback(() => {
     const canvas = uploadPreviewRef.current
@@ -253,9 +280,15 @@ export default function OrganizerDocumentUploadPage() {
   }
 
   const beginDraw = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (event.cancelable) {
+      event.preventDefault()
+    }
     const canvas = drawCanvasRef.current
     const context = canvas?.getContext("2d")
     if (!canvas || !context) return
+    if (canvas.setPointerCapture) {
+      canvas.setPointerCapture(event.pointerId)
+    }
     const point = drawAtPoint(event)
     if (!point) return
     drawingRef.current = true
@@ -266,6 +299,9 @@ export default function OrganizerDocumentUploadPage() {
   }
 
   const continueDraw = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (event.cancelable) {
+      event.preventDefault()
+    }
     if (!drawingRef.current) return
     const canvas = drawCanvasRef.current
     const context = canvas?.getContext("2d")
@@ -278,7 +314,16 @@ export default function OrganizerDocumentUploadPage() {
     drawPointRef.current = point
   }
 
-  const endDraw = () => {
+  const endDraw = (event?: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (event?.cancelable) {
+      event.preventDefault()
+    }
+    if (event) {
+      const canvas = drawCanvasRef.current
+      if (canvas?.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId)
+      }
+    }
     drawingRef.current = false
     drawPointRef.current = null
   }
@@ -382,6 +427,18 @@ export default function OrganizerDocumentUploadPage() {
     try {
       setError(null)
       setSuccess(null)
+      setIsBuildingAgreement(true)
+      if (hasStoredAgreement && !signatureDataUrl) {
+        const existingAgreementBlob = await fetchOrganizerDocumentBlob("agreement")
+        triggerPdfDownload(
+          existingAgreementBlob,
+          `baatasari-organizer-agreement-${user?.id ?? "signed"}.pdf`
+        )
+        setAgreementDownloaded(true)
+        setSuccess("Agreement downloaded.")
+        return
+      }
+
       validateDeclaration()
       if (!panUploaded) {
         throw new Error("Upload PAN PDF before downloading agreement.")
@@ -389,15 +446,10 @@ export default function OrganizerDocumentUploadPage() {
       if (!signatureDataUrl) {
         throw new Error("Add organizer signature before downloading agreement.")
       }
-      setIsBuildingAgreement(true)
+
       const agreementBlob = await buildAgreementPdf()
+      triggerPdfDownload(agreementBlob, `baatasari-organizer-agreement-${user?.id ?? "signed"}.pdf`)
       await uploadOrganizerDocument("agreement", agreementBlob)
-      const downloadUrl = URL.createObjectURL(agreementBlob)
-      const anchor = document.createElement("a")
-      anchor.href = downloadUrl
-      anchor.download = `baatasari-organizer-agreement-${user?.id ?? "signed"}.pdf`
-      anchor.click()
-      URL.revokeObjectURL(downloadUrl)
       setAgreementDownloaded(true)
       await refreshOrganizerStatus()
       setSuccess("Agreement downloaded and stored securely.")
@@ -433,6 +485,202 @@ export default function OrganizerDocumentUploadPage() {
       setIsSubmitting(false)
     }
   }
+
+  const renderAgreementContainer = (withRef = false, compact = false) => (
+    <div
+      ref={withRef ? agreementRef : undefined}
+      style={{
+        width: "100%",
+        minWidth: compact ? "auto" : "780px",
+        backgroundColor: "#ffffff",
+        color: "#111827",
+        border: "1px solid #cbd5e1",
+        borderRadius: "14px",
+        padding: compact ? "16px" : "24px",
+        fontFamily: "Times New Roman, Georgia, serif",
+        fontSize: compact ? "12px" : "13px",
+        lineHeight: 1.6,
+      }}
+    >
+      <p style={{ margin: 0, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#6b7280" }}>
+        Privileged and Confidential
+      </p>
+      <h3 style={{ margin: "10px 0 4px", fontSize: compact ? "24px" : "28px", lineHeight: 1.2 }}>AGREEMENT</h3>
+      <p style={{ margin: 0 }}>
+        This agreement is made on <strong>{todayLabel}</strong> between <strong>Baatasari</strong> and{" "}
+        <strong>{organizerDisplayName}</strong>.
+      </p>
+
+      <div style={{ marginTop: "16px", border: "1px solid #d1d5db", borderRadius: "10px", overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <tbody>
+            <tr>
+              <td
+                style={{
+                  width: "28%",
+                  borderRight: "1px solid #d1d5db",
+                  borderBottom: "1px solid #d1d5db",
+                  padding: "10px",
+                  fontWeight: 700,
+                }}
+              >
+                First Party
+              </td>
+              <td style={{ borderBottom: "1px solid #d1d5db", padding: "10px" }}>
+                Baatasari (baatasari.com)
+                <br />
+                {BAATASARI_ADDRESS_LINES.join(", ")}
+              </td>
+            </tr>
+            <tr>
+              <td style={{ width: "28%", borderRight: "1px solid #d1d5db", padding: "10px", fontWeight: 700 }}>
+                Second Party
+              </td>
+              <td style={{ padding: "10px" }}>
+                {organizerDisplayName} ({organizerEntityTypeLabel})
+                <br />
+                Address: {organizerAddress}
+                <br />
+                Email: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}
+                <br />
+                Phone: {formatValue(organizerProfile?.contactPhone)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ marginTop: "18px" }}>
+        <p style={{ margin: "0 0 8px" }}>
+          <strong>Recitals</strong>
+        </p>
+        <p style={{ margin: "0 0 8px" }}>A) Baatasari provides event discovery and ticketing services through its platform.</p>
+        <p style={{ margin: "0 0 8px" }}>
+          B) The Organizer appoints Baatasari to facilitate event listing and ticket bookings on the platform.
+        </p>
+        <p style={{ margin: 0 }}>
+          C) The Parties agree to the commercial and legal terms below, modeled on the BookMyShow-style agreement format.
+        </p>
+      </div>
+
+      <div style={{ marginTop: "18px" }}>
+        <p style={{ margin: "0 0 8px" }}>
+          <strong>Key Terms</strong>
+        </p>
+        <ol style={{ margin: "0 0 0 18px", padding: 0 }}>
+          <li>Baatasari will provide platform listing and online ticketing support.</li>
+          <li>The Organizer is solely responsible for event execution, safety, licenses, and legal compliance.</li>
+          <li>Payment terms and commission structure are as communicated for each event listing.</li>
+          <li>Cancellation, refund handling, and chargebacks follow the agreed event policy and applicable laws.</li>
+          <li>Both parties shall maintain confidentiality and comply with applicable tax and data-protection laws.</li>
+        </ol>
+      </div>
+
+      <div style={{ marginTop: "18px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+        <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Schedule 1 - Organizer Particulars</p>
+        <p style={{ margin: "0 0 4px" }}>Name: {organizerDisplayName}</p>
+        <p style={{ margin: "0 0 4px" }}>PAN: {formatValue(organizerProfile?.panNumber, "Pending")}</p>
+        <p style={{ margin: "0 0 4px" }}>
+          GST Status:{" "}
+          {gstAnswer === "YES"
+            ? getSanitizedGstEntries()
+                .map((entry) => `${entry.gstin} (${entry.state})`)
+                .join(", ") || formatValue(organizerProfile?.gstNumber, "GST details pending")
+            : `Not registered under GST (Undertaking accepted: ${undertakingAccepted ? "Yes" : "No"})`}
+        </p>
+        <p style={{ margin: 0 }}>
+          Registered Address: <strong>{organizerAddress}</strong>
+        </p>
+      </div>
+
+      <div style={{ marginTop: "18px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+        <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Schedule 2 - Notices</p>
+        <p style={{ margin: "0 0 6px" }}>
+          <strong>To Baatasari:</strong> Contact Team, contact-us@baatasari.com
+        </p>
+        <p style={{ margin: "0 0 6px" }}>
+          Address: <strong>{BAATASARI_ADDRESS_LINES.join(", ")}</strong>
+        </p>
+        <p style={{ margin: "0 0 6px" }}>
+          <strong>To Organizer:</strong> {organizerDisplayName}
+        </p>
+        <p style={{ margin: "0 0 6px" }}>Email: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}</p>
+        <p style={{ margin: 0 }}>
+          Address: <strong>{organizerAddress}</strong>
+        </p>
+      </div>
+
+      <div
+        style={{
+          marginTop: "20px",
+          paddingTop: "12px",
+          borderTop: "1px solid #d1d5db",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "16px",
+        }}
+      >
+        <div style={{ flex: "1 1 260px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+          <p style={{ margin: 0, fontWeight: 700 }}>For Baatasari</p>
+          <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Authorized Signatory</p>
+          <div style={{ minHeight: "76px", display: "flex", alignItems: "center" }}>
+            <img
+              src="/Signature.png"
+              alt="Baatasari authorized signature"
+              style={{ maxHeight: "64px", width: "auto", objectFit: "contain" }}
+            />
+          </div>
+          <p style={{ margin: "8px 0 0" }}>Date: {todayLabel}</p>
+        </div>
+        <div style={{ flex: "1 1 260px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+          <p style={{ margin: 0, fontWeight: 700 }}>For Organizer</p>
+          <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Authorized Signatory</p>
+          <div
+            style={{
+              minHeight: "76px",
+              border: "1px dashed #94a3b8",
+              borderRadius: "8px",
+              padding: "8px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {signatureDataUrl ? (
+              <button
+                type="button"
+                onClick={() => setSignatureModalOpen(true)}
+                style={{ width: "100%", border: "none", background: "transparent", padding: 0, cursor: "pointer" }}
+              >
+                <img
+                  src={signatureDataUrl}
+                  alt="Organizer signature"
+                  style={{ maxHeight: "58px", width: "100%", objectFit: "contain" }}
+                />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSignatureModalOpen(true)}
+                style={{
+                  border: "1px solid #111827",
+                  borderRadius: "999px",
+                  padding: "8px 14px",
+                  background: "#ffffff",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Click to sign
+              </button>
+            )}
+          </div>
+          <p style={{ margin: "8px 0 0" }}>Name: {organizerDisplayName}</p>
+          <p style={{ margin: "2px 0 0" }}>Date: {todayLabel}</p>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <ProtectedRoute requireOnboarding={false}>
@@ -528,7 +776,10 @@ export default function OrganizerDocumentUploadPage() {
                     <input
                       type="checkbox"
                       checked={undertakingAccepted}
-                      onChange={(event) => setUndertakingAccepted(event.target.checked)}
+                      onChange={(event) => {
+                        undertakingDirtyRef.current = true
+                        setUndertakingAccepted(event.target.checked)
+                      }}
                     />
                     I have read and accept the{" "}
                     <button
@@ -544,7 +795,10 @@ export default function OrganizerDocumentUploadPage() {
                     <select
                       className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       value={undertakingState}
-                      onChange={(event) => setUndertakingState(event.target.value)}
+                      onChange={(event) => {
+                        undertakingDirtyRef.current = true
+                        setUndertakingState(event.target.value)
+                      }}
                     >
                       <option value="">Select state</option>
                       {INDIA_STATES.map((state) => (
@@ -586,191 +840,43 @@ export default function OrganizerDocumentUploadPage() {
 
           <SectionCard
             title="Agreement"
-            description="Review this agreement container, sign in the organizer signatory section, then use Download and Submit."
+            description="Open agreement in a top container, sign in organizer signatory, then use Download and Submit."
           >
             <div className="space-y-4">
-              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 sm:p-3">
-                <div
-                  ref={agreementRef}
-                  style={{
-                    width: "100%",
-                    minWidth: "780px",
-                    backgroundColor: "#ffffff",
-                    color: "#111827",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: "14px",
-                    padding: "24px",
-                    fontFamily: "Times New Roman, Georgia, serif",
-                    fontSize: "13px",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  <p style={{ margin: 0, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#6b7280" }}>
-                    Privileged and Confidential
-                  </p>
-                  <h3 style={{ margin: "10px 0 4px", fontSize: "28px", lineHeight: 1.2 }}>AGREEMENT</h3>
-                  <p style={{ margin: 0 }}>
-                    This agreement is made on <strong>{todayLabel}</strong> between <strong>Baatasari</strong> and{" "}
-                    <strong>{organizerDisplayName}</strong>.
-                  </p>
-
-                  <div style={{ marginTop: "16px", border: "1px solid #d1d5db", borderRadius: "10px", overflow: "hidden" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <tbody>
-                        <tr>
-                          <td style={{ width: "28%", borderRight: "1px solid #d1d5db", borderBottom: "1px solid #d1d5db", padding: "10px", fontWeight: 700 }}>
-                            First Party
-                          </td>
-                          <td style={{ borderBottom: "1px solid #d1d5db", padding: "10px" }}>
-                            Baatasari (baatasari.com)
-                            <br />
-                            {BAATASARI_ADDRESS_LINES.join(", ")}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style={{ width: "28%", borderRight: "1px solid #d1d5db", padding: "10px", fontWeight: 700 }}>
-                            Second Party
-                          </td>
-                          <td style={{ padding: "10px" }}>
-                            {organizerDisplayName} ({organizerEntityTypeLabel})
-                            <br />
-                            Address: {organizerAddress}
-                            <br />
-                            Email: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}
-                            <br />
-                            Phone: {formatValue(organizerProfile?.contactPhone)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div style={{ marginTop: "18px" }}>
-                    <p style={{ margin: "0 0 8px" }}>
-                      <strong>Recitals</strong>
-                    </p>
-                    <p style={{ margin: "0 0 8px" }}>
-                      A) Baatasari provides event discovery and ticketing services through its platform.
-                    </p>
-                    <p style={{ margin: "0 0 8px" }}>
-                      B) The Organizer appoints Baatasari to facilitate event listing and ticket bookings on the platform.
-                    </p>
-                    <p style={{ margin: 0 }}>
-                      C) The Parties agree to the commercial and legal terms below, modeled on the BookMyShow-style agreement format.
-                    </p>
-                  </div>
-
-                  <div style={{ marginTop: "18px" }}>
-                    <p style={{ margin: "0 0 8px" }}>
-                      <strong>Key Terms</strong>
-                    </p>
-                    <ol style={{ margin: "0 0 0 18px", padding: 0 }}>
-                      <li>Baatasari will provide platform listing and online ticketing support.</li>
-                      <li>The Organizer is solely responsible for event execution, safety, licenses, and legal compliance.</li>
-                      <li>Payment terms and commission structure are as communicated for each event listing.</li>
-                      <li>Cancellation, refund handling, and chargebacks follow the agreed event policy and applicable laws.</li>
-                      <li>Both parties shall maintain confidentiality and comply with applicable tax and data-protection laws.</li>
-                    </ol>
-                  </div>
-
-                  <div style={{ marginTop: "18px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
-                    <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Schedule 1 - Organizer Particulars</p>
-                    <p style={{ margin: "0 0 4px" }}>Name: {organizerDisplayName}</p>
-                    <p style={{ margin: "0 0 4px" }}>PAN: {formatValue(organizerProfile?.panNumber, "Pending")}</p>
-                    <p style={{ margin: "0 0 4px" }}>
-                      GST Status:{" "}
-                      {gstAnswer === "YES"
-                        ? getSanitizedGstEntries()
-                            .map((entry) => `${entry.gstin} (${entry.state})`)
-                            .join(", ") || formatValue(organizerProfile?.gstNumber, "GST details pending")
-                        : `Not registered under GST (Undertaking accepted: ${undertakingAccepted ? "Yes" : "No"})`}
-                    </p>
-                    <p style={{ margin: 0 }}>
-                      Registered Address: <strong>{organizerAddress}</strong>
-                    </p>
-                  </div>
-
-                  <div style={{ marginTop: "18px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
-                    <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Schedule 2 - Notices</p>
-                    <p style={{ margin: "0 0 6px" }}>
-                      <strong>To Baatasari:</strong> Contact Team, contact-us@baatasari.com
-                    </p>
-                    <p style={{ margin: "0 0 6px" }}>
-                      Address: <strong>{BAATASARI_ADDRESS_LINES.join(", ")}</strong>
-                    </p>
-                    <p style={{ margin: "0 0 6px" }}>
-                      <strong>To Organizer:</strong> {organizerDisplayName}
-                    </p>
-                    <p style={{ margin: "0 0 6px" }}>
-                      Email: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}
-                    </p>
-                    <p style={{ margin: 0 }}>
-                      Address: <strong>{organizerAddress}</strong>
-                    </p>
-                  </div>
-
-                  <div style={{ marginTop: "20px", paddingTop: "12px", borderTop: "1px solid #d1d5db", display: "grid", gap: "16px", gridTemplateColumns: "1fr 1fr" }}>
-                    <div style={{ border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
-                      <p style={{ margin: 0, fontWeight: 700 }}>For Baatasari</p>
-                      <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Authorized Signatory</p>
-                      <div style={{ minHeight: "76px", display: "flex", alignItems: "center" }}>
-                        <img
-                          src="/Signature.png"
-                          alt="Baatasari authorized signature"
-                          style={{ maxHeight: "64px", width: "auto", objectFit: "contain" }}
-                        />
-                      </div>
-                      <p style={{ margin: "8px 0 0" }}>Date: {todayLabel}</p>
-                    </div>
-                    <div style={{ border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
-                      <p style={{ margin: 0, fontWeight: 700 }}>For Organizer</p>
-                      <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Authorized Signatory</p>
-                      <div style={{ minHeight: "76px", border: "1px dashed #94a3b8", borderRadius: "8px", padding: "8px", display: "flex", alignItems: "center" }}>
-                        {signatureDataUrl ? (
-                          <button
-                            type="button"
-                            onClick={() => setSignatureModalOpen(true)}
-                            style={{ width: "100%", border: "none", background: "transparent", padding: 0, cursor: "pointer" }}
-                          >
-                            <img
-                              src={signatureDataUrl}
-                              alt="Organizer signature"
-                              style={{ maxHeight: "58px", width: "100%", objectFit: "contain" }}
-                            />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setSignatureModalOpen(true)}
-                            style={{
-                              border: "1px solid #111827",
-                              borderRadius: "999px",
-                              padding: "8px 14px",
-                              background: "#ffffff",
-                              fontSize: "12px",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                            }}
-                          >
-                            Click to sign
-                          </button>
-                        )}
-                      </div>
-                      <p style={{ margin: "8px 0 0" }}>Name: {organizerDisplayName}</p>
-                      <p style={{ margin: "2px 0 0" }}>Date: {todayLabel}</p>
-                    </div>
-                  </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-700">
+                  Open the agreement in a top container like the undertaking modal. This is optimized for mobile and laptop review.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAgreementModalOpen(true)}
+                    className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Open agreement container
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSignatureModalOpen(true)}
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white"
+                  >
+                    {signatureDataUrl ? "Edit signature" : "Add signature"}
+                  </button>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-wrap justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => void handleDownloadAgreement()}
-                  disabled={isBuildingAgreement || !panUploaded || !signatureDataUrl}
+                  disabled={isBuildingAgreement || (!hasStoredAgreement && (!panUploaded || !signatureDataUrl))}
                   className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
                 >
-                  {isBuildingAgreement ? "Preparing agreement..." : "Download"}
+                  {isBuildingAgreement
+                    ? "Preparing agreement..."
+                    : hasStoredAgreement && !signatureDataUrl
+                      ? "Download uploaded agreement"
+                      : "Download"}
                 </button>
                 <button
                   type="button"
@@ -786,11 +892,26 @@ export default function OrganizerDocumentUploadPage() {
                 <p className="text-right text-sm text-emerald-700">Agreement downloaded. You can submit now.</p>
               ) : (
                 <p className="text-right text-sm text-slate-500">
-                  Download gets enabled after PAN upload and organizer signature. Submit unlocks after download.
+                  Download gets enabled after PAN upload and organizer signature. If you already uploaded one, you can
+                  download it directly. Submit unlocks after download.
                 </p>
               )}
             </div>
           </SectionCard>
+
+          <div
+            aria-hidden="true"
+            style={{
+              position: "fixed",
+              left: "-10000px",
+              top: 0,
+              width: "820px",
+              opacity: 0,
+              pointerEvents: "none",
+            }}
+          >
+            {renderAgreementContainer(true)}
+          </div>
 
           {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
           {success ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p> : null}
@@ -841,6 +962,7 @@ export default function OrganizerDocumentUploadPage() {
               <button
                 type="button"
                 onClick={() => {
+                  undertakingDirtyRef.current = true
                   setUndertakingAccepted(true)
                   setIsDeclarationOpen(false)
                 }}
@@ -853,9 +975,41 @@ export default function OrganizerDocumentUploadPage() {
         </div>
       ) : null}
 
+      {agreementModalOpen ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 px-4 py-5">
+          <div
+            tabIndex={-1}
+            className="absolute left-1/2 top-1/2 max-h-[95vh] w-full max-w-5xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 shadow-2xl sm:p-6"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-xl font-semibold text-slate-900">Agreement</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSignatureModalOpen(true)}
+                  className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700"
+                >
+                  {signatureDataUrl ? "Edit signature" : "Add signature"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAgreementModalOpen(false)}
+                  className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2">
+              <div className="mx-auto min-w-0">{renderAgreementContainer(false, true)}</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {signatureModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
-          <div className="w-full max-w-3xl rounded-2xl bg-white p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 px-4 py-5">
+          <div className="mx-auto w-full max-w-3xl rounded-2xl bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold text-slate-900">Organizer Signature</h3>
               <button
@@ -936,11 +1090,12 @@ export default function OrganizerDocumentUploadPage() {
                   ref={drawCanvasRef}
                   width={900}
                   height={280}
-                  className="w-full rounded-lg border border-slate-200 bg-white"
+                  className="touch-none select-none w-full rounded-lg border border-slate-200 bg-white"
                   onPointerDown={beginDraw}
                   onPointerMove={continueDraw}
                   onPointerUp={endDraw}
                   onPointerLeave={endDraw}
+                  onPointerCancel={endDraw}
                 />
                 <div className="flex flex-wrap gap-2">
                   <button
