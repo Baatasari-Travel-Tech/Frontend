@@ -10,11 +10,12 @@ export interface DashboardNavItem {
   name: string;
   href: string;
   icon: LucideIcon;
+  comingSoon?: boolean;
 }
 
 export const dashboardNavItems: DashboardNavItem[] = [
-  { name: "Analytics", icon: BarChart2, href: "/organizer/analytics" },
   { name: "Home", icon: Home, href: "/organizer/dashboard" },
-  { name: "Create Events", icon: PlusCircle, href: "/organizer/create-event" },
+  { name: "Create event", icon: PlusCircle, href: "/organizer/create-event" },
   { name: "Manage Events", icon: Calendar, href: "/organizer/manage-events" },
+  { name: "Analytics", icon: BarChart2, href: "/organizer/analytics", comingSoon: true },
 ];

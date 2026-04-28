@@ -2,6 +2,7 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import EventPage from "@/components/event-org/EventPage"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import type { EventFormData } from "@/components/event-org/data/create-event-data"
@@ -214,6 +215,7 @@ const normalizeIndianMobile = (value: string | null | undefined) => {
 
 function CreateEventContent() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const searchParams = useSearchParams()
   const { user, profile, organizerProfile } = useAuth()
 
@@ -332,6 +334,10 @@ function CreateEventContent() {
           if (formData.eventPhoto && persistedEventId) {
             await uploadEventCoverImage(persistedEventId, formData.eventPhoto)
           }
+
+          await queryClient.invalidateQueries({ queryKey: ["organizer-events"] })
+          await queryClient.invalidateQueries({ queryKey: ["organizer-events", "manage-events"] })
+          await queryClient.invalidateQueries({ queryKey: ["organizer-analytics"] })
 
           router.push("/organizer/manage-events")
         }}

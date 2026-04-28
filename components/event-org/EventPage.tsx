@@ -539,7 +539,7 @@ const EventPage: React.FC<EventPageProps> = ({
                 </div>
 
                 <div className="hidden max-[768px]:flex max-[768px]:flex-col max-[768px]:items-center text-center mb-6 w-full">
-                  <h3 className="text-xl font-bold text-upcoming-primary-900 m-0">{progressSteps[currentStep - 1]?.label}</h3>
+                  <h3 className="text-xl font-bold text-(--upcoming-primary-900) m-0">{progressSteps[currentStep - 1]?.label}</h3>
                   <div className="text-xs text-gray-500 mt-1">
                     Step {currentStep} of {progressSteps.length}
                   </div>
@@ -572,11 +572,11 @@ const EventPage: React.FC<EventPageProps> = ({
                           }}
                         >
                           <div
-                            className={`w-8.5 h-8.5 rounded-full flex items-center justify-center border-2 border-upcoming-primary-800 bg-gray-100 text-upcoming-primary-800 transition-all duration-200 ${active
-                                ? "border-upcoming-primary-900! bg-card! text-upcoming-primary-900!"
+                            className={`w-8.5 h-8.5 rounded-full flex items-center justify-center border-2 border-(--upcoming-primary-800) bg-gray-100 text-(--upcoming-primary-800) transition-all duration-200 ${active
+                                ? "border-(--upcoming-primary-900) bg-card text-(--upcoming-primary-900)"
                                 : ""
                               } ${done
-                                ? "border-upcoming-primary-900! bg-upcoming-primary-900! text-white!"
+                                ? "border-(--upcoming-primary-900) bg-(--upcoming-primary-900) text-white"
                                 : ""
                               }`}
                           >
@@ -596,7 +596,7 @@ const EventPage: React.FC<EventPageProps> = ({
                           </div>
 
                           <span
-                            className={`mt-3 text-center text-base text-upcoming-primary-800 max-w-25 wrap-break-word ${active ? "text-upcoming-primary-900!" : ""
+                            className={`mt-3 text-center text-base text-(--upcoming-primary-800) max-w-25 wrap-break-word ${active ? "text-(--upcoming-primary-900)" : ""
                               }`}
                           >
                             {step.label}
@@ -605,7 +605,7 @@ const EventPage: React.FC<EventPageProps> = ({
 
                         {index < progressSteps.length - 1 && (
                           <div
-                            className={`flex-1 h-1 bg-upcoming-primary-800 min-w-6 max-w-full z-1 mt-3.75 ${done ? "bg-upcoming-primary-900!" : ""
+                            className={`flex-1 h-1 bg-(--upcoming-gray-200) min-w-6 max-w-full z-1 mt-3.75 ${done ? "bg-(--upcoming-primary-900)" : ""
                               }`}
                           />
                         )}
@@ -704,7 +704,7 @@ const EventPage: React.FC<EventPageProps> = ({
             <button
               onClick={() => void handleNext()}
               disabled={isSubmitting}
-              className="flex items-center gap-2 py-3 px-8 rounded-full bg-upcoming-primary-900 text-white border-none cursor-pointer text-base font-medium shadow-[0_4px_6px_-1px_rgb(0_0_0/0.1),0_2px_4px_-1px_rgb(0_0_0/0.06)]"
+              className="flex items-center gap-2 py-3 px-8 rounded-full bg-(--upcoming-primary-900) text-white border-none cursor-pointer text-base font-medium shadow-[0_4px_6px_-1px_rgb(0_0_0/0.1),0_2px_4px_-1px_rgb(0_0_0/0.06)] hover:bg-(--upcoming-primary-800) disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Submitting..." : currentStep === 4 ? "Submit" : "Proceed"}
               {currentStep !== 4 && <ArrowRightIcon size={20} />}

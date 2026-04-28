@@ -54,21 +54,28 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, positionMode = "fi
                   key={item.href}
                   href={item.href}
                   className={classNames(
-                    "flex items-center gap-4 px-3 py-3 rounded-xl transition-colors w-full",
+                    "flex items-center justify-between gap-2 px-3 py-3 rounded-xl transition-colors w-full",
                     isActive
-                      ? "bg-slate-900 text-white font-medium"
-                      : "text-slate-600 hover:bg-slate-900 hover:text-white"
+                      ? "bg-slate-700/70 text-white font-medium"
+                      : "text-slate-200 hover:bg-slate-800 hover:text-white"
                   )}
                 >
-                  <item.icon className={classNames("w-6 h-6 min-w-6", isActive ? "text-white" : "text-slate-500")} />
-                  <span
-                    className={classNames(
-                      "whitespace-nowrap transition-opacity duration-300 font-poppins text-[15px]",
-                      isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-                    )}
-                  >
-                    {item.name}
-                  </span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <item.icon className={classNames("w-6 h-6 min-w-6", isActive ? "text-white" : "text-slate-300")} />
+                    <span
+                      className={classNames(
+                        "whitespace-nowrap transition-opacity duration-300 font-poppins text-[15px]",
+                        isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                      )}
+                    >
+                      {item.name}
+                    </span>
+                  </div>
+                  {item.comingSoon && isOpen ? (
+                    <span className="rounded-full border border-sky-300/30 bg-sky-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-100">
+                      Coming soon
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
