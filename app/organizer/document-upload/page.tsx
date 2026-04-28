@@ -37,6 +37,17 @@ const todayLabel = new Date().toLocaleDateString("en-IN", {
 const isPdfFile = (file: File) =>
   file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
 
+const BAATASARI_ADDRESS_LINES = [
+  "Ground Floor, Wajeda House",
+  "Gulmohar Cross Road No. 7, Juhu Scheme",
+  "Mumbai - 400049",
+]
+
+const formatValue = (value: string | null | undefined, fallback = "Not provided") => {
+  const nextValue = value?.trim()
+  return nextValue && nextValue.length > 0 ? nextValue : fallback
+}
+
 export default function OrganizerDocumentUploadPage() {
   const router = useRouter()
   const { user, profile, organizerProfile, organizerVerificationStatus, refreshOrganizerStatus } = useAuth()
@@ -46,7 +57,7 @@ export default function OrganizerDocumentUploadPage() {
   const [undertakingAccepted, setUndertakingAccepted] = useState(false)
   const [undertakingState, setUndertakingState] = useState("")
   const [isDeclarationOpen, setIsDeclarationOpen] = useState(false)
-  const [panFile, setPanFile] = useState<File | null>(null)
+  const [panFileName, setPanFileName] = useState<string | null>(null)
   const [isUploadingPan, setIsUploadingPan] = useState(false)
   const [panUploaded, setPanUploaded] = useState(false)
   const [agreementDownloaded, setAgreementDownloaded] = useState(false)
@@ -75,6 +86,22 @@ export default function OrganizerDocumentUploadPage() {
     if (orgName) return orgName
     return user?.email ?? "Organizer"
   }, [organizerProfile?.orgName, profile?.full_name, user?.email])
+
+  const organizerAddress = useMemo(() => {
+    const parts = [
+      organizerProfile?.address,
+      organizerProfile?.city,
+      organizerProfile?.state,
+      organizerProfile?.pincode ? `PIN ${organizerProfile.pincode}` : null,
+    ]
+      .map((part) => part?.trim() ?? "")
+      .filter((part) => part.length > 0)
+    if (parts.length === 0) return "Not provided"
+    return parts.join(", ")
+  }, [organizerProfile?.address, organizerProfile?.city, organizerProfile?.pincode, organizerProfile?.state])
+
+  const organizerEntityTypeLabel =
+    organizerProfile?.entityType === "INDIVIDUAL" ? "Individual" : "Organization"
 
   useEffect(() => {
     if (!user) return
@@ -287,22 +314,20 @@ export default function OrganizerDocumentUploadPage() {
     }
   }
 
-  const handlePanUpload = async () => {
+  const handlePanUpload = async (file: File) => {
     try {
       setError(null)
       setSuccess(null)
-      if (!panFile) {
-        throw new Error("Select a PAN PDF file.")
-      }
-      if (!isPdfFile(panFile)) {
+      if (!isPdfFile(file)) {
         throw new Error("PAN file must be a PDF.")
       }
       validateDeclaration()
       setIsUploadingPan(true)
-      await uploadOrganizerDocument("pan", panFile)
+      await uploadOrganizerDocument("pan", file)
       setPanUploaded(true)
+      setPanFileName(file.name)
       await refreshOrganizerStatus()
-      setSuccess("PAN PDF uploaded securely.")
+      setSuccess("PAN PDF selected and uploaded securely.")
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "PAN upload failed.")
     } finally {
@@ -318,6 +343,8 @@ export default function OrganizerDocumentUploadPage() {
       scale: 2,
       useCORS: true,
       backgroundColor: "#ffffff",
+      windowWidth: agreementRef.current.scrollWidth,
+      windowHeight: agreementRef.current.scrollHeight,
     })
     const imageData = canvas.toDataURL("image/png")
     const pdf = new jsPDF("p", "pt", "a4")
@@ -424,7 +451,10 @@ export default function OrganizerDocumentUploadPage() {
                     type="radio"
                     name="gst-answer"
                     checked={gstAnswer === "NO"}
-                    onChange={() => setGstAnswer("NO")}
+                    onChange={() => {
+                      setGstAnswer("NO")
+                      setIsDeclarationOpen(true)
+                    }}
                   />
                   No
                 </label>
@@ -520,8 +550,8 @@ export default function OrganizerDocumentUploadPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="PAN Card Upload" description="Upload PAN card as PDF. File is stored privately and never exposed via public URL.">
-            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+          <SectionCard title="PAN Card Upload" description="Upload PAN card as PDF. Upload starts immediately after file selection.">
+            <div className="grid gap-3">
               <label className="grid gap-2 text-sm font-semibold text-slate-700">
                 PAN card PDF
                 <input
@@ -529,150 +559,229 @@ export default function OrganizerDocumentUploadPage() {
                   accept=".pdf,application/pdf"
                   onChange={(event) => {
                     const nextFile = event.target.files?.[0] ?? null
-                    setPanFile(nextFile)
-                    setError(null)
+                    if (!nextFile) return
+                    void handlePanUpload(nextFile)
                   }}
+                  disabled={isUploadingPan}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                 />
               </label>
-              <button
-                type="button"
-                onClick={() => void handlePanUpload()}
-                disabled={isUploadingPan}
-                className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
-              >
-                {isUploadingPan ? "Uploading..." : panUploaded ? "Re-upload PAN PDF" : "Upload PAN PDF"}
-              </button>
             </div>
-            {panUploaded ? <p className="mt-2 text-sm text-emerald-700">PAN document uploaded.</p> : null}
+            {isUploadingPan ? <p className="mt-2 text-sm text-amber-700">Uploading PAN PDF...</p> : null}
+            {!isUploadingPan && panUploaded ? (
+              <p className="mt-2 text-sm text-emerald-700">
+                PAN document uploaded{panFileName ? `: ${panFileName}` : ""}.
+              </p>
+            ) : null}
           </SectionCard>
 
-          {!agreementDownloaded ? (
-            <SectionCard title="Agreement" description="Review the agreement, add organizer signature, then download signed PDF.">
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSignatureModalOpen(true)}
-                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                  >
-                    {signatureDataUrl ? "Edit organizer signature" : "Click to sign"}
-                  </button>
-                  {signatureDataUrl ? <span className="text-sm text-emerald-700">Organizer signature attached.</span> : null}
-                </div>
-
+          <SectionCard
+            title="Agreement"
+            description="Review this agreement container, sign in the organizer signatory section, then use Download and Submit."
+          >
+            <div className="space-y-4">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 sm:p-3">
                 <div
                   ref={agreementRef}
-                  className="space-y-4 rounded-xl border border-slate-300 bg-white p-5 text-sm leading-6 text-slate-800"
+                  style={{
+                    width: "100%",
+                    minWidth: "780px",
+                    backgroundColor: "#ffffff",
+                    color: "#111827",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "14px",
+                    padding: "24px",
+                    fontFamily: "Times New Roman, Georgia, serif",
+                    fontSize: "13px",
+                    lineHeight: 1.6,
+                  }}
                 >
-                  <div className="border-b border-slate-200 pb-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Baatasari - baatasari.com</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-950">Organizer Agreement</h3>
-                    <p>Date: {todayLabel}</p>
-                  </div>
+                  <p style={{ margin: 0, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#6b7280" }}>
+                    Privileged and Confidential
+                  </p>
+                  <h3 style={{ margin: "10px 0 4px", fontSize: "28px", lineHeight: 1.2 }}>AGREEMENT</h3>
+                  <p style={{ margin: 0 }}>
+                    This agreement is made on <strong>{todayLabel}</strong> between <strong>Baatasari</strong> and{" "}
+                    <strong>{organizerDisplayName}</strong>.
+                  </p>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full border border-slate-300 text-xs sm:text-sm">
+                  <div style={{ marginTop: "16px", border: "1px solid #d1d5db", borderRadius: "10px", overflow: "hidden" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <tbody>
-                        <tr className="border-b border-slate-300">
-                          <td className="border-r border-slate-300 px-2 py-2 font-semibold">OFFICIAL ADDRESS OF ENTERPRISE</td>
-                          <td className="px-2 py-2">
-                            Flat/Door/Block No: 28/1a-4-145/41, Premises: Sathyamjee Layout, Village/Town: Nellore,
-                            Block: Nawabpeta, Road/Street/Lane: Navakula Gardens, City: Nellore, State: Andhra Pradesh,
-                            District: SPSR Nellore, Pin 524002, Mobile: 9550993024, Email: karthikreddysimha11@gmail.com
+                        <tr>
+                          <td style={{ width: "28%", borderRight: "1px solid #d1d5db", borderBottom: "1px solid #d1d5db", padding: "10px", fontWeight: 700 }}>
+                            First Party
+                          </td>
+                          <td style={{ borderBottom: "1px solid #d1d5db", padding: "10px" }}>
+                            Baatasari (baatasari.com)
+                            <br />
+                            {BAATASARI_ADDRESS_LINES.join(", ")}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ width: "28%", borderRight: "1px solid #d1d5db", padding: "10px", fontWeight: 700 }}>
+                            Second Party
+                          </td>
+                          <td style={{ padding: "10px" }}>
+                            {organizerDisplayName} ({organizerEntityTypeLabel})
+                            <br />
+                            Address: {organizerAddress}
+                            <br />
+                            Email: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}
+                            <br />
+                            Phone: {formatValue(organizerProfile?.contactPhone)}
                           </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
 
-                  <div>
-                    <p>
-                      This Agreement is entered between <strong>Baatasari</strong> and <strong>{organizerDisplayName}</strong> for listing
-                      and managing events on baatasari.com.
+                  <div style={{ marginTop: "18px" }}>
+                    <p style={{ margin: "0 0 8px" }}>
+                      <strong>Recitals</strong>
                     </p>
-                    <p>
-                      The Organizer confirms compliance with all applicable laws including GST obligations. Where GSTIN is not available,
-                      the Organizer confirms turnover-based eligibility and assumes full responsibility for tax liabilities.
+                    <p style={{ margin: "0 0 8px" }}>
+                      A) Baatasari provides event discovery and ticketing services through its platform.
                     </p>
-                    <p>
-                      Schedule 2: Cancellation charges apply as communicated for each event and applicable policy.
+                    <p style={{ margin: "0 0 8px" }}>
+                      B) The Organizer appoints Baatasari to facilitate event listing and ticket bookings on the platform.
                     </p>
-                    <p>
-                      Term: This agreement continues until Baatasari terminates the agreement for organizer actions against platform terms,
-                      or until the organizer chooses to exit the platform.
-                    </p>
-                    <p>Payment Terms: Will be contacted and informed.</p>
-                  </div>
-
-                  <div>
-                    <h4 className="text-base font-semibold text-slate-900">Notices</h4>
-                    <p>All notices will be communicated personally with event organizer.</p>
-                    <p>Name: {organizerDisplayName}</p>
-                    <p>Email: {user?.email ?? "-"}</p>
-                    <p>
-                      If organizer wants to contact us, they can use the contact-us page or email contact-us@baatasari.com.
+                    <p style={{ margin: 0 }}>
+                      C) The Parties agree to the commercial and legal terms below, modeled on the BookMyShow-style agreement format.
                     </p>
                   </div>
 
-                  <div className="grid gap-4 border-t border-slate-200 pt-4 md:grid-cols-2">
-                    <div className="rounded-lg border border-slate-200 p-3">
-                      <p className="font-semibold text-slate-900">For Baatasari</p>
-                      <p className="mt-2 text-xs text-slate-500">Authorized Signatory</p>
-                      <p className="mt-8 text-sm">Date: {todayLabel}</p>
+                  <div style={{ marginTop: "18px" }}>
+                    <p style={{ margin: "0 0 8px" }}>
+                      <strong>Key Terms</strong>
+                    </p>
+                    <ol style={{ margin: "0 0 0 18px", padding: 0 }}>
+                      <li>Baatasari will provide platform listing and online ticketing support.</li>
+                      <li>The Organizer is solely responsible for event execution, safety, licenses, and legal compliance.</li>
+                      <li>Payment terms and commission structure are as communicated for each event listing.</li>
+                      <li>Cancellation, refund handling, and chargebacks follow the agreed event policy and applicable laws.</li>
+                      <li>Both parties shall maintain confidentiality and comply with applicable tax and data-protection laws.</li>
+                    </ol>
+                  </div>
+
+                  <div style={{ marginTop: "18px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+                    <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Schedule 1 - Organizer Particulars</p>
+                    <p style={{ margin: "0 0 4px" }}>Name: {organizerDisplayName}</p>
+                    <p style={{ margin: "0 0 4px" }}>PAN: {formatValue(organizerProfile?.panNumber, "Pending")}</p>
+                    <p style={{ margin: "0 0 4px" }}>
+                      GST Status:{" "}
+                      {gstAnswer === "YES"
+                        ? getSanitizedGstEntries()
+                            .map((entry) => `${entry.gstin} (${entry.state})`)
+                            .join(", ") || formatValue(organizerProfile?.gstNumber, "GST details pending")
+                        : `Not registered under GST (Undertaking accepted: ${undertakingAccepted ? "Yes" : "No"})`}
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      Registered Address: <strong>{organizerAddress}</strong>
+                    </p>
+                  </div>
+
+                  <div style={{ marginTop: "18px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+                    <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Schedule 2 - Notices</p>
+                    <p style={{ margin: "0 0 6px" }}>
+                      <strong>To Baatasari:</strong> Contact Team, contact-us@baatasari.com
+                    </p>
+                    <p style={{ margin: "0 0 6px" }}>
+                      Address: <strong>{BAATASARI_ADDRESS_LINES.join(", ")}</strong>
+                    </p>
+                    <p style={{ margin: "0 0 6px" }}>
+                      <strong>To Organizer:</strong> {organizerDisplayName}
+                    </p>
+                    <p style={{ margin: "0 0 6px" }}>
+                      Email: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      Address: <strong>{organizerAddress}</strong>
+                    </p>
+                  </div>
+
+                  <div style={{ marginTop: "20px", paddingTop: "12px", borderTop: "1px solid #d1d5db", display: "grid", gap: "16px", gridTemplateColumns: "1fr 1fr" }}>
+                    <div style={{ border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+                      <p style={{ margin: 0, fontWeight: 700 }}>For Baatasari</p>
+                      <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Authorized Signatory</p>
+                      <div style={{ minHeight: "76px", display: "flex", alignItems: "center" }}>
+                        <img
+                          src="/Signature.png"
+                          alt="Baatasari authorized signature"
+                          style={{ maxHeight: "64px", width: "auto", objectFit: "contain" }}
+                        />
+                      </div>
+                      <p style={{ margin: "8px 0 0" }}>Date: {todayLabel}</p>
                     </div>
-                    <div className="rounded-lg border border-slate-200 p-3">
-                      <p className="font-semibold text-slate-900">For Organizer</p>
-                      <div className="mt-3 h-16 rounded border border-dashed border-slate-300 bg-slate-50 p-2">
+                    <div style={{ border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+                      <p style={{ margin: 0, fontWeight: 700 }}>For Organizer</p>
+                      <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Authorized Signatory</p>
+                      <div style={{ minHeight: "76px", border: "1px dashed #94a3b8", borderRadius: "8px", padding: "8px", display: "flex", alignItems: "center" }}>
                         {signatureDataUrl ? (
-                          <img src={signatureDataUrl} alt="Organizer signature" className="h-full object-contain" />
+                          <button
+                            type="button"
+                            onClick={() => setSignatureModalOpen(true)}
+                            style={{ width: "100%", border: "none", background: "transparent", padding: 0, cursor: "pointer" }}
+                          >
+                            <img
+                              src={signatureDataUrl}
+                              alt="Organizer signature"
+                              style={{ maxHeight: "58px", width: "100%", objectFit: "contain" }}
+                            />
+                          </button>
                         ) : (
-                          <p className="text-xs text-slate-500">Signature pending</p>
+                          <button
+                            type="button"
+                            onClick={() => setSignatureModalOpen(true)}
+                            style={{
+                              border: "1px solid #111827",
+                              borderRadius: "999px",
+                              padding: "8px 14px",
+                              background: "#ffffff",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Click to sign
+                          </button>
                         )}
                       </div>
-                      <p className="mt-2 text-sm">Name: {organizerDisplayName}</p>
+                      <p style={{ margin: "8px 0 0" }}>Name: {organizerDisplayName}</p>
+                      <p style={{ margin: "2px 0 0" }}>Date: {todayLabel}</p>
                     </div>
                   </div>
                 </div>
-
-                {signatureDataUrl ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleDownloadAgreement()}
-                    disabled={isBuildingAgreement}
-                    className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
-                  >
-                    {isBuildingAgreement ? "Preparing agreement..." : "Download Signed Agreement PDF"}
-                  </button>
-                ) : (
-                  <p className="text-sm text-slate-500">Add organizer signature to unlock the download option.</p>
-                )}
               </div>
-            </SectionCard>
-          ) : (
-            <SectionCard title="Agreement Completed">
-              <p className="text-sm text-emerald-700">
-                Signed agreement has been downloaded and stored. You can now submit documents for approval review.
-              </p>
-            </SectionCard>
-          )}
 
-          {agreementDownloaded ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => void handleSubmitDocuments()}
-                disabled={isSubmitting || !panUploaded}
-                className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-              >
-                {isSubmitting ? "Submitting..." : "Submit Documents"}
-              </button>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleDownloadAgreement()}
+                  disabled={isBuildingAgreement || !panUploaded || !signatureDataUrl}
+                  className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
+                >
+                  {isBuildingAgreement ? "Preparing agreement..." : "Download"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmitDocuments()}
+                  disabled={isSubmitting || !panUploaded || !agreementDownloaded}
+                  className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {isSubmitting ? "Submitting..." : "Submit"}
+                </button>
+              </div>
+
+              {agreementDownloaded ? (
+                <p className="text-right text-sm text-emerald-700">Agreement downloaded. You can submit now.</p>
+              ) : (
+                <p className="text-right text-sm text-slate-500">
+                  Download gets enabled after PAN upload and organizer signature. Submit unlocks after download.
+                </p>
+              )}
             </div>
-          ) : (
-            <p className="text-sm text-slate-500">
-              Download signed agreement to unlock the final submit button.
-            </p>
-          )}
+          </SectionCard>
 
           {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
           {success ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p> : null}
