@@ -43,6 +43,7 @@ const BAATASARI_ADDRESS_LINES = [
   "Gulmohar Cross Road No. 7, Juhu Scheme",
   "Mumbai - 400049",
 ]
+const MAX_AGREEMENT_UPLOAD_BYTES = 25 * 1024 * 1024
 
 const formatValue = (value: string | null | undefined, fallback = "Not provided") => {
   const nextValue = value?.trim()
@@ -384,8 +385,9 @@ export default function OrganizerDocumentUploadPage() {
     if (!agreementRef.current) {
       throw new Error("Agreement view is not ready yet.")
     }
+    const renderScale = Math.min(window.devicePixelRatio || 1, 1.5)
     const canvas = await html2canvas(agreementRef.current, {
-      scale: 2,
+      scale: renderScale,
       useCORS: true,
       backgroundColor: "#ffffff",
       windowWidth: agreementRef.current.scrollWidth,
@@ -400,7 +402,7 @@ export default function OrganizerDocumentUploadPage() {
         }
       },
     })
-    const imageData = canvas.toDataURL("image/png")
+    const imageData = canvas.toDataURL("image/jpeg", 0.82)
     const pdf = new jsPDF("p", "pt", "a4")
     const pageWidth = pdf.internal.pageSize.getWidth()
     const pageHeight = pdf.internal.pageSize.getHeight()
@@ -410,13 +412,13 @@ export default function OrganizerDocumentUploadPage() {
 
     let heightLeft = renderHeight
     let y = margin
-    pdf.addImage(imageData, "PNG", margin, y, renderWidth, renderHeight)
+    pdf.addImage(imageData, "JPEG", margin, y, renderWidth, renderHeight)
     heightLeft -= pageHeight - margin * 2
 
     while (heightLeft > 0) {
       y = margin - (renderHeight - heightLeft)
       pdf.addPage()
-      pdf.addImage(imageData, "PNG", margin, y, renderWidth, renderHeight)
+      pdf.addImage(imageData, "JPEG", margin, y, renderWidth, renderHeight)
       heightLeft -= pageHeight - margin * 2
     }
 
@@ -448,6 +450,9 @@ export default function OrganizerDocumentUploadPage() {
       }
 
       const agreementBlob = await buildAgreementPdf()
+      if (agreementBlob.size > MAX_AGREEMENT_UPLOAD_BYTES) {
+        throw new Error("Agreement file is too large. Please keep signature image smaller and retry.")
+      }
       triggerPdfDownload(agreementBlob, `baatasari-organizer-agreement-${user?.id ?? "signed"}.pdf`)
       await uploadOrganizerDocument("agreement", agreementBlob)
       setAgreementDownloaded(true)
@@ -840,27 +845,23 @@ export default function OrganizerDocumentUploadPage() {
 
           <SectionCard
             title="Agreement"
-            description="Open agreement in a top container, sign in organizer signatory, then use Download and Submit."
+            description="Open the agreement, sign inside the document, then use Download and Submit."
           >
             <div className="space-y-4">
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm text-slate-700">
-                  Open the agreement in a top container like the undertaking modal. This is optimized for mobile and laptop review.
+                  Open agreement, click the organizer signature area inside the document to sign, then click Done.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => setAgreementModalOpen(true)}
-                    className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                   >
-                    Open agreement container
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSignatureModalOpen(true)}
-                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white"
-                  >
-                    {signatureDataUrl ? "Edit signature" : "Add signature"}
+                    Open agreement
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                      <path d="M7 13L13 7M8 7H13V12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -981,27 +982,27 @@ export default function OrganizerDocumentUploadPage() {
             tabIndex={-1}
             className="absolute left-1/2 top-1/2 max-h-[95vh] w-full max-w-5xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 shadow-2xl sm:p-6"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <h3 className="text-xl font-semibold text-slate-900">Agreement</h3>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSignatureModalOpen(true)}
-                  className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700"
-                >
-                  {signatureDataUrl ? "Edit signature" : "Add signature"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAgreementModalOpen(false)}
-                  className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600"
-                >
-                  Close
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setAgreementModalOpen(false)}
+                className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600"
+              >
+                Close
+              </button>
             </div>
             <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2">
               <div className="mx-auto min-w-0">{renderAgreementContainer(false, true)}</div>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setAgreementModalOpen(false)}
+                className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
