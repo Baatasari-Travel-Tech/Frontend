@@ -39,39 +39,41 @@ export default function OrganizerPendingPage() {
       <PageShell
         eyebrow="Organizer approval"
         title="Your organizer account is pending review"
-        description="Your onboarding, email verification, and compliance document upload are complete. Our onboarding team will now review your organization before organizer tools are unlocked."
+        description="All required onboarding steps are complete. Our team is now reviewing your profile and documents."
       >
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SectionCard title="Current status">
-            <div className="grid gap-3 text-sm leading-6 text-slate-600">
-              <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-4 text-amber-800">
-                Organizer onboarding, email verification, and required document upload are complete. The remaining step is approval from our onboarding team.
+        <div className="mx-auto w-full max-w-3xl">
+          <SectionCard className="border-slate-200 bg-white">
+            <div className="grid gap-6">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 sm:px-5">
+                Status: Pending manual verification by the onboarding team.
               </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                A member of our onboarding team will contact you for document verification and organization verification.
-              </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Please keep your PAN, GST, and organization details ready so the review can move quickly.
-              </div>
-              <Link
-                href="/organizer/profile"
-                className="inline-flex w-fit items-center justify-center rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white"
-              >
-                Open organizer profile
-              </Link>
-            </div>
-          </SectionCard>
 
-          <SectionCard title="What you can do right now">
-            <div className="grid gap-3 text-sm leading-6 text-slate-600">
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Use the switch role option in the navbar profile dropdown to move back to the user side whenever you want.
+              <div className="grid gap-4 text-sm leading-6 text-slate-600">
+                <h2 className="text-lg font-semibold text-slate-950">What happens next</h2>
+                <ol className="list-decimal space-y-2 pl-5">
+                  <li>Our team reviews your submitted documents and organizer details.</li>
+                  <li>We contact you if any clarification is needed.</li>
+                  <li>Your organizer tools unlock automatically once approved.</li>
+                </ol>
               </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Your organizer profile stays available here so you can review the onboarding details you already submitted.
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600 sm:px-5">
+                Keep PAN, GST, and organization details handy to speed up verification if our team reaches out.
               </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Organizer dashboard access, event creation, analytics, and management tools will unlock after approval.
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/organizer/profile"
+                  className="inline-flex items-center justify-center rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white"
+                >
+                  Open organizer profile
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Switch to user side
+                </Link>
               </div>
             </div>
           </SectionCard>

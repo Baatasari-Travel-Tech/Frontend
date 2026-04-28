@@ -492,7 +492,7 @@ export default function OrganizerDocumentUploadPage() {
   }
 
   const renderAgreementContainer = (withRef = false, compact = false) => (
-    <div
+      <div
       ref={withRef ? agreementRef : undefined}
       style={{
         width: "100%",
@@ -517,7 +517,7 @@ export default function OrganizerDocumentUploadPage() {
       </p>
 
       <div style={{ marginTop: "16px", border: "1px solid #d1d5db", borderRadius: "10px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: compact ? "fixed" : "auto" }}>
           <tbody>
             <tr>
               <td
@@ -527,21 +527,30 @@ export default function OrganizerDocumentUploadPage() {
                   borderBottom: "1px solid #d1d5db",
                   padding: "10px",
                   fontWeight: 700,
+                  wordBreak: "break-word",
                 }}
               >
                 First Party
               </td>
-              <td style={{ borderBottom: "1px solid #d1d5db", padding: "10px" }}>
+              <td style={{ borderBottom: "1px solid #d1d5db", padding: "10px", wordBreak: "break-word" }}>
                 Baatasari (baatasari.com)
                 <br />
                 {BAATASARI_ADDRESS_LINES.join(", ")}
               </td>
             </tr>
             <tr>
-              <td style={{ width: "28%", borderRight: "1px solid #d1d5db", padding: "10px", fontWeight: 700 }}>
+              <td
+                style={{
+                  width: "28%",
+                  borderRight: "1px solid #d1d5db",
+                  padding: "10px",
+                  fontWeight: 700,
+                  wordBreak: "break-word",
+                }}
+              >
                 Second Party
               </td>
-              <td style={{ padding: "10px" }}>
+              <td style={{ padding: "10px", wordBreak: "break-word" }}>
                 {organizerDisplayName} ({organizerEntityTypeLabel})
                 <br />
                 Address: {organizerAddress}
@@ -866,12 +875,12 @@ export default function OrganizerDocumentUploadPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap justify-end gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
                 <button
                   type="button"
                   onClick={() => void handleDownloadAgreement()}
                   disabled={isBuildingAgreement || (!hasStoredAgreement && (!panUploaded || !signatureDataUrl))}
-                  className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
+                  className="w-full rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60 sm:w-auto"
                 >
                   {isBuildingAgreement
                     ? "Preparing agreement..."
@@ -883,7 +892,7 @@ export default function OrganizerDocumentUploadPage() {
                   type="button"
                   onClick={() => void handleSubmitDocuments()}
                   disabled={isSubmitting || !panUploaded || !agreementDownloaded}
-                  className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                  className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 sm:w-auto"
                 >
                   {isSubmitting ? "Submitting..." : "Submit"}
                 </button>
@@ -920,11 +929,12 @@ export default function OrganizerDocumentUploadPage() {
       </PageShell>
 
       {isDeclarationOpen ? (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 px-4 py-6">
-          <div
-            tabIndex={-1}
-            className="absolute left-1/2 top-1/2 max-h-[95vh] w-full max-w-[605px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-6 outline-none"
-          >
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 px-3 py-4 sm:px-4 sm:py-6">
+          <div className="flex min-h-full items-start justify-center py-1 sm:items-center sm:py-4">
+            <div
+              tabIndex={-1}
+              className="max-h-[95vh] w-full max-w-[605px] overflow-y-auto rounded-xl bg-white p-4 outline-none sm:p-6"
+            >
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-xl font-semibold text-slate-900">GST Declaration</h3>
               <button
@@ -972,16 +982,18 @@ export default function OrganizerDocumentUploadPage() {
                 Accept
               </button>
             </div>
+            </div>
           </div>
         </div>
       ) : null}
 
       {agreementModalOpen ? (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 px-4 py-5">
-          <div
-            tabIndex={-1}
-            className="absolute left-1/2 top-1/2 max-h-[95vh] w-full max-w-5xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 shadow-2xl sm:p-6"
-          >
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 px-3 py-4 sm:px-4 sm:py-5">
+          <div className="flex min-h-full items-start justify-center py-1 sm:items-center sm:py-4">
+            <div
+              tabIndex={-1}
+              className="max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white p-4 shadow-2xl sm:p-6"
+            >
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-xl font-semibold text-slate-900">Agreement</h3>
               <button
@@ -1004,13 +1016,15 @@ export default function OrganizerDocumentUploadPage() {
                 Done
               </button>
             </div>
+            </div>
           </div>
         </div>
       ) : null}
 
       {signatureModalOpen ? (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 px-4 py-5">
-          <div className="mx-auto w-full max-w-3xl rounded-2xl bg-white p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 px-3 py-4 sm:px-4 sm:py-5">
+          <div className="flex min-h-full items-start justify-center py-1 sm:items-center sm:py-4">
+            <div className="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-2xl sm:p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold text-slate-900">Organizer Signature</h3>
               <button
@@ -1116,6 +1130,7 @@ export default function OrganizerDocumentUploadPage() {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       ) : null}

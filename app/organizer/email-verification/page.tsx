@@ -38,37 +38,34 @@ export default function OrganizerEmailVerificationPage() {
       <PageShell
         eyebrow="Organizer verification"
         title="Verify your email to continue"
-        description="Your verification email is sent only after organizer onboarding is completed. Once you verify it, you will continue to document upload."
+        description="Finish this step to unlock organizer document upload and move your account into approval review."
       >
-        <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <SectionCard title="Next step" description="Please open your inbox and use the verification link from Baatasari.">
-            <div className="grid gap-4 text-sm leading-6 text-slate-600">
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                After verification, you will land on the document upload page before approval review begins.
+        <div className="mx-auto w-full max-w-3xl">
+          <SectionCard className="border-slate-200 bg-white">
+            <div className="grid gap-6">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-900 sm:px-5">
+                A verification link has been sent to your registered email address.
               </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                We do not show resend here. If there is any issue with the verification email, please contact us and our team will help you directly.
+
+              <div className="grid gap-4 text-sm leading-6 text-slate-600">
+                <h2 className="text-lg font-semibold text-slate-950">What to do now</h2>
+                <ol className="list-decimal space-y-2 pl-5">
+                  <li>Open your inbox and click the Baatasari verification link.</li>
+                  <li>Return here after verification completes.</li>
+                  <li>Continue with PAN and agreement upload.</li>
+                </ol>
               </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600 sm:px-5">
+                If you cannot find the email, check Spam or Promotions. For support, reach our team directly.
+              </div>
+
               <a
                 href="mailto:contact-us@baatasari.com"
                 className="inline-flex w-fit items-center justify-center rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
               >
-                Contact us
+                Contact support
               </a>
-            </div>
-          </SectionCard>
-
-          <SectionCard title="While you wait">
-            <div className="grid gap-3 text-sm leading-6 text-slate-600">
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Your organizer dashboard will unlock only after email verification and manual approval are both complete.
-              </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                You can still access the user side of the platform by switching roles from the profile menu in the navbar once your onboarding is complete.
-              </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Once your email is verified, your organizer profile will stay available from the pending state so you can review the same onboarding details anytime.
-              </div>
             </div>
           </SectionCard>
         </div>
