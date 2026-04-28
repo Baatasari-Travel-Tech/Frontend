@@ -699,13 +699,13 @@ export default function OrganizerDocumentUploadPage() {
   return (
     <ProtectedRoute requireOnboarding={false}>
       <PageShell
-        className="px-2 sm:px-3 lg:px-6 [&>section]:overflow-visible [&>section]:px-4 [&>section]:sm:px-6"
+        className="px-2 sm:px-3 lg:px-6 [&>section]:px-3 [&>section]:sm:px-5"
         eyebrow="Organizer document upload"
         title="Upload Compliance Documents"
         description="Email verification is complete. Upload PAN and signed agreement to move into final approval review."
       >
-        <div className="grid gap-6">
-          <SectionCard title="GST Declaration" className="p-4 sm:p-5">
+        <div className="grid min-w-0 gap-6">
+          <SectionCard title="GST Declaration" className="min-w-0 p-4 sm:p-5">
             <div className="space-y-4">
               <p className="text-sm font-semibold text-slate-800">Do you have GSTIN number?</p>
               <div className="flex flex-wrap gap-4">
@@ -771,7 +771,7 @@ export default function OrganizerDocumentUploadPage() {
                         onClick={() =>
                           setGstEntries((current) => (current.length > 1 ? current.filter((item) => item.id !== entry.id) : current))
                         }
-                        className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                        className="w-full max-w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 md:w-auto"
                       >
                         Remove
                       </button>
@@ -780,14 +780,14 @@ export default function OrganizerDocumentUploadPage() {
                   <button
                     type="button"
                     onClick={() => setGstEntries((current) => [...current, makeGstEntry()])}
-                    className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    className="inline-flex w-full max-w-full justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:w-auto"
                   >
                     + Add more
                   </button>
                 </div>
               ) : (
                 <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
-                  <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <label className="flex flex-wrap items-start gap-2 text-sm text-slate-700">
                     <input
                       type="checkbox"
                       checked={undertakingAccepted}
@@ -831,7 +831,7 @@ export default function OrganizerDocumentUploadPage() {
           <SectionCard
             title="PAN Card Upload"
             description="Upload PAN card as PDF. Upload starts immediately after file selection."
-            className="p-4 sm:p-5"
+            className="min-w-0 p-4 sm:p-5"
           >
             <div className="grid gap-3">
               <label className="grid gap-2 text-sm font-semibold text-slate-700">
@@ -845,7 +845,7 @@ export default function OrganizerDocumentUploadPage() {
                     void handlePanUpload(nextFile)
                   }}
                   disabled={isUploadingPan}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                  className="min-w-0 w-full max-w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                 />
               </label>
             </div>
@@ -860,7 +860,7 @@ export default function OrganizerDocumentUploadPage() {
           <SectionCard
             title="Agreement"
             description="Open the agreement, sign inside the document, then use Download and Submit."
-            className="p-4 sm:p-5"
+            className="min-w-0 p-4 sm:p-5"
           >
             <div className="space-y-4">
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -871,7 +871,7 @@ export default function OrganizerDocumentUploadPage() {
                   <button
                     type="button"
                     onClick={() => setAgreementModalOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                    className="inline-flex w-full max-w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 sm:w-auto"
                   >
                     Open agreement
                     <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
@@ -922,7 +922,9 @@ export default function OrganizerDocumentUploadPage() {
               left: "-10000px",
               top: 0,
               width: "820px",
+              maxWidth: "100vw",
               opacity: 0,
+              overflow: "hidden",
               pointerEvents: "none",
             }}
           >
@@ -939,7 +941,7 @@ export default function OrganizerDocumentUploadPage() {
           <div className="flex min-h-full items-start justify-center py-1 sm:items-center sm:py-4">
             <div
               tabIndex={-1}
-              className="max-h-[95vh] w-full max-w-[605px] overflow-y-auto rounded-xl bg-white p-4 outline-none sm:p-6"
+              className="min-w-0 max-h-[95vh] w-full max-w-[605px] overflow-y-auto rounded-xl bg-white p-4 outline-none sm:p-6"
             >
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-xl font-semibold text-slate-900">GST Declaration</h3>
@@ -998,7 +1000,7 @@ export default function OrganizerDocumentUploadPage() {
           <div className="flex min-h-full items-start justify-center py-1 sm:items-center sm:py-4">
             <div
               tabIndex={-1}
-              className="max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white p-4 shadow-2xl sm:p-6"
+              className="min-w-0 max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white p-4 shadow-2xl sm:p-6"
             >
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-xl font-semibold text-slate-900">Agreement</h3>
@@ -1010,7 +1012,7 @@ export default function OrganizerDocumentUploadPage() {
                 Close
               </button>
             </div>
-            <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2">
+            <div className="mt-4 min-w-0 overflow-x-hidden rounded-xl border border-slate-200 bg-white p-2">
               <div className="mx-auto min-w-0">{renderAgreementContainer(false, true)}</div>
             </div>
             <div className="mt-4 flex justify-end">
@@ -1030,7 +1032,7 @@ export default function OrganizerDocumentUploadPage() {
       {signatureModalOpen ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 px-3 py-4 sm:px-4 sm:py-5">
           <div className="flex min-h-full items-start justify-center py-1 sm:items-center sm:py-4">
-            <div className="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-2xl sm:p-5">
+            <div className="min-w-0 w-full max-w-3xl rounded-2xl bg-white p-4 shadow-2xl sm:p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold text-slate-900">Organizer Signature</h3>
               <button
@@ -1063,17 +1065,17 @@ export default function OrganizerDocumentUploadPage() {
             </div>
 
             {signatureTab === "upload" ? (
-              <div className="mt-4 grid gap-4 md:grid-cols-[1fr_220px]">
-                <div className="space-y-3">
+              <div className="mt-4 grid min-w-0 gap-4 md:grid-cols-[1fr_220px]">
+                <div className="min-w-0 space-y-3">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={(event) => handleUploadSignatureFile(event.target.files?.[0] ?? null)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="min-w-0 w-full max-w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                   />
-                  <canvas ref={uploadPreviewRef} width={620} height={180} className="w-full rounded-lg border border-slate-200 bg-slate-50" />
+                  <canvas ref={uploadPreviewRef} width={620} height={180} className="w-full max-w-full rounded-lg border border-slate-200 bg-slate-50" />
                 </div>
-                <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="min-w-0 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                     Scale
                     <input
@@ -1111,7 +1113,7 @@ export default function OrganizerDocumentUploadPage() {
                   ref={drawCanvasRef}
                   width={900}
                   height={280}
-                  className="touch-none select-none w-full rounded-lg border border-slate-200 bg-white"
+                  className="touch-none select-none w-full max-w-full rounded-lg border border-slate-200 bg-white"
                   onPointerDown={beginDraw}
                   onPointerMove={continueDraw}
                   onPointerUp={endDraw}
