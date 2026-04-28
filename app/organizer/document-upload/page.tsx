@@ -52,7 +52,7 @@ export default function OrganizerDocumentUploadPage() {
   const router = useRouter()
   const { user, profile, organizerProfile, organizerVerificationStatus, refreshOrganizerStatus } = useAuth()
 
-  const [gstAnswer, setGstAnswer] = useState<"YES" | "NO">("NO")
+  const [gstAnswer, setGstAnswer] = useState<"YES" | "NO">("YES")
   const [gstEntries, setGstEntries] = useState<GstEntry[]>([makeGstEntry()])
   const [undertakingAccepted, setUndertakingAccepted] = useState(false)
   const [undertakingState, setUndertakingState] = useState("")
@@ -345,6 +345,15 @@ export default function OrganizerDocumentUploadPage() {
       backgroundColor: "#ffffff",
       windowWidth: agreementRef.current.scrollWidth,
       windowHeight: agreementRef.current.scrollHeight,
+      onclone: (clonedDocument: Document) => {
+        clonedDocument.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => node.remove())
+        clonedDocument.documentElement.style.backgroundColor = "#ffffff"
+        clonedDocument.documentElement.style.color = "#111827"
+        if (clonedDocument.body) {
+          clonedDocument.body.style.backgroundColor = "#ffffff"
+          clonedDocument.body.style.color = "#111827"
+        }
+      },
     })
     const imageData = canvas.toDataURL("image/png")
     const pdf = new jsPDF("p", "pt", "a4")
