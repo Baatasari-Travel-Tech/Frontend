@@ -699,12 +699,13 @@ export default function OrganizerDocumentUploadPage() {
   return (
     <ProtectedRoute requireOnboarding={false}>
       <PageShell
+        className="px-2 sm:px-3 lg:px-6 [&>section]:overflow-visible [&>section]:px-4 [&>section]:sm:px-6"
         eyebrow="Organizer document upload"
         title="Upload Compliance Documents"
         description="Email verification is complete. Upload PAN and signed agreement to move into final approval review."
       >
         <div className="grid gap-6">
-          <SectionCard title="GST Declaration">
+          <SectionCard title="GST Declaration" className="p-4 sm:p-5">
             <div className="space-y-4">
               <p className="text-sm font-semibold text-slate-800">Do you have GSTIN number?</p>
               <div className="flex flex-wrap gap-4">
@@ -734,9 +735,9 @@ export default function OrganizerDocumentUploadPage() {
               {gstAnswer === "YES" ? (
                 <div className="space-y-3">
                   {gstEntries.map((entry, index) => (
-                    <div key={entry.id} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-[1fr_1fr_auto]">
+                    <div key={entry.id} className="min-w-0 grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-[1fr_1fr_auto]">
                       <input
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        className="min-w-0 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                         placeholder={`GSTIN #${index + 1}`}
                         value={entry.gstin}
                         onChange={(event) =>
@@ -748,7 +749,7 @@ export default function OrganizerDocumentUploadPage() {
                         }
                       />
                       <select
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        className="min-w-0 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                         value={entry.state}
                         onChange={(event) =>
                           setGstEntries((current) =>
@@ -804,10 +805,10 @@ export default function OrganizerDocumentUploadPage() {
                       undertaking
                     </button>
                   </label>
-                  <div className="grid gap-2 sm:max-w-sm">
+                  <div className="grid min-w-0 gap-2 sm:max-w-sm">
                     <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">State</label>
                     <select
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="min-w-0 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       value={undertakingState}
                       onChange={(event) => {
                         undertakingDirtyRef.current = true
@@ -827,7 +828,11 @@ export default function OrganizerDocumentUploadPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="PAN Card Upload" description="Upload PAN card as PDF. Upload starts immediately after file selection.">
+          <SectionCard
+            title="PAN Card Upload"
+            description="Upload PAN card as PDF. Upload starts immediately after file selection."
+            className="p-4 sm:p-5"
+          >
             <div className="grid gap-3">
               <label className="grid gap-2 text-sm font-semibold text-slate-700">
                 PAN card PDF
@@ -855,6 +860,7 @@ export default function OrganizerDocumentUploadPage() {
           <SectionCard
             title="Agreement"
             description="Open the agreement, sign inside the document, then use Download and Submit."
+            className="p-4 sm:p-5"
           >
             <div className="space-y-4">
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
