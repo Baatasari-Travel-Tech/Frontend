@@ -15,7 +15,6 @@ export type SafeUser = {
 };
 
 export type AuthResponse = {
-  accessToken: string;
   user: SafeUser;
 };
 

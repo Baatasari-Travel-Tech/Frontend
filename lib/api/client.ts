@@ -12,7 +12,7 @@ const withPrefix = (path: string) => {
   return `${base}${API_PREFIX}${normalized}`
 }
 
-let refreshPromise: Promise<string | null> | null = null
+let refreshPromise: Promise<boolean> | null = null
 
 const redirectToLogin = () => {
   if (typeof window !== "undefined" && window.location.pathname !== "/login") {
@@ -38,15 +38,12 @@ const refreshAccessToken = async () => {
       credentials: "include"
     })
       .then(async (response) => {
-        const payload = (await tryParseJson(response)) as { accessToken?: string } | null
-        if (!response.ok || !payload?.accessToken) {
+        if (!response.ok) {
           useAuthStore.getState().clearSession()
           redirectToLogin()
-          return null
+          return false
         }
-
-        useAuthStore.getState().setAccessToken(payload.accessToken)
-        return payload.accessToken
+        return true
       })
       .finally(() => {
         refreshPromise = null
@@ -72,7 +69,6 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers,
     ...init
   } = options
-  const token = useAuthStore.getState().accessToken
   const roleHeader = activeRole ?? useAuthStore.getState().activeRole
   const finalHeaders = new Headers(headers)
 
@@ -80,30 +76,18 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     finalHeaders.set("Content-Type", "application/json")
   }
 
-  if (auth && token) {
-    finalHeaders.set("Authorization", `Bearer ${token}`)
-  }
-
   if (roleHeader) {
     finalHeaders.set("x-active-role", roleHeader)
   }
 
-  const makeRequest = async (accessToken?: string | null) => {
-    const requestHeaders = new Headers(finalHeaders)
-    if (auth && accessToken) {
-      requestHeaders.set("Authorization", `Bearer ${accessToken}`)
-    }
-
+  const makeRequest = async () => {
     const controller = init.signal ? null : new AbortController()
-    const timeout =
-      controller
-        ? setTimeout(() => controller.abort(), timeoutMs)
-        : null
+    const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null
 
     try {
       return await fetch(withPrefix(path), {
         ...init,
-        headers: requestHeaders,
+        headers: finalHeaders,
         credentials: "include",
         signal: init.signal ?? controller?.signal
       })
@@ -120,17 +104,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
   }
 
-  let response = await makeRequest(token)
+  let response = await makeRequest()
 
   if (response.status === 401 && retryOn401) {
-    const freshToken = await refreshAccessToken()
-    if (!freshToken) {
+    const refreshed = await refreshAccessToken()
+    if (!refreshed) {
       throw new ApiError(401, {
         code: "TOKEN_INVALID",
         message: "Session expired. Please log in again."
       })
     }
-    response = await makeRequest(freshToken)
+    response = await makeRequest()
   }
 
   const payload = await tryParseJson(response)

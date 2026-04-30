@@ -13,7 +13,6 @@ import type {
 
 type AuthStore = {
   bootstrapping: boolean
-  accessToken: string | null
   user: SafeUser | null
   activeRole: ActiveRole
   profile: LegacyProfile | null
@@ -21,7 +20,6 @@ type AuthStore = {
   preferences: SimplePreferences | null
   talentProfile: TalentProfile | null
   setBootstrapping: (value: boolean) => void
-  setAccessToken: (token: string | null) => void
   setUser: (user: SafeUser | null) => void
   setActiveRole: (role: ActiveRole) => void
   setProfile: (profile: LegacyProfile | null) => void
@@ -35,7 +33,6 @@ export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
       bootstrapping: true,
-      accessToken: null,
       user: null,
       activeRole: "USER",
       profile: null,
@@ -43,7 +40,6 @@ export const useAuthStore = create<AuthStore>()(
       preferences: null,
       talentProfile: null,
       setBootstrapping: (value) => set({ bootstrapping: value }),
-      setAccessToken: (token) => set({ accessToken: token }),
       setUser: (user) => set({ user }),
       setActiveRole: (role) => set({ activeRole: role }),
       setProfile: (profile) => set({ profile }),
@@ -52,7 +48,6 @@ export const useAuthStore = create<AuthStore>()(
       setTalentProfile: (profile) => set({ talentProfile: profile }),
       clearSession: () =>
         set({
-          accessToken: null,
           user: null,
           activeRole: "USER",
           profile: null,

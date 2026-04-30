@@ -1,13 +1,9 @@
-"use client"
-
 import Image from "next/image"
-import { useQuery } from "@tanstack/react-query"
 import { FaInstagram, FaLinkedin, FaTwitter } from "react-icons/fa"
 import SuggestionsForm from "@/components/suggestions-form"
 import { EventList } from "@/components/events/event-list"
 import { EventsHero } from "@/components/events/hero"
 import { SuggestedEventsSection } from "@/components/events/suggested-events-section"
-import { apiRequest } from "@/lib/api/client"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { formatCurrency } from "@/lib/format"
 import type { EventData } from "@/lib/events-data"
@@ -109,27 +105,28 @@ function buildRows(events: EventData[]): EventRow[] {
   return rows
 }
 
-export default function EventsPage() {
-  const eventsQuery = useQuery({
-    queryKey: ["public-events"],
-    queryFn: async () => {
-      const response = await apiRequest<{ data: { events: EventSummary[] } }>("/events")
-      return response.data.events
-    },
-  })
+async function fetchPublicEvents(): Promise<{ events: EventSummary[]; error: boolean }> {
+  try {
+    const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? ""
+    const res = await fetch(`${base}/api/v1/events`, { next: { revalidate: 60 } })
+    if (!res.ok) return { events: [], error: true }
+    const json = (await res.json()) as { data?: { events?: EventSummary[] } }
+    return { events: json.data?.events ?? [], error: false }
+  } catch {
+    return { events: [], error: true }
+  }
+}
 
-  const mappedEvents = (eventsQuery.data ?? []).map(toEventCardData)
+export default async function EventsPage() {
+  const { events, error } = await fetchPublicEvents()
+  const mappedEvents = events.map(toEventCardData)
   const rows = buildRows(mappedEvents)
   const hasAnyEvents = rows.length > 0
 
   return (
     <main className="min-h-screen bg-(--white)">
       <div className="pt-16">
-        {eventsQuery.isLoading ? (
-          <section className="flex flex-col items-center justify-center py-32 text-center">
-            <h2 className="text-2xl font-semibold text-(--brand-blue)">Loading events...</h2>
-          </section>
-        ) : eventsQuery.isError ? (
+        {error ? (
           <section className="flex flex-col items-center justify-center py-32 text-center">
             <h2 className="text-2xl font-semibold text-(--brand-blue)">Unable to load events</h2>
             <p className="mt-3 text-gray-500">Please try again in a moment.</p>

@@ -159,7 +159,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     preferences,
     talentProfile,
     setBootstrapping,
-    setAccessToken,
     setUser,
     setActiveRole,
     setProfile,
@@ -258,16 +257,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const bootstrap = useCallback(async () => {
     setBootstrapping(true)
     try {
-      const refreshPayload = await apiRequest<{ accessToken?: string }>("/auth/refresh", {
+      await apiRequest("/auth/refresh", {
         method: "POST",
         retryOn401: false,
       })
-      if (!refreshPayload.accessToken) {
-        clearSession()
-        return
-      }
-
-      setAccessToken(refreshPayload.accessToken)
 
       const me = await apiRequest<{ user: SafeUser }>("/auth/me", {
         auth: true,
@@ -280,7 +273,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     } finally {
       setBootstrapping(false)
     }
-  }, [clearSession, hydrateForUser, setAccessToken, setBootstrapping])
+  }, [clearSession, hydrateForUser, setBootstrapping])
 
   useEffect(() => {
     if (typeof window !== "undefined" && isAdminRoutePath(window.location.pathname)) {
@@ -297,7 +290,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       body: JSON.stringify(payload),
     })
 
-    setAccessToken(response.accessToken)
     await hydrateForUser(response.user)
   }
 
@@ -307,7 +299,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       body: JSON.stringify(payload),
     })
 
-    setAccessToken(response.accessToken)
     setActiveRole(payload.role === "ORGANIZER" ? "ORGANIZER" : "USER")
     await hydrateForUser(response.user)
   }
@@ -329,7 +320,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({ idToken, role }),
     })
 
-    setAccessToken(response.accessToken)
     setActiveRole(response.user.role === "ORGANIZER" ? "ORGANIZER" : "USER")
     await hydrateForUser(response.user)
   }
