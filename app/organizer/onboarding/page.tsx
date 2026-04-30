@@ -11,10 +11,43 @@ import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
 import { uploadOrganizerAvatarImage } from "@/lib/api/uploads"
 import { DEFAULT_AVATAR_IMAGE, getAvatarImageUrl } from "@/lib/avatar"
+import {
+  getDobDateBounds,
+  isDobWithinBounds,
+  isPredefinedProfession,
+  OTHER_PROFESSION_VALUE,
+  PROFESSION_OPTIONS,
+} from "@/lib/profile-validation"
 
 const DRAFT_STORAGE_KEY = "organizer-onboarding-draft-v2"
 const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
+const DOB_BOUNDS = getDobDateBounds()
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const TEN_DIGIT_PHONE_PATTERN = /^\d{10}$/
+const PINCODE_PATTERN = /^\d{6}$/
+
+const getProfessionFormValues = (profession: string | null | undefined) => {
+  const trimmedProfession = (profession ?? "").trim()
+  if (!trimmedProfession) {
+    return {
+      profession: "",
+      otherProfession: "",
+    }
+  }
+
+  if (isPredefinedProfession(trimmedProfession)) {
+    return {
+      profession: trimmedProfession,
+      otherProfession: "",
+    }
+  }
+
+  return {
+    profession: OTHER_PROFESSION_VALUE,
+    otherProfession: trimmedProfession,
+  }
+}
 
 const schema = z
   .object({
@@ -24,7 +57,8 @@ const schema = z
     dob: z.string().min(1, "Select your date of birth"),
     location: z.string().min(2, "Enter your location"),
     gender: z.string().min(1, "Select your gender"),
-    profession: z.string().min(2, "Enter your profession"),
+    profession: z.string().min(1, "Select your profession"),
+    otherProfession: z.string().optional(),
     orgName: z.string().optional(),
     description: z.string().optional(),
     contactEmail: z.string().optional(),
@@ -45,6 +79,22 @@ const schema = z
     bankIfsc: z.string().min(4, "Enter a valid IFSC code"),
   })
   .superRefine((value, ctx) => {
+    if (value.dob && !isDobWithinBounds(value.dob, DOB_BOUNDS)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["dob"],
+        message: `Date of birth must be between ${DOB_BOUNDS.min} and ${DOB_BOUNDS.max}.`,
+      })
+    }
+
+    if (value.profession === OTHER_PROFESSION_VALUE && (!value.otherProfession || value.otherProfession.trim().length < 2)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["otherProfession"],
+        message: "Enter your profession",
+      })
+    }
+
     if (value.entityType === "INDIVIDUAL") return
     const requiredFields: Array<keyof Omit<typeof value, "entityType">> = [
       "orgName",
@@ -67,11 +117,43 @@ const schema = z
       }
     }
 
-    if (value.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.contactEmail)) {
+    if (value.contactEmail && !EMAIL_PATTERN.test(value.contactEmail.trim())) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["contactEmail"],
         message: "Enter a valid contact email",
+      })
+    }
+
+    if (value.contactPhone && !TEN_DIGIT_PHONE_PATTERN.test(value.contactPhone.trim())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["contactPhone"],
+        message: "Contact phone must be 10 digits",
+      })
+    }
+
+    if (value.secondaryContactPhone && value.secondaryContactPhone.trim() && !TEN_DIGIT_PHONE_PATTERN.test(value.secondaryContactPhone.trim())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["secondaryContactPhone"],
+        message: "Secondary phone must be 10 digits",
+      })
+    }
+
+    if (value.primaryContactName && value.primaryContactName.trim() && value.primaryContactName.trim().length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["primaryContactName"],
+        message: "Enter a valid primary contact name",
+      })
+    }
+
+    if (value.pincode && !PINCODE_PATTERN.test(value.pincode.trim())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["pincode"],
+        message: "Pincode must be 6 digits",
       })
     }
   })
@@ -103,6 +185,7 @@ const stepOneFields: Array<keyof Values> = [
   "location",
   "gender",
   "profession",
+  "otherProfession",
 ]
 
 const stepTwoFields: Array<keyof Values> = [
@@ -194,6 +277,7 @@ export default function OrganizerOnboardingPage() {
       location: "",
       gender: "",
       profession: "",
+      otherProfession: "",
       orgName: "",
       description: "",
       contactEmail: "",
@@ -216,6 +300,7 @@ export default function OrganizerOnboardingPage() {
   })
 
   const entityType = form.watch("entityType")
+  const selectedProfession = form.watch("profession")
   const showOrganizationStep = entityType !== "INDIVIDUAL"
   const activeSteps = showOrganizationStep ? steps : individualSteps
 
@@ -226,6 +311,7 @@ export default function OrganizerOnboardingPage() {
   }, [showOrganizationStep, step])
 
   useEffect(() => {
+    const profileProfession = getProfessionFormValues(profile?.profession)
     const baseValues: Values = {
       entityType: organizerProfile?.entityType ?? "ORGANIZATION",
       fullName: profile?.full_name ?? "",
@@ -233,7 +319,8 @@ export default function OrganizerOnboardingPage() {
       dob: profile?.dob ?? "",
       location: profile?.location ?? "",
       gender: profile?.gender ?? "",
-      profession: profile?.profession ?? "",
+      profession: profileProfession.profession,
+      otherProfession: profileProfession.otherProfession,
       orgName: organizerProfile?.orgName ?? "",
       description: organizerProfile?.description ?? "",
       contactEmail: organizerProfile?.contactEmail ?? session?.user?.email ?? "",
@@ -442,6 +529,9 @@ export default function OrganizerOnboardingPage() {
     setAvatarPreview(getAvatarImageUrl("organizers", user.id, upload.version))
   }
 
+  const resolveProfession = (values: Values) =>
+    values.profession === OTHER_PROFESSION_VALUE ? values.otherProfession?.trim() ?? "" : values.profession.trim()
+
   const buildOrganizerPayload = (values: Values) => ({
     entityType: values.entityType,
     orgName: values.entityType === "INDIVIDUAL" ? null : values.orgName?.trim() || null,
@@ -487,7 +577,7 @@ export default function OrganizerOnboardingPage() {
         dob: values.dob,
         location: values.location.trim(),
         gender: values.gender,
-        profession: values.profession.trim(),
+        profession: resolveProfession(values),
       })
       if (values.entityType === "INDIVIDUAL") {
         persistDraft(2, values)
@@ -550,7 +640,7 @@ export default function OrganizerOnboardingPage() {
         dob: values.dob,
         location: values.location.trim(),
         gender: values.gender,
-        profession: values.profession.trim(),
+        profession: resolveProfession(values),
       })
 
       await completeRoleOnboarding("EVENT_ORGANIZER", buildOrganizerPayload(values))
@@ -693,7 +783,7 @@ export default function OrganizerOnboardingPage() {
 
                   <label className="block text-sm font-semibold text-slate-700">
                     Date of birth *
-                    <input type="date" className={inputClassName} {...form.register("dob")} />
+                    <input type="date" className={inputClassName} min={DOB_BOUNDS.min} max={DOB_BOUNDS.max} {...form.register("dob")} />
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.dob?.message ?? ""}</p>
                   </label>
 
@@ -716,9 +806,24 @@ export default function OrganizerOnboardingPage() {
 
                   <label className="block text-sm font-semibold text-slate-700">
                     Profession *
-                    <input className={inputClassName} placeholder="Your profession" {...form.register("profession")} />
+                    <select className={inputClassName} {...form.register("profession")}>
+                      <option value="">Select</option>
+                      {PROFESSION_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.profession?.message ?? ""}</p>
                   </label>
+
+                  {selectedProfession === OTHER_PROFESSION_VALUE ? (
+                    <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                      Other profession *
+                      <input className={inputClassName} placeholder="Enter your profession" {...form.register("otherProfession")} />
+                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.otherProfession?.message ?? ""}</p>
+                    </label>
+                  ) : null}
 
                   <div className="md:col-span-2">
                     <p className="text-sm font-semibold text-slate-700">Onboarding type</p>
@@ -779,18 +884,38 @@ export default function OrganizerOnboardingPage() {
 
                   <label className="block text-sm font-semibold text-slate-700">
                     Contact phone *
-                    <input className={inputClassName} placeholder="Organizer contact number" {...form.register("contactPhone")} />
+                    <input
+                      className={inputClassName}
+                      placeholder="Organizer contact number"
+                      inputMode="numeric"
+                      maxLength={10}
+                      {...form.register("contactPhone")}
+                      onChange={(event) =>
+                        form.setValue("contactPhone", event.target.value.replace(/\D/g, "").slice(0, 10), { shouldValidate: true })
+                      }
+                    />
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.contactPhone?.message ?? ""}</p>
                   </label>
 
                   <label className="block text-sm font-semibold text-slate-700">
                     Primary contact name
                     <input className={inputClassName} placeholder="Primary contact person" {...form.register("primaryContactName")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.primaryContactName?.message ?? ""}</p>
                   </label>
 
                   <label className="block text-sm font-semibold text-slate-700">
                     Secondary contact phone
-                    <input className={inputClassName} placeholder="Optional backup number" {...form.register("secondaryContactPhone")} />
+                    <input
+                      className={inputClassName}
+                      placeholder="Optional backup number"
+                      inputMode="numeric"
+                      maxLength={10}
+                      {...form.register("secondaryContactPhone")}
+                      onChange={(event) =>
+                        form.setValue("secondaryContactPhone", event.target.value.replace(/\D/g, "").slice(0, 10), { shouldValidate: true })
+                      }
+                    />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.secondaryContactPhone?.message ?? ""}</p>
                   </label>
 
                   <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
@@ -813,7 +938,14 @@ export default function OrganizerOnboardingPage() {
 
                   <label className="block text-sm font-semibold text-slate-700">
                     Pincode *
-                    <input className={inputClassName} placeholder="Pincode" {...form.register("pincode")} />
+                    <input
+                      className={inputClassName}
+                      placeholder="Pincode"
+                      inputMode="numeric"
+                      maxLength={6}
+                      {...form.register("pincode")}
+                      onChange={(event) => form.setValue("pincode", event.target.value.replace(/\D/g, "").slice(0, 6), { shouldValidate: true })}
+                    />
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.pincode?.message ?? ""}</p>
                   </label>
 

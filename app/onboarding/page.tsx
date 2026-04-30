@@ -5,6 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/app/providers"
 import { uploadUserAvatarImage } from "@/lib/api/uploads"
 import { DEFAULT_AVATAR_IMAGE, getAvatarImageUrl } from "@/lib/avatar"
+import {
+  getDobDateBounds,
+  isDobWithinBounds,
+  isPredefinedProfession,
+  OTHER_PROFESSION_VALUE,
+  PROFESSION_OPTIONS,
+} from "@/lib/profile-validation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import {
   clearSuggestedEventDraft,
@@ -31,6 +38,7 @@ export default function OnboardingPage() {
   const [location, setLocation] = useState("")
   const [gender, setGender] = useState("")
   const [profession, setProfession] = useState("")
+  const [otherProfession, setOtherProfession] = useState("")
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
@@ -48,6 +56,7 @@ export default function OnboardingPage() {
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const dobBounds = getDobDateBounds()
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
@@ -59,7 +68,14 @@ export default function OnboardingPage() {
     setDob(profile?.dob ?? "")
     setLocation(profile?.location ?? "")
     setGender(profile?.gender ?? "")
-    setProfession(profile?.profession ?? "")
+    const profileProfession = (profile?.profession ?? "").trim()
+    if (profileProfession && isPredefinedProfession(profileProfession)) {
+      setProfession(profileProfession)
+      setOtherProfession("")
+    } else {
+      setProfession(profileProfession ? OTHER_PROFESSION_VALUE : "")
+      setOtherProfession(profileProfession)
+    }
     setAvatarPreview(profile?.avatar_url ?? DEFAULT_AVATAR_IMAGE)
   }, [profile, user?.email])
 
@@ -187,7 +203,9 @@ export default function OnboardingPage() {
     setLoading(true)
     setError(null)
 
-    if (!name.trim() || !phone.trim() || !dob.trim() || !location.trim() || !gender.trim() || !profession.trim()) {
+    const resolvedProfession = profession === OTHER_PROFESSION_VALUE ? otherProfession.trim() : profession.trim()
+
+    if (!name.trim() || !phone.trim() || !dob.trim() || !location.trim() || !gender.trim() || !resolvedProfession) {
       setError("Please fill in all required fields. Marked with *")
       setLoading(false)
       return
@@ -195,6 +213,12 @@ export default function OnboardingPage() {
 
     if (!/^\d{10}$/.test(phone)) {
       setError("Phone number must be exactly 10 digits.")
+      setLoading(false)
+      return
+    }
+
+    if (!isDobWithinBounds(dob.trim(), dobBounds)) {
+      setError(`Date of birth must be between ${dobBounds.min} and ${dobBounds.max}.`)
       setLoading(false)
       return
     }
@@ -216,7 +240,7 @@ export default function OnboardingPage() {
         dob: dob.trim(),
         location: location.trim(),
         gender: gender.trim(),
-        profession: profession.trim(),
+        profession: resolvedProfession,
       })
 
       let redirectTarget = nextHref
@@ -339,6 +363,8 @@ export default function OnboardingPage() {
                   <input
                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
                     type="date"
+                    min={dobBounds.min}
+                    max={dobBounds.max}
                     value={dob}
                     onChange={(event) => setDob(event.target.value)}
                   />
@@ -370,13 +396,31 @@ export default function OnboardingPage() {
 
                 <label className="block text-sm font-semibold text-slate-700">
                   Profession *
-                  <input
+                  <select
                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
-                    placeholder="Student, Designer, Engineer..."
                     value={profession}
                     onChange={(event) => setProfession(event.target.value)}
-                  />
+                  >
+                    <option value="">Select</option>
+                    {PROFESSION_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </label>
+
+                {profession === OTHER_PROFESSION_VALUE ? (
+                  <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                    Other profession *
+                    <input
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
+                      placeholder="Enter your profession"
+                      value={otherProfession}
+                      onChange={(event) => setOtherProfession(event.target.value)}
+                    />
+                  </label>
+                ) : null}
               </div>
             </div>
 

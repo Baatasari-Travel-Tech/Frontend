@@ -10,6 +10,8 @@ import InlineSpinner from '@/components/ui/inline-spinner'
 import { User, CalendarPlus, Eye, EyeOff } from 'lucide-react'
 import { logAuth, logAuthError } from '@/lib/auth-log'
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const GoogleIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -248,6 +250,12 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       return
     }
 
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     if (password !== confirm) {
       setError('Passwords do not match')
       return
@@ -256,11 +264,11 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
     setLoading(true)
     setError(null)
     setIsAuthenticating(true)
-    logAuth('register:submit', { email, role: selectedRole })
+    logAuth('register:submit', { email: normalizedEmail, role: selectedRole })
 
     try {
       await register({
-        email,
+        email: normalizedEmail,
         password,
         role: selectedRole,
       })
