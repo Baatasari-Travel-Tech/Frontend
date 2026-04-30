@@ -1,129 +1,119 @@
-import { EventFormData } from "./data/create-event-data";
+import type { EventFormData } from "./data/create-event-data"
 
-export type { EventFormData };
+export type { EventFormData }
+
+const isValidUrl = (value: string) => {
+  try {
+    new URL(value)
+    return true
+  } catch {
+    try {
+      new URL(`https://${value}`)
+      return true
+    } catch {
+      return false
+    }
+  }
+}
 
 export function validateEventForm(formData: Partial<EventFormData>): Record<string, string> {
-  const errors: Record<string, string> = {};
+  const errors: Record<string, string> = {}
 
-  // --- EventForm fields ---
-  if (!formData.eventName || formData.eventName.trim() === "") errors.eventName = "Event Name is required";
-  if (!formData.category || formData.category.trim() === "") errors.category = "Category is required";
-  if (!formData.tagline || formData.tagline.trim() === "") errors.tagline = "Tagline is required";
-  if (!formData.description || formData.description.trim() === "") errors.description = "Description is required";
-  if (!formData.personnel || formData.personnel.trim() === "") errors.personnel = "Personnel is required";
-  if (!formData.date) errors.date = "Date is required";
-  if (!formData.time) errors.time = "Start time is required";
-  if (!formData.endTime) errors.endTime = "End time is required";
-  if (!formData.venue || formData.venue.trim() === "") errors.venue = "Venue is required";
-  if (!formData.entrySide || formData.entrySide.trim() === "") errors.entrySide = "Entry Side is required";
+  if (!formData.eventPhoto && !formData.hasStoredCover) errors.eventPhoto = "Cover image is required."
+  if (!formData.eventName?.trim()) errors.eventName = "Event name is required."
+  if (!formData.category?.trim()) errors.category = "Category is required."
+  if (!formData.description?.trim()) errors.description = "Description is required."
+  if (!formData.date) errors.date = "Start date is required."
+  if (!formData.time) errors.time = "Start time is required."
+  if (!formData.endTime) errors.endTime = "End time is required."
+  if (!formData.venue?.trim()) errors.venue = "Venue is required."
+  if (!formData.googleMapsUrl?.trim()) {
+    errors.googleMapsUrl = "Google Maps URL is required."
+  } else if (!isValidUrl(formData.googleMapsUrl.trim())) {
+    errors.googleMapsUrl = "Enter a valid Google Maps URL."
+  }
 
-  // --- TicketingForm fields ---
+  if (formData.tagline?.trim() && formData.tagline.trim().length > 240) {
+    errors.tagline = "Tagline must be 240 characters or less."
+  }
+
+  if (formData.transportToEvent?.trim() && formData.transportToEvent.trim().length > 1000) {
+    errors.transportToEvent = "Transport details must be 1000 characters or less."
+  }
+
+  if (formData.entrySide?.trim() && formData.entrySide.trim().length > 1000) {
+    errors.entrySide = "Entry side details must be 1000 characters or less."
+  }
+
   if (!formData.ticketType || (formData.ticketType !== "paid" && formData.ticketType !== "free")) {
-    errors.ticketType = "Ticket type is required";
+    errors.ticketType = "Ticket type is required."
   }
-  if (formData.ticketType === "paid") {
-    // Audience Category
-    if (!Array.isArray(formData.audienceCategory) || formData.audienceCategory.length === 0) {
-      errors["audienceCategory.0.category"] = "At least one audience category is required";
-    } else {
-      formData.audienceCategory.forEach((cat, idx) => {
-        if (!cat.category || cat.category.trim() === "") errors[`audienceCategory.${idx}.category`] = "Category is required";
-        if (!cat.price || cat.price === "") errors[`audienceCategory.${idx}.price`] = "Price is required";
-        if (!cat.description || cat.description.trim() === "") errors[`audienceCategory.${idx}.description`] = "Description is required";
-      });
-    }
-    if (!formData.refundPolicy || formData.refundPolicy.trim() === "") errors.refundPolicy = "Refund policy is required";
-  }
-  if (!formData.ticketName || formData.ticketName.trim() === "") errors.ticketName = "Ticket name is required";
-  if (!formData.ticketQuantity || isNaN(Number(formData.ticketQuantity)) || Number(formData.ticketQuantity) < 1) errors.ticketQuantity = "Ticket quantity is required";
-  if (formData.enableOffers) {
-    if (!formData.discountType || (formData.discountType !== "flat" && formData.discountType !== "percentage")) errors.discountType = "Discount type is required";
-    if (!formData.discountAmount || isNaN(Number(formData.discountAmount))) errors.discountAmount = "Discount amount is required";
-    if (!formData.discountCode || formData.discountCode.trim() === "") errors.discountCode = "Discount code is required";
-    if (formData.discountType === "percentage") {
-      if (!formData.couponCode || formData.couponCode.trim() === "") errors.couponCode = "Coupon code is required";
-      if (!formData.couponExpiry) {
-        errors.couponExpiry = "Coupon expiry date is required";
-      } else {
-        const expiryDate = new Date(formData.couponExpiry);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (isNaN(expiryDate.getTime())) {
-          errors.couponExpiry = "Enter a valid date";
-        } else if (expiryDate < today) {
-          errors.couponExpiry = "Expiry date must be in the future";
+
+  const tiers = formData.audienceCategory ?? []
+  if (!Array.isArray(tiers) || tiers.length === 0) {
+    errors["audienceCategory.0.category"] = "Add at least one ticket category."
+  } else {
+    tiers.forEach((tier, index) => {
+      if (!tier.category?.trim()) {
+        errors[`audienceCategory.${index}.category`] = "Category name is required."
+      }
+
+      if (tier.isLimited) {
+        const quantity = Number(tier.numberOfTickets)
+        if (!tier.numberOfTickets || !Number.isFinite(quantity) || quantity < 1) {
+          errors[`audienceCategory.${index}.numberOfTickets`] =
+            "Number of tickets is required when limited."
         }
       }
-      if (!formData.minOrderValue || isNaN(Number(formData.minOrderValue)) || Number(formData.minOrderValue) < 0) {
-        errors.minOrderValue = "Enter a valid minimum order value";
+
+      if (formData.ticketType === "paid") {
+        const amount = Number(tier.price)
+        if (tier.price === "" || !Number.isFinite(amount) || amount < 0) {
+          errors[`audienceCategory.${index}.price`] = "Valid price is required."
+        }
       }
+
+      if (!tier.description?.trim()) {
+        errors[`audienceCategory.${index}.description`] = "Description is required."
+      }
+    })
+  }
+
+  if (formData.guidelines?.trim() && formData.guidelines.trim().length > 4000) {
+    errors.guidelines = "Guidelines must be 4000 characters or less."
+  }
+
+  if (formData.addOns?.giftHampers && !formData.addOns.giftHampersDescription?.trim()) {
+    errors["addOns.giftHampersDescription"] = "Gift hampers description is required."
+  }
+
+  if (formData.addOns?.addOther && !formData.addOns.addOtherDescription?.trim()) {
+    errors["addOns.addOtherDescription"] = "Add-ons description is required."
+  }
+
+  if (!formData.contactInfo?.mobile?.trim()) {
+    errors["contactInfo.mobile"] = "Mobile number is required."
+  } else {
+    const digits = formData.contactInfo.mobile.replace(/\D/g, "")
+    const normalized = digits.startsWith("91") ? digits.slice(2) : digits
+    if (normalized.length !== 10) {
+      errors["contactInfo.mobile"] = "Enter a valid 10-digit mobile number."
     }
   }
-  if (!formData.guidelines || formData.guidelines.trim() === "") errors.guidelines = "Guidelines are required";
-  // Add-Ons
-  if (formData.addOns?.giftHampers && (!formData.addOns.giftHampersDescription || formData.addOns.giftHampersDescription.trim() === "")) {
-    errors["addOns.giftHampersDescription"] = "Gift hampers description is required";
+
+  if (!formData.contactInfo?.email?.trim()) {
+    errors["contactInfo.email"] = "Email is required."
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactInfo.email.trim())) {
+    errors["contactInfo.email"] = "Enter a valid email address."
   }
 
-  // --- SponsorshipForm fields ---
-  if (!formData.contactInfo || !formData.contactInfo.mobile || formData.contactInfo.mobile.trim() === "") {
-    errors["contactInfo.mobile"] = "Mobile number is required";
-  }
-  if (!formData.contactInfo || !formData.contactInfo.email || formData.contactInfo.email.trim() === "") {
-    errors["contactInfo.email"] = "Email is required";
-  }
-  // Sponsors
-  // Note: The original code handled both array and object structure. 
-  // Based on EventPage.jsx, sponsors is an object with keys: titleSponsors, coPartners, mediaPartners.
-  // Sponsors are optional now
-  /*
-  if (formData.sponsors && !Array.isArray(formData.sponsors)) {
-      const sponsorsObj = formData.sponsors as { [key: string]: { name: string; website: string }[] };
-      ["titleSponsors", "coPartners", "mediaPartners"].forEach(type => {
-          const sponsorsOfType = sponsorsObj[type];
-          if (Array.isArray(sponsorsOfType)) {
-              sponsorsOfType.forEach((sponsor, idx) => {
-                  if (!sponsor.name || sponsor.name.trim() === "") {
-                      errors[`sponsors.${type}.${idx}.name`] = "Sponsor name is required";
-                  }
-              });
-          }
-      });
-  } else if (Array.isArray(formData.sponsors)) {
-      // Logic from original file if sponsors was array
-      ["titleSponsors", "coPartners", "mediaPartners"].forEach(type => {
-          // @ts-ignore
-          const sponsorsOfType = formData.sponsors.filter(s => s.type === type);
-          // @ts-ignore
-          sponsorsOfType.forEach((sponsor, idx) => {
-              if (!sponsor.name || sponsor.name.trim() === "") {
-                  errors[`sponsors.${type}.${idx}.name`] = "Sponsor name is required";
-              }
-          });
-      });
-  }
-  */
-
-  // --- FinalForm fields ---
-  if (!formData.requirements || !formData.requirements.artists || formData.requirements.artists.trim() === "") {
-    errors["requirements.artists"] = "Artists/Singers field is required";
-  }
-  if (!formData.requirements || !formData.requirements.stallsAvailability || formData.requirements.stallsAvailability.trim() === "") {
-    errors["requirements.stallsAvailability"] = "Stalls availability is required";
-  }
-  if (formData.requirements && Array.isArray(formData.requirements.stallsPrices)) {
-    formData.requirements.stallsPrices.forEach((stall, idx) => {
-      if (!stall.stallType || stall.stallType.trim() === "") {
-        errors[`requirements.stallsPrices.${idx}.stallType`] = "Stall type is required";
-      }
-      if (!stall.stallPrice || isNaN(Number(stall.stallPrice))) {
-        errors[`requirements.stallsPrices.${idx}.stallPrice`] = "Stall price is required";
-      }
-    });
-  }
-  if (!formData.postEventFollowUp || !formData.postEventFollowUp.thankYouNote || formData.postEventFollowUp.thankYouNote.trim() === "") {
-    errors["postEventFollowUp.thankYouNote"] = "Thank you note is required";
+  if (formData.contactInfo?.website?.trim() && !isValidUrl(formData.contactInfo.website.trim())) {
+    errors["contactInfo.website"] = "Enter a valid website URL."
   }
 
-  return errors;
+  if (!formData.postEventFollowUp?.thankYouNote?.trim()) {
+    errors["postEventFollowUp.thankYouNote"] = "Post-event follow-up is required."
+  }
+
+  return errors
 }

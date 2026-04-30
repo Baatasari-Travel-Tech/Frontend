@@ -1,4 +1,4 @@
-import type { EventFormData } from "@/components/event-org/data/create-event-data"
+import { UNLIMITED_TICKET_CAPACITY, type EventFormData } from "@/components/event-org/data/create-event-data"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { formatCurrency } from "@/lib/format"
 import type { EventDetail } from "@/types/api"
@@ -45,13 +45,6 @@ export type AllManageEvent = {
   action: "Edit" | "Repeat"
   formData: Partial<EventFormData>
   analyticsData: AnalyticsEventData
-}
-
-const DEFAULT_TRANSPORT_OPTIONS = {
-  publicTransport: false,
-  ownVehicles: false,
-  thirdPartyApp: false,
-  localPrivateTransport: false,
 }
 
 const DEFAULT_ADD_ONS = {
@@ -158,8 +151,6 @@ export const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => 
   const audienceRange = asRecord(event.audienceRange)
   const targetAudience = asRecord(event.targetAudience)
   const addOns = asRecord(event.addOns)
-  const transportOptions = asRecord(event.transportOptions)
-  const discounts = asRecord(event.discounts)
   const guidelines = asRecord(event.guidelines)
   const sponsors = asRecord(event.sponsors)
   const postEventFollowUp = asRecord(event.postEventFollowUp)
@@ -175,6 +166,9 @@ export const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => 
       }
     })
     .filter((artist): artist is { name: string; genre: string } => artist !== null)
+  const requirementHighlights = asArray<string>(requirements.highlights)
+    .map((item) => asString(item).trim())
+    .filter(Boolean)
 
   const tiers = event.ticketTiers ?? []
   const hasPaidTier = tiers.some((tier) => Number(tier.price) > 0)
@@ -184,21 +178,12 @@ export const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => 
     tiers.length > 0
       ? tiers.map((tier) => ({
           category: tier.name,
-          numberOfTickets: String(tier.quantity),
+          numberOfTickets: tier.quantity >= UNLIMITED_TICKET_CAPACITY ? "" : String(tier.quantity),
+          isLimited: tier.quantity < UNLIMITED_TICKET_CAPACITY,
           price: String(tier.price),
           description: tier.description ?? "",
         }))
-      : [{ category: "", numberOfTickets: "", price: "", description: "" }]
-
-  const stallsPrices = asArray(requirements.stallsPrices)
-    .map((stall) => {
-      const stallRecord = asRecord(stall)
-      const stallType = asString(stallRecord.stallType).trim()
-      const stallPrice = asString(stallRecord.stallPrice).trim()
-      if (!stallType && !stallPrice) return null
-      return { stallType, stallPrice }
-    })
-    .filter((stall): stall is { stallType: string; stallPrice: string } => stall !== null)
+      : [{ category: "", numberOfTickets: "", isLimited: true, price: "", description: "" }]
 
   const parsedTargetAudience = Object.fromEntries(
     Object.entries(targetAudience).map(([key, value]) => [key, asBoolean(value)])
@@ -220,17 +205,9 @@ export const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => 
     entrySide: event.entrySide ?? "",
     ticketType: hasPaidTier ? "paid" : "free",
     audienceCategory,
-    refundPolicy: asString(discounts.refundPolicy),
     ticketName: tiers[0]?.name ?? "General Admission",
     ticketQuantity: String(totalTicketQuantity > 0 ? totalTicketQuantity : 1),
     ticketPrice: String(tiers[0]?.price ?? 0),
-    enableOffers: asBoolean(discounts.enabled),
-    discountType: asString(discounts.discountType) || "flat",
-    discountAmount: String(asNumber(discounts.discountAmount, 0)),
-    discountCode: asString(discounts.discountCode),
-    couponCode: asString(discounts.couponCode),
-    couponExpiry: asString(discounts.couponExpiry),
-    minOrderValue: String(asNumber(discounts.minOrderValue, 0)),
     guidelines: asString(guidelines.text),
     addOns: {
       ...DEFAULT_ADD_ONS,
@@ -253,34 +230,22 @@ export const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => 
       coPartners: sanitizeSponsorList(sponsors.coPartners),
       mediaPartners: sanitizeSponsorList(sponsors.mediaPartners),
     },
-    requirements: {
-      artists: asString(requirements.artists),
-      stallsAvailability: asString(requirements.stallsAvailability),
-      stallsPrices:
-        stallsPrices.length > 0
-          ? stallsPrices
-          : [
-              { stallType: "", stallPrice: "" },
-              { stallType: "", stallPrice: "" },
-            ],
-    },
     postEventFollowUp: {
       thankYouNote: asString(postEventFollowUp.thankYouNote),
     },
-    transportOptions: {
-      ...DEFAULT_TRANSPORT_OPTIONS,
-      publicTransport: asBoolean(transportOptions.publicTransport),
-      ownVehicles: asBoolean(transportOptions.ownVehicles),
-      thirdPartyApp: asBoolean(transportOptions.thirdPartyApp),
-      localPrivateTransport: asBoolean(transportOptions.localPrivateTransport),
-    },
-    artists: parsedArtists.length > 0 ? parsedArtists : [{ name: "", genre: "" }],
+    artists:
+      parsedArtists.length > 0
+        ? parsedArtists
+        : requirementHighlights.length > 0
+          ? requirementHighlights.map((name) => ({ name, genre: "" }))
+          : [{ name: "", genre: "" }],
     audienceRange: {
       min: asNumber(audienceRange.min, 13),
       max: asNumber(audienceRange.max, 86),
     },
     targetAudience: parsedTargetAudience,
     eventPhoto: null,
+    hasStoredCover: true,
   }
 }
 

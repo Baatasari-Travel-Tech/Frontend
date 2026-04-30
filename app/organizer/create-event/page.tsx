@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import EventPage from "@/components/event-org/EventPage"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import type { EventFormData } from "@/components/event-org/data/create-event-data"
+import { UNLIMITED_TICKET_CAPACITY } from "@/components/event-org/data/create-event-data"
 import { toEventFormDraft } from "@/components/event-org/manage-events/manage-events"
 import { uploadEventCoverImage } from "@/lib/api/uploads"
 import { apiRequest } from "@/lib/api/client"
@@ -80,11 +81,13 @@ const combineDateAndTime = (dateText: string, timeText?: string) => {
 
 const buildTicketTiers = (formData: EventFormData): TicketTierPayload[] => {
   const fromAudienceCategory = (formData.audienceCategory ?? [])
-    .filter((item) => item.category?.trim() && toNumber(item.numberOfTickets, 0) > 0)
+    .filter((item) => item.category?.trim())
     .map((item) => ({
       name: item.category.trim(),
       description: item.description?.trim() || "General access",
-      quantity: Math.max(1, toNumber(item.numberOfTickets, 1)),
+      quantity: item.isLimited !== false
+        ? Math.max(1, toNumber(item.numberOfTickets, 1))
+        : UNLIMITED_TICKET_CAPACITY,
       price: formData.ticketType === "free" ? 0 : Math.max(0, toNumber(item.price, 0)),
     }))
 
@@ -167,34 +170,24 @@ const buildCreateEventPayload = (
     googleMapsUrl: normalizeOptionalUrl(formData.googleMapsUrl),
     transportToEvent: formData.transportToEvent || null,
     entrySide: formData.entrySide || null,
-    transportOptions: formData.transportOptions || {},
     artists: (formData.artists || [])
       .filter((artist) => artist.name?.trim())
       .map((artist) => ({
         name: artist.name.trim(),
-        genre: artist.genre?.trim() || null,
+        genre: null,
       })),
     sponsors: normalizeSponsors(formData.sponsors),
     requirements: {
-      ...(formData.requirements || {}),
       personnel: formData.personnel || "",
+      highlights: (formData.artists || [])
+        .map((artist) => artist.name?.trim() || "")
+        .filter(Boolean),
     },
     postEventFollowUp: formData.postEventFollowUp || {},
     contactInfo: formData.contactInfo || {},
     audienceRange: formData.audienceRange || { min: 0, max: 100 },
     targetAudience: formData.targetAudience || {},
     addOns: formData.addOns || {},
-    discounts: {
-      enabled: Boolean(formData.enableOffers),
-      ticketType: formData.ticketType,
-      refundPolicy: formData.refundPolicy || "",
-      discountType: formData.discountType || "",
-      discountAmount: toNumber(formData.discountAmount, 0),
-      discountCode: formData.discountCode || "",
-      couponCode: formData.couponCode || "",
-      couponExpiry: formData.couponExpiry || "",
-      minOrderValue: toNumber(formData.minOrderValue, 0),
-    },
     guidelines: {
       text: formData.guidelines || "",
     },

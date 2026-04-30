@@ -54,6 +54,12 @@ type CreateOrderResponse = {
   }
 }
 
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+
+const asStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean) : []
+
 export default function EventDetailPage() {
   const params = useParams<{ id: string }>()
   const pathname = usePathname()
@@ -116,6 +122,25 @@ export default function EventDetailPage() {
     if (!selectedTierId) return tiers[0]
     return tiers.find((tier) => tier.id === selectedTierId) ?? tiers[0]
   }, [event, selectedTierId])
+
+  const eventHighlights = useMemo(() => {
+    if (!event) return []
+    const requirements = asRecord(event.requirements)
+    const requirementHighlights = asStringArray(requirements.highlights)
+    const artistHighlights = (event.artists ?? []).map((artist) => artist.name).filter(Boolean)
+    const combined = [...requirementHighlights, ...artistHighlights]
+    return [...new Set(combined)].slice(0, 6)
+  }, [event])
+  const guidelineItems = useMemo(() => {
+    if (!event) return []
+    const guidelines = asRecord(event.guidelines)
+    const text = typeof guidelines.text === "string" ? guidelines.text.trim() : ""
+    if (!text) return []
+    return text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+  }, [event])
 
   const effectiveTierId = selectedTier?.id ?? selectedTierId
   const subtotal = useMemo(() => Number(((selectedTier?.price ?? 0) * quantity).toFixed(2)), [quantity, selectedTier?.price])
@@ -516,13 +541,11 @@ export default function EventDetailPage() {
 
             <h3 className="font-bold text-lg text-(--black) mb-4">Event Highlights</h3>
             <ul className="list-disc pl-5 space-y-2 text-(--gray-600)">
-              <li>{event.tagline ?? "Curated live experience with excellent production quality."}</li>
-              {(event.artists?.length ? event.artists.map((artist) => artist.name) : [event.category ?? "Live Event"]).map(
-                (highlight) => (
-                  <li key={highlight}>{highlight}</li>
-                )
-              )}
-              <li>{event.transportToEvent ?? "Travel support and location guidance shared by organizer."}</li>
+              {event.tagline ? <li>{event.tagline}</li> : null}
+              {eventHighlights.length > 0
+                ? eventHighlights.map((highlight) => <li key={highlight}>{highlight}</li>)
+                : <li>{event.category ?? "Live Event"}</li>}
+              {event.transportToEvent ? <li>{event.transportToEvent}</li> : null}
             </ul>
           </div>
 
@@ -561,10 +584,16 @@ export default function EventDetailPage() {
                 </AccordionTrigger>
                 <AccordionContent className="text-(--gray-600)">
                   <ul className="list-disc pl-5 space-y-2">
-                    <li>Tickets once booked cannot be exchanged or refunded.</li>
-                    <li>An internet handling fee per ticket may be levied. Please check the final amount before payment.</li>
-                    <li>We recommend arriving at least 20 minutes before event start time.</li>
-                    <li>Rights of admission reserved.</li>
+                    {guidelineItems.length > 0 ? (
+                      guidelineItems.map((item) => <li key={item}>{item}</li>)
+                    ) : (
+                      <>
+                        <li>Tickets once booked cannot be exchanged or refunded.</li>
+                        <li>An internet handling fee per ticket may be levied. Please check the final amount before payment.</li>
+                        <li>We recommend arriving at least 20 minutes before event start time.</li>
+                        <li>Rights of admission reserved.</li>
+                      </>
+                    )}
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -587,11 +616,11 @@ export default function EventDetailPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Bus className="h-4 w-4 text-(--gray-400)" />
-                        <span>Nearest Bus Stop: Main Junction</span>
+                        <span>{event.transportToEvent || "Travel details will be shared by organizer."}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Flag className="h-4 w-4 text-(--gray-400)" />
-                        <span>Landmark: City Center</span>
+                        <span>{event.entrySide || "Entry gate details shared before the event."}</span>
                       </div>
                     </div>
 

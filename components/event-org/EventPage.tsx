@@ -134,16 +134,11 @@ const EventPage: React.FC<EventPageProps> = ({
     "event-info": true,
     "date-time": true,
     "event-highlights": true,
-    "photo-media": true,
     ticketing: true,
     sponsorship: true,
-    requirements: true,
-    postEvent: true,
-    contactInfo: true,
     audience: true,
     guidelines: true,
     addOns: true,
-    discounts: true,
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
@@ -273,8 +268,23 @@ const EventPage: React.FC<EventPageProps> = ({
   const handleNext = async () => {
     if (isSubmitting) return;
 
+    const errors = validateEventForm(formData);
+
+    if (currentStep < 4) {
+      const currentStepKeys = stepFields[currentStep - 1] ?? [];
+      const currentStepHasErrors = Object.keys(errors).some((field) =>
+        currentStepKeys.some((key) => field === key || field.startsWith(`${key}.`))
+      );
+
+      if (currentStepHasErrors) {
+        setFormErrors(errors);
+        setSubmitError(null);
+        setSubmitSuccess(null);
+        return;
+      }
+    }
+
     if (currentStep === 4) {
-      const errors = validateEventForm(formData);
       setFormErrors(errors);
       setSubmitError(null);
       setSubmitSuccess(null);
@@ -283,7 +293,7 @@ const EventPage: React.FC<EventPageProps> = ({
         const errorFields = Object.keys(errors);
         let jumpStep = 1;
         for (let i = 0; i < stepFields.length; i++) {
-          if (errorFields.some((field) => stepFields[i].some((key) => field.startsWith(key)))) {
+          if (errorFields.some((field) => stepFields[i].some((key) => field === key || field.startsWith(`${key}.`)))) {
             jumpStep = i + 1;
             break;
           }
@@ -368,7 +378,7 @@ const EventPage: React.FC<EventPageProps> = ({
           return;
         }
         setPhotoError("");
-        setFormData((prev) => ({ ...prev, eventPhoto: file }));
+        setFormData((prev) => ({ ...prev, eventPhoto: file, hasStoredCover: true }));
         setPhotoPreview(URL.createObjectURL(file));
       } else {
         setPhotoError("");
@@ -416,17 +426,6 @@ const EventPage: React.FC<EventPageProps> = ({
     );
   };
 
-  const handleTransportToggle = (transportKey: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      transportOptions: {
-        ...prev.transportOptions,
-        [transportKey]:
-          !prev.transportOptions[transportKey as keyof typeof prev.transportOptions],
-      },
-    }));
-  };
-
   const addArrayItem = (arrayName: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -439,13 +438,13 @@ const EventPage: React.FC<EventPageProps> = ({
             : arrayName === "attractions"
               ? { name: "", description: "" }
               : arrayName === "audienceCategory"
-                ? { category: "", numberOfTickets: "", price: "", description: "" }
+                ? { category: "", numberOfTickets: "", isLimited: true, price: "", description: "" }
                 : { name: "", logo: null, details: "" },
       ],
     }));
   };
 
-  const updateArrayField = (arrayName: string, index: number, field: string, value: string) => {
+  const updateArrayField = (arrayName: string, index: number, field: string, value: unknown) => {
     setFormData((prev) => ({
       ...prev,
       [arrayName]: (prev[arrayName as keyof EventFormData] as Record<string, unknown>[]).map(
@@ -576,7 +575,7 @@ const EventPage: React.FC<EventPageProps> = ({
                                 ? "border-(--upcoming-primary-900) bg-card text-(--upcoming-primary-900)"
                                 : ""
                               } ${done
-                                ? "border-(--upcoming-primary-900) bg-(--upcoming-primary-900) text-white"
+                                ? "border-green-600 bg-green-50 text-green-700"
                                 : ""
                               }`}
                           >
@@ -584,7 +583,7 @@ const EventPage: React.FC<EventPageProps> = ({
                               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                 <path
                                   d="M6 10.5L9 13.5L14 8.5"
-                                  stroke="#fff"
+                                  stroke="currentColor"
                                   strokeWidth="2"
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
@@ -605,7 +604,7 @@ const EventPage: React.FC<EventPageProps> = ({
 
                         {index < progressSteps.length - 1 && (
                           <div
-                            className={`flex-1 h-1 bg-(--upcoming-gray-200) min-w-6 max-w-full z-1 mt-3.75 ${done ? "bg-(--upcoming-primary-900)" : ""
+                            className={`flex-1 h-1 bg-(--upcoming-gray-200) min-w-6 max-w-full z-1 mt-3.75 ${done ? "bg-green-600" : ""
                               }`}
                           />
                         )}
@@ -631,9 +630,9 @@ const EventPage: React.FC<EventPageProps> = ({
                     setAdditionalPhotoPreviews={setAdditionalPhotoPreviews}
                     additionalPhotosError={additionalPhotosError}
                     setAdditionalPhotosError={setAdditionalPhotosError}
-                    handleTransportToggle={handleTransportToggle}
                     addArrayItem={addArrayItem}
                     updateArrayField={updateArrayField}
+                    removeArrayItem={removeArrayItem}
                     openSections={openSections}
                     toggleSection={toggleSection}
                     formErrors={formErrors}

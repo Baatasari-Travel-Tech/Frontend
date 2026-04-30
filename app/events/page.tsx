@@ -36,10 +36,38 @@ function formatCardDate(date: string) {
     .toUpperCase()
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+}
+
+function asSponsorNames(value: unknown): string[] {
+  const entries = Array.isArray(value) ? value : []
+  return entries
+    .map((entry) => {
+      const sponsor = asRecord(entry)
+      return typeof sponsor.name === "string" ? sponsor.name.trim() : ""
+    })
+    .filter(Boolean)
+}
+
 function toEventCardData(event: EventSummary): EventData {
   const lowestPrice = event.startingPrice ?? 0
-  const readablePrice = formatCurrency(lowestPrice).replace("₹", "Rs ")
+  const readablePrice = formatCurrency(lowestPrice).replace(/[^\d.,-]+/, "INR ")
   const routeId = event.slug ?? event.id
+  const sponsors = asRecord(event.sponsors)
+  const sponsorNames = [
+    ...asSponsorNames(sponsors.titleSponsors),
+    ...asSponsorNames(sponsors.coPartners),
+    ...asSponsorNames(sponsors.mediaPartners),
+  ]
+  const requirements = asRecord(event.requirements)
+  const requirementHighlights = Array.isArray(requirements.highlights)
+    ? requirements.highlights.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean)
+    : []
+  const artistHighlights = (event.artists ?? []).map((artist) => artist.name).filter(Boolean)
+  const highlights = [...new Set([event.tagline ?? "", ...requirementHighlights, ...artistHighlights])]
+    .filter(Boolean)
+    .slice(0, 3)
 
   return {
     id: routeId,
@@ -53,13 +81,12 @@ function toEventCardData(event: EventSummary): EventData {
     bookedCount: event.bookedCount ?? 0,
     tag: event.tagline ?? "Live Experience",
     chiefGuest: event.artists?.[0]?.name ?? "Special Guests",
-    sponsors: "Baatasari",
+    sponsors: sponsorNames[0] ?? "Baatasari",
     eventTime: "All ages welcome",
-    highlights: [
-      event.tagline ?? "Curated event experience",
-      event.venue,
-      event.category ?? "Live Event",
-    ],
+    highlights:
+      highlights.length > 0
+        ? highlights
+        : [event.tagline ?? "Curated event experience", event.venue, event.category ?? "Live Event"],
   }
 }
 
