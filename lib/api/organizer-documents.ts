@@ -51,15 +51,8 @@ export const completeOrganizerDocuments = async (payload: {
 }
 
 export const fetchOrganizerDocumentBlob = async (documentType: OrganizerDocumentType) => {
-  const token = useAuthStore.getState().accessToken
-  if (!token) {
-    throw new Error("Authentication required.")
-  }
-
   const activeRole = useAuthStore.getState().activeRole
-  const headers = new Headers({
-    Authorization: `Bearer ${token}`,
-  })
+  const headers = new Headers()
   if (activeRole) {
     headers.set("x-active-role", activeRole)
   }
