@@ -474,6 +474,16 @@ export default function OrganizerDocumentUploadPage() {
         throw new Error("Upload PAN PDF and sign the agreement before submitting.")
       }
       setIsSubmitting(true)
+
+      // Auto-upload agreement when signed in this session (skip if backend already has one and no new signature)
+      if (signatureDataUrl) {
+        const agreementBlob = await buildAgreementPdf()
+        if (agreementBlob.size > MAX_AGREEMENT_UPLOAD_BYTES) {
+          throw new Error("Agreement file is too large. Please keep signature image smaller and retry.")
+        }
+        await uploadOrganizerDocument("agreement", agreementBlob)
+      }
+
       const mode = gstAnswer === "YES" ? "HAS_GSTIN" : "NO_GSTIN"
       const gstDetails = mode === "HAS_GSTIN" ? getSanitizedGstEntries() : []
       await completeOrganizerDocuments({
