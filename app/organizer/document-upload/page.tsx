@@ -470,8 +470,8 @@ export default function OrganizerDocumentUploadPage() {
       setError(null)
       setSuccess(null)
       validateDeclaration()
-      if (!panUploaded || !agreementDownloaded) {
-        throw new Error("Upload PAN and download signed agreement before submitting.")
+      if (!panUploaded || (!signatureDataUrl && !hasStoredAgreement)) {
+        throw new Error("Upload PAN PDF and sign the agreement before submitting.")
       }
       setIsSubmitting(true)
       const mode = gstAnswer === "YES" ? "HAS_GSTIN" : "NO_GSTIN"
@@ -897,7 +897,7 @@ export default function OrganizerDocumentUploadPage() {
                 <button
                   type="button"
                   onClick={() => void handleSubmitDocuments()}
-                  disabled={isSubmitting || !panUploaded || !agreementDownloaded}
+                  disabled={isSubmitting || !panUploaded || (!signatureDataUrl && !hasStoredAgreement)}
                   className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 sm:w-auto"
                 >
                   {isSubmitting ? "Submitting..." : "Submit"}
@@ -905,11 +905,10 @@ export default function OrganizerDocumentUploadPage() {
               </div>
 
               {agreementDownloaded ? (
-                <p className="text-right text-sm text-emerald-700">Agreement downloaded. You can submit now.</p>
+                <p className="text-right text-sm text-emerald-700">Agreement downloaded.</p>
               ) : (
                 <p className="text-right text-sm text-slate-500">
-                  Download gets enabled after PAN upload and organizer signature. If you already uploaded one, you can
-                  download it directly. Submit unlocks after download.
+                  Download is optional. Submit unlocks after PAN upload and signing the agreement.
                 </p>
               )}
             </div>
