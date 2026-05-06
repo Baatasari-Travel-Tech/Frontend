@@ -8,7 +8,12 @@ import { useAuth } from "@/app/providers"
 
 export default function OrganizerEmailVerificationPage() {
   const router = useRouter()
-  const { user, organizerVerificationStatus } = useAuth()
+  const { user, organizerVerificationStatus, refreshOrganizerStatus } = useAuth()
+
+  useEffect(() => {
+    const id = setInterval(() => { void refreshOrganizerStatus() }, 10_000)
+    return () => clearInterval(id)
+  }, [refreshOrganizerStatus])
 
   useEffect(() => {
     if (!user || user.role !== "ORGANIZER") return

@@ -9,7 +9,12 @@ import { useAuth } from "@/app/providers"
 
 export default function OrganizerPendingPage() {
   const router = useRouter()
-  const { user, organizerVerificationStatus } = useAuth()
+  const { user, organizerVerificationStatus, refreshOrganizerStatus } = useAuth()
+
+  useEffect(() => {
+    const id = setInterval(() => { void refreshOrganizerStatus() }, 10_000)
+    return () => clearInterval(id)
+  }, [refreshOrganizerStatus])
 
   useEffect(() => {
     if (!user || user.role !== "ORGANIZER") return
@@ -30,7 +35,7 @@ export default function OrganizerPendingPage() {
     }
 
     if (organizerVerificationStatus === "APPROVED") {
-      router.replace("/organizer/analytics")
+      router.replace("/organizer/dashboard")
     }
   }, [organizerVerificationStatus, router, user])
 

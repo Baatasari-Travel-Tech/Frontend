@@ -268,14 +268,11 @@ export default function OrganizerProfilePage() {
 
     setBusy(true)
     setError(null)
-    setSuccess(null)
     try {
       await approveOrganizer(organizerId)
-      setSuccess("Organizer approved successfully.")
-      await refresh(false)
+      router.replace(ADMIN_ROUTES.dashboard)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Failed to approve organizer")
-    } finally {
       setBusy(false)
     }
   }
