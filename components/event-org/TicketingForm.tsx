@@ -130,13 +130,22 @@ function PriceSummaryTable({ price, gatewayBearer, onGatewayBearerToggle }: {
               {price > 0 ? `₹${gatewayFee.toFixed(2)}` : "—"}
             </td>
             <td className="py-2 text-right">
-              <button
-                type="button"
-                onClick={onGatewayBearerToggle}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 transition-colors duration-150"
-              >
-                {gatewayBearer === "customer" ? "Customer" : "Organizer"}
-              </button>
+              <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-0.5 text-[11px] font-medium">
+                <button
+                  type="button"
+                  onClick={() => gatewayBearer !== "organizer" && onGatewayBearerToggle()}
+                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "organizer" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                >
+                  Organizer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => gatewayBearer !== "customer" && onGatewayBearerToggle()}
+                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "customer" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                >
+                  Customer
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>

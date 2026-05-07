@@ -75,8 +75,8 @@ function toEventCardData(event: EventSummary): EventData {
     location: event.venue,
     bookedCount: event.bookedCount ?? 0,
     tag: event.tagline ?? "Live Experience",
-    chiefGuest: event.artists?.[0]?.name ?? "Special Guests",
-    sponsors: sponsorNames[0] ?? "Baatasari",
+    chiefGuest: event.artists?.[0]?.name || undefined,
+    sponsors: sponsorNames[0] || undefined,
     eventTime: "All ages welcome",
     highlights:
       highlights.length > 0

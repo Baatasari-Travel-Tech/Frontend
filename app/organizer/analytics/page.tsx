@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
 import type { EventDetail } from "@/types/api"
 
@@ -13,13 +12,10 @@ import { EventOverview } from "@/components/event-org/analytics/event-overview"
 import { EventStats } from "@/components/event-org/analytics/event-stats"
 import { RevenueStats } from "@/components/event-org/analytics/revenue-stats"
 import { DateReviewsSection } from "@/components/event-org/analytics/date-reviews"
-import { EventDetailsDescription } from "@/components/event-org/analytics/event-details-description"
 
 function AnalyticsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { profile } = useAuth()
-
   const eventId = searchParams.get("eventId")
 
   const eventQuery = useQuery<EventDetail, Error>({
@@ -36,8 +32,6 @@ function AnalyticsContent() {
 
   const event = eventQuery.data ?? null
   const isLoading = eventQuery.isLoading
-
-  const organizerName = profile?.full_name?.trim() || undefined
 
   const handleEdit = () => {
     if (!eventId) return
@@ -84,12 +78,7 @@ function AnalyticsContent() {
         </div>
       </div>
       <RevenueStats event={event} isLoading={isLoading} />
-      <DateReviewsSection />
-      <EventDetailsDescription
-        event={event}
-        isLoading={isLoading}
-        organizerName={organizerName}
-      />
+      <DateReviewsSection eventId={event?.id} />
     </div>
   )
 }

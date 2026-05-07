@@ -574,7 +574,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   <DialogTitle>Select Date and View Reviews</DialogTitle>
                 </VisuallyHidden>
                 <div className="w-full h-full overflow-y-auto p-6 md:p-8 flex items-center justify-center">
-                  <DateReviewsSection />
+                  <DateReviewsSection eventId={event.id} />
                 </div>
               </DialogContent>
             </Dialog>

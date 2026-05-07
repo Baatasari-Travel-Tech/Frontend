@@ -5,6 +5,7 @@ import { useMemo } from "react"
 import { useQueries, useQuery } from "@tanstack/react-query"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { apiRequest } from "@/lib/api/client"
+import { Calendar, MapPin, Ticket, User } from "lucide-react"
 import type { TicketRecord } from "@/types/api"
 
 type HistoryEntry = {
@@ -19,6 +20,7 @@ type TicketActivityItem = {
   entry: HistoryEntry
   ticketId: string
   ticket: TicketRecord | null
+  isLoading: boolean
 }
 
 const resolveTicketId = (entry: HistoryEntry) => {
@@ -31,12 +33,24 @@ const resolveTicketId = (entry: HistoryEntry) => {
   return entry.id
 }
 
-const toInr = (amount: number, currency: string) => {
-  if (currency.toUpperCase() === "INR") {
-    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount)
-  }
+const formatAmount = (amount: number, currency: string) => {
+  if (amount === 0) return "Free"
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: currency.toUpperCase() || "INR" }).format(amount)
+}
 
-  return `${currency.toUpperCase()} ${amount.toFixed(2)}`
+const formatDate = (dateStr: string) => {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(dateStr))
+}
+
+const statusStyles: Record<string, string> = {
+  CONFIRMED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  PAID: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+  CANCELLED: "bg-rose-50 text-rose-700 border-rose-200",
 }
 
 export default function HistoryPage() {
@@ -73,6 +87,7 @@ export default function HistoryPage() {
       entry,
       ticketId: resolveTicketId(entry),
       ticket: ticketQueries[index]?.data ?? null,
+      isLoading: ticketQueries[index]?.isLoading ?? false,
     }))
   }, [bookedEntries, ticketQueries])
 
@@ -94,37 +109,116 @@ export default function HistoryPage() {
           </div>
 
           {query.isLoading ? (
-            <p className="text-sm text-slate-500">Loading your bookings...</p>
+            <div className="grid gap-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-36 animate-pulse rounded-2xl bg-slate-100" />
+              ))}
+            </div>
           ) : bookedTickets.length === 0 ? (
-            <p className="text-sm text-slate-500">No booked events yet.</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Ticket className="mb-3 h-10 w-10 text-slate-300" />
+              <p className="text-sm font-medium text-slate-600">No booked events yet</p>
+              <p className="mt-1 text-xs text-slate-400">Events you register for will appear here.</p>
+              <Link
+                href="/events"
+                className="mt-4 inline-flex items-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 transition-all active:scale-[0.97]"
+              >
+                Browse events
+              </Link>
+            </div>
           ) : (
             <div className="grid gap-4">
-              {bookedTickets.map((item) => (
-                <article
-                  key={item.entry.id}
-                  className="rounded-2xl border border-slate-100 bg-white p-4 transition hover:border-slate-200 hover:shadow-sm"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                    {item.ticket?.ticketCode ? `Ticket ${item.ticket.ticketCode}` : "Booked Event"}
-                  </p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">
-                    {item.ticket?.eventTitle ?? item.entry.description}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                    <span>{new Date(item.entry.createdAt).toLocaleString()}</span>
-                    {item.ticket ? <span>{item.ticket.quantity} ticket(s)</span> : null}
-                    {item.ticket ? <span>{toInr(item.ticket.totalAmount, item.ticket.currency)}</span> : null}
-                  </div>
-                  <div className="mt-4">
-                    <Link
-                      href={`/history/${item.ticketId}`}
-                      className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-                    >
-                      Open ticket
-                    </Link>
-                  </div>
-                </article>
-              ))}
+              {bookedTickets.map((item) => {
+                const t = item.ticket
+                const status = t?.ticketStatus ?? "PENDING"
+                const statusClass = statusStyles[status] ?? statusStyles.PENDING
+
+                return (
+                  <article
+                    key={item.entry.id}
+                    className="rounded-2xl border border-slate-100 bg-white overflow-hidden transition hover:border-slate-200 hover:shadow-md"
+                  >
+                    {/* Top bar with ticket code */}
+                    <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-3">
+                      <div className="flex items-center gap-2 text-xs font-mono font-semibold text-slate-500">
+                        <Ticket className="h-3.5 w-3.5" />
+                        {item.isLoading ? (
+                          <span className="inline-block h-3 w-28 animate-pulse rounded bg-slate-200" />
+                        ) : (
+                          <span>{t?.ticketCode ?? "—"}</span>
+                        )}
+                      </div>
+                      {!item.isLoading && (
+                        <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusClass}`}>
+                          {status.charAt(0) + status.slice(1).toLowerCase()}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Main content */}
+                    <div className="p-5">
+                      {item.isLoading ? (
+                        <div className="space-y-2">
+                          <div className="h-5 w-3/4 animate-pulse rounded bg-slate-100" />
+                          <div className="h-4 w-1/2 animate-pulse rounded bg-slate-100" />
+                        </div>
+                      ) : (
+                        <>
+                          <h3 className="text-base font-semibold text-slate-900 leading-snug">
+                            {t?.eventTitle ?? item.entry.description}
+                          </h3>
+
+                          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
+                            {t?.eventDate && (
+                              <span className="flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5 shrink-0" />
+                                {formatDate(t.eventDate)}
+                              </span>
+                            )}
+                            {t?.venue && (
+                              <span className="flex items-center gap-1.5">
+                                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                <span className="truncate max-w-[200px]">{t.venue}</span>
+                              </span>
+                            )}
+                            {t?.attendeeName && (
+                              <span className="flex items-center gap-1.5">
+                                <User className="h-3.5 w-3.5 shrink-0" />
+                                {t.attendeeName}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4 text-sm">
+                              {t && (
+                                <span className="text-slate-700">
+                                  <span className="font-semibold">{t.quantity}</span>
+                                  <span className="text-slate-400"> × </span>
+                                  <span className="font-semibold text-slate-900">
+                                    {formatAmount(t.totalAmount / t.quantity, t.currency)}
+                                  </span>
+                                </span>
+                              )}
+                              {t && t.totalAmount > 0 && (
+                                <span className="text-xs text-slate-400">
+                                  Total: {formatAmount(t.totalAmount, t.currency)}
+                                </span>
+                              )}
+                            </div>
+                            <Link
+                              href={`/history/${item.ticketId}`}
+                              className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 active:scale-[0.97]"
+                            >
+                              View ticket
+                            </Link>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           )}
         </section>

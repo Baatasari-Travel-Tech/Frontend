@@ -5,31 +5,15 @@ import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { addMonths, subMonths, format } from "date-fns"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { apiRequest } from "@/lib/api/client"
 
-type HighlightColor = "pink" | "green" | "yellow"
+type HighlightedDate = { date: Date; count: number }
 
-type HighlightedDate = {
-  date: Date
+type DateRequestItem = {
+  requestedDate: string
   count: number
-  color: HighlightColor
 }
-
-// Helper to get a date in the current month
-function currentMonthDate(day: number): Date {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), day)
-}
-
-// --- Mock Data ---
-const highlightedDates: HighlightedDate[] = [
-  { date: currentMonthDate(10), count: 20, color: "pink" },
-  { date: currentMonthDate(13), count: 100, color: "green" },
-  { date: currentMonthDate(14), count: 52, color: "yellow" },
-  { date: currentMonthDate(15), count: 17, color: "pink" },
-  { date: currentMonthDate(19), count: 31, color: "pink" },
-  { date: currentMonthDate(20), count: 83, color: "yellow" },
-  { date: currentMonthDate(27), count: 145, color: "green" },
-]
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -39,16 +23,53 @@ function isSameDay(a: Date, b: Date) {
   )
 }
 
-export function DateReviewsSection() {
-  const [date, setDate] = React.useState<Date | undefined>(new Date())
+function useDateRequests(eventId?: string) {
+  return useQuery({
+    queryKey: ["event-date-requests", eventId],
+    queryFn: async () => {
+      const response = await apiRequest<{ data: { dateRequests: DateRequestItem[] } }>(
+        `/events/${eventId}/date-requests`
+      )
+      return response.data.dateRequests.map((item) => ({
+        date: new Date(item.requestedDate + "T00:00:00"),
+        count: item.count,
+      })) as HighlightedDate[]
+    },
+    enabled: Boolean(eventId),
+  })
+}
+
+export function DateReviewsSection({ eventId }: { eventId?: string }) {
+  const [date, setDate] = React.useState<Date | undefined>(undefined)
   const [month, setMonth] = React.useState<Date>(new Date())
+  const [submitted, setSubmitted] = React.useState(false)
+
+  const queryClient = useQueryClient()
+  const { data: dateRequests = [] } = useDateRequests(eventId)
+
+  const mutation = useMutation({
+    mutationFn: async (selectedDate: Date) => {
+      await apiRequest(`/events/${eventId}/date-requests`, {
+        method: "POST",
+        body: JSON.stringify({ requestedDate: format(selectedDate, "yyyy-MM-dd") }),
+      })
+    },
+    onSuccess: () => {
+      setSubmitted(true)
+      queryClient.invalidateQueries({ queryKey: ["event-date-requests", eventId] })
+    },
+  })
+
+  const handleSubmit = () => {
+    if (!date || !eventId) return
+    mutation.mutate(date)
+  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 w-full h-full justify-center items-center lg:items-stretch">
       {/* Calendar Card */}
       <div className="flex flex-col gap-6 w-full lg:w-auto">
         <div className="border border-border rounded-2xl p-6 md:p-8 bg-background shadow-sm flex flex-col overflow-hidden flex-1 min-w-70 lg:min-w-95">
-          {/* Header */}
           <h2 className="text-2xl font-bold text-blue-soft mb-6 px-2">Date Change</h2>
           <div className="flex items-center justify-between mb-6 px-2">
             <Button
@@ -74,7 +95,6 @@ export function DateReviewsSection() {
             </Button>
           </div>
 
-          {/* Calendar */}
           <Calendar
             mode="single"
             month={month}
@@ -83,7 +103,7 @@ export function DateReviewsSection() {
             onSelect={setDate}
             weekStartsOn={1}
             formatters={{
-              formatWeekdayName: (date) => format(date, "EEE"),
+              formatWeekdayName: (d) => format(d, "EEE"),
             }}
             className="p-0 w-full max-w-full"
             classNames={{
@@ -104,26 +124,12 @@ export function DateReviewsSection() {
               DayButton: (props) => {
                 const { day, modifiers, ...buttonProps } = props
                 const dateObj = day.date
-                const data = highlightedDates.find((d) => isSameDay(d.date, dateObj))
+                const data = dateRequests.find((d) => isSameDay(d.date, dateObj))
 
-                // Default styles (light gray box, black text) like Day 1, 2, 4 etc.
                 let wrapperClass = "bg-gray-50 text-gray-900 hover:bg-gray-100"
-                const countColor = "text-[#10b981]" // Small numbers are always green in the image
-
-                if (data) {
-                  if (data.color === "pink") {
-                    wrapperClass = "bg-[#fee2e2] text-gray-900 hover:bg-[#ffcfcf]"
-                  } else if (data.color === "green") {
-                    wrapperClass = "bg-[#dcfce7] text-gray-900 hover:bg-[#bbf7d0]"
-                  } else if (data.color === "yellow") {
-                    wrapperClass = "bg-[#fef9c3] text-gray-900 hover:bg-[#fef08a]"
-                  }
-                }
-
-                // Selected day (e.g. Day 3) has white background and border
-                if (modifiers.selected && !data) {
-                  wrapperClass = "border border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
-                }
+                if (data) wrapperClass = "bg-[#dcfce7] text-gray-900 hover:bg-[#bbf7d0]"
+                if (modifiers.selected && !data) wrapperClass = "border border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
+                if (modifiers.selected && data) wrapperClass = "border-2 border-emerald-500 bg-[#dcfce7] text-gray-900"
 
                 return (
                   <button
@@ -132,7 +138,7 @@ export function DateReviewsSection() {
                   >
                     <span className="text-sm font-medium">{dateObj.getDate()}</span>
                     {data ? (
-                      <span className={`text-[10px] font-bold leading-none mt-0.5 ${countColor}`}>
+                      <span className="text-[10px] font-bold leading-none mt-0.5 text-emerald-600">
                         {data.count}
                       </span>
                     ) : (
@@ -145,6 +151,26 @@ export function DateReviewsSection() {
               },
             }}
           />
+
+          <div className="mt-4 px-2">
+            {submitted ? (
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 text-center">
+                Your date request has been submitted!
+              </p>
+            ) : (
+              <Button
+                className="w-full rounded-xl"
+                disabled={!date || mutation.isPending || !eventId}
+                onClick={handleSubmit}
+              >
+                {mutation.isPending
+                  ? "Submitting..."
+                  : date
+                  ? `Request ${format(date, "MMM d, yyyy")}`
+                  : "Select a date to request"}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

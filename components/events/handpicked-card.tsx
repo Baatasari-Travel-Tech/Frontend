@@ -34,10 +34,10 @@ export function HandpickedEventCard({
     date,
     bookedCount = 0,
     tag = "Music Festival",
-    chiefGuest = "Allu Arjun",
-    sponsors = "aata events",
-    eventTime = "Telugu | 6yrs + | 4hrs",
-    highlights = ["Rockstar Devi Sri Prasad", "Rockstar Devi Sri Prasad", "Rockstar Devi Sri Prasad"]
+    chiefGuest,
+    sponsors,
+    eventTime = "All ages welcome",
+    highlights = []
 }: HandpickedEventCardProps) {
     const [showDetails, setShowDetails] = useState(false)
     const [imageSrc, setImageSrc] = useState(image)
@@ -142,16 +142,22 @@ export function HandpickedEventCard({
                         </Badge>
 
                         {/* Guests & Sponsors */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
+                        {(chiefGuest || sponsors) && (
+                          <div className="grid grid-cols-2 gap-4">
+                            {chiefGuest && (
+                              <div>
                                 <p className="text-(--gray-500) text-sm">Chief Guest</p>
                                 <p className="font-semibold text-(--events-card-text)">{chiefGuest}</p>
-                            </div>
-                            <div>
+                              </div>
+                            )}
+                            {sponsors && (
+                              <div>
                                 <p className="text-(--gray-500) text-sm">Sponsors</p>
                                 <p className="font-semibold text-(--events-card-text)">{sponsors}</p>
-                            </div>
-                        </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* Meta Info */}
                         <p className="text-(--gray-600) text-sm font-medium">{eventTime}</p>
