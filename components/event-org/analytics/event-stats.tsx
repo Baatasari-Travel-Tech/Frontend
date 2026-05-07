@@ -9,6 +9,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import type { EventDetail } from "@/types/api"
 
 import {
   DEMOGRAPHICS_DATA,
@@ -66,19 +67,41 @@ function CancelledGauge({ value }: { value: number }) {
   )
 }
 
-export function EventStats() {
+type Props = {
+  event: EventDetail | null
+  isLoading: boolean
+}
+
+export function EventStats({ event, isLoading }: Props) {
+  const totalSold = event
+    ? event.ticketTiers.reduce((sum, tier) => sum + Number(tier.soldCount || 0), 0)
+    : 0
+  const totalCapacity = event
+    ? event.ticketTiers.reduce((sum, tier) => sum + Number(tier.quantity || 0), 0)
+    : 0
+  const totalAvailable = Math.max(0, totalCapacity - totalSold)
+
+  if (isLoading) {
+    return (
+      <div className="w-full grid gap-6 grid-cols-1 md:grid-cols-3 animate-pulse">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-xl border bg-card p-6 h-48" />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="w-full">
       <div className="w-full grid gap-6 grid-cols-1 md:grid-cols-3">
         <Card className="flex flex-col">
           <CardHeader className="items-start pb-2">
             <CardTitle className="text-lg font-medium text-foreground">
-              Total number of tickets ➔ {375 + 25}
+              Total number of tickets ➔ {totalCapacity}
             </CardTitle>
           </CardHeader>
 
           <CardContent className="flex flex-1 flex-col justify-center">
-            {/* Swapped: Registered Participants title */}
             <div className="mb-4 w-full">
               <span className="text-sm font-semibold text-muted-foreground mr-2">
                 Registered Participants
@@ -90,26 +113,33 @@ export function EventStats() {
                 <span className="text-xs font-semibold uppercase text-muted-foreground">
                   Registered
                 </span>
-                <div className="text-2xl font-bold text-foreground">375</div>
+                <div className="text-2xl font-bold text-foreground">{totalSold}</div>
               </div>
 
               <div className="text-right">
                 <span className="text-xs font-semibold uppercase text-muted-foreground">
                   Available
                 </span>
-                <div className="text-2xl font-bold text-foreground">25</div>
+                <div className="text-2xl font-bold text-foreground">{totalAvailable}</div>
               </div>
             </div>
 
             <div className="flex gap-2 w-full">
-              <div
-                className="h-4 rounded-full"
-                style={{ backgroundColor: "#7c83db", flex: 375 }}
-              />
-              <div
-                className="h-4 rounded-full"
-                style={{ backgroundColor: "#a3e635", flex: 25 }}
-              />
+              {totalSold > 0 && (
+                <div
+                  className="h-4 rounded-full"
+                  style={{ backgroundColor: "#7c83db", flex: totalSold }}
+                />
+              )}
+              {totalAvailable > 0 && (
+                <div
+                  className="h-4 rounded-full"
+                  style={{ backgroundColor: "#a3e635", flex: totalAvailable }}
+                />
+              )}
+              {totalSold === 0 && totalAvailable === 0 && (
+                <div className="h-4 rounded-full bg-muted w-full" />
+              )}
             </div>
           </CardContent>
         </Card>

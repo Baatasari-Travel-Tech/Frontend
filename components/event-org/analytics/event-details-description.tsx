@@ -5,8 +5,42 @@ import { Calendar, MapPin, Users, Tag } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import type { EventDetail } from "@/types/api"
 
-export function EventDetailsDescription() {
+const formatDateAndTime = (date: string, startTime: string | null, endTime: string | null) => {
+  const formatted = new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(date))
+
+  if (startTime && endTime) return `${formatted}; ${startTime} – ${endTime}`
+  if (startTime) return `${formatted}; ${startTime} onwards`
+  return formatted
+}
+
+type Props = {
+  event: EventDetail | null
+  isLoading: boolean
+  organizerName?: string
+}
+
+export function EventDetailsDescription({ event, isLoading, organizerName }: Props) {
+  const [showFull, setShowFull] = React.useState(false)
+
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        <div className="rounded-xl border bg-card p-10 animate-pulse h-64" />
+      </div>
+    )
+  }
+
+  if (!event) return null
+
+  const description = event.description ?? ""
+  const truncated = description.length > 300 && !showFull
+  const displayedDescription = truncated ? `${description.slice(0, 300)}…` : description
 
   return (
     <div className="w-full">
@@ -21,11 +55,9 @@ export function EventDetailsDescription() {
                   <Calendar className="h-6 w-6 text-foreground" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <h3 className="font-semibold text-lg text-foreground">
-                    Date & Time
-                  </h3>
+                  <h3 className="font-semibold text-lg text-foreground">Date &amp; Time</h3>
                   <p className="text-muted-foreground">
-                    March 22, 2025; 7:00 PM onwards
+                    {formatDateAndTime(event.date, event.startTime, event.endTime)}
                   </p>
                 </div>
               </div>
@@ -35,36 +67,30 @@ export function EventDetailsDescription() {
                   <MapPin className="h-6 w-6 text-foreground" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <h3 className="font-semibold text-lg text-foreground">
-                    Location
-                  </h3>
-                  <p className="text-muted-foreground">
-                    VMRDA Grounds, Visakhapatnam
-                  </p>
+                  <h3 className="font-semibold text-lg text-foreground">Location</h3>
+                  <p className="text-muted-foreground">{event.venue}</p>
                 </div>
               </div>
 
-              <div className="flex gap-4">
-                <div className="mt-1">
-                  <Users className="h-6 w-6 text-foreground" />
+              {organizerName && (
+                <div className="flex gap-4">
+                  <div className="mt-1">
+                    <Users className="h-6 w-6 text-foreground" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="font-semibold text-lg text-foreground">Organized By</h3>
+                    <p className="text-muted-foreground">{organizerName}</p>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <h3 className="font-semibold text-lg text-foreground">
-                    Organized By
-                  </h3>
-                  <p className="text-muted-foreground">Moonlight Events</p>
-                </div>
-              </div>
+              )}
 
               <div className="flex gap-4">
                 <div className="mt-1">
                   <Tag className="h-6 w-6 text-foreground" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <h3 className="font-semibold text-lg text-foreground">
-                    Category
-                  </h3>
-                  <p className="text-muted-foreground">Music Concert</p>
+                  <h3 className="font-semibold text-lg text-foreground">Category</h3>
+                  <p className="text-muted-foreground">{event.category ?? "Live Event"}</p>
                 </div>
               </div>
             </div>
@@ -74,32 +100,20 @@ export function EventDetailsDescription() {
             <h2 className="text-2xl font-bold text-blue-soft">Description</h2>
 
             <div className="flex flex-col gap-4 text-muted-foreground leading-relaxed">
-              <p>
-                A sensational live performance by Maritza Correa, bringing Latin
-                pop and soul to the heart of Vizag. Enjoy an electrifying
-                evening filled with vibrant music, food stalls, light shows, and
-                crowd interaction. This open-air concert is a must-attend for
-                music lovers and cultural enthusiasts.
-              </p>
-              <p>
-                Entry starts at 6:00 PM.
-                <br />
-                All age groups welcome.
-                <br />
-                Food & beverage stalls available.
-                <br />
-                Security and medical assistance will be on-site.
-              </p>
+              <p>{displayedDescription}</p>
             </div>
 
-            <div className="pt-4">
-              <Button
-                variant="outline"
-                className="bg-(--white) text-(--upcoming-blue-600) rounded-full px-4 py-1 font-poppins font-medium text-sm md:text-base transition-colors"
-              >
-                Read More 
-              </Button>
-            </div>
+            {description.length > 300 && (
+              <div className="pt-4">
+                <Button
+                  variant="outline"
+                  className="bg-(--white) text-(--upcoming-blue-600) rounded-full px-4 py-1 font-medium text-sm md:text-base transition-transform duration-160 ease-out active:scale-[0.97]"
+                  onClick={() => setShowFull((prev) => !prev)}
+                >
+                  {showFull ? "Show Less" : "Read More"}
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

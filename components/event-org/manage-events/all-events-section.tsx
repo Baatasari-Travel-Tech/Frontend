@@ -76,7 +76,7 @@ export function AllEventsSection({
 
   const handleRowClick = (event: AllManageEvent) => {
     localStorage.setItem("analyticsEventData", JSON.stringify(event.analyticsData))
-    router.push("/organizer/analytics")
+    router.push(`/organizer/analytics?eventId=${encodeURIComponent(event.id)}`)
   }
 
   return (

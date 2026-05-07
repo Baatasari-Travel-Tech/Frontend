@@ -6,6 +6,7 @@ import type { EventDetail } from "@/types/api"
 export type ManageEventStatus = "Upcoming" | "Ongoing" | "Past"
 
 export type AnalyticsEventData = {
+  id: string
   eventName: string
   date: string
   category: string
@@ -293,6 +294,7 @@ const toUpcomingCard = (event: EventDetail): UpcomingManageEvent => {
     },
     formData: toEventFormDraft(event),
     analyticsData: {
+      id: event.id,
       eventName: event.title,
       date: analyticsDate,
       category: event.category ?? "Live Event",
@@ -314,6 +316,7 @@ const toAllEventsRow = (event: EventDetail): AllManageEvent => {
     action: status === "Past" ? "Repeat" : "Edit",
     formData: toEventFormDraft(event),
     analyticsData: {
+      id: event.id,
       eventName: event.title,
       date: formatLongDate(event.date),
       category: event.category ?? "Live Event",

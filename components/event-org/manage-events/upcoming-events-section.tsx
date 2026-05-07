@@ -2,8 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import { apiRequest } from "@/lib/api/client"
 import {
   Card,
   CardContent,
@@ -46,8 +48,10 @@ export function UpcomingEventsSection({
   errorMessage = null,
 }: UpcomingEventsSectionProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [api, setApi] = useState<CarouselApi>()
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   const upcomingEvents = useMemo(() => toUpcomingManageEvents(events), [events])
 
@@ -65,7 +69,19 @@ export function UpcomingEventsSection({
 
   const handleEventClick = (event: UpcomingManageEvent) => {
     localStorage.setItem("analyticsEventData", JSON.stringify(event.analyticsData))
-    router.push("/organizer/analytics")
+    router.push(`/organizer/analytics?eventId=${encodeURIComponent(event.id)}`)
+  }
+
+  const handleCancelEvent = async (eventId: string) => {
+    setCancellingId(eventId)
+    try {
+      await apiRequest(`/organizer/events/${eventId}`, { method: "DELETE", auth: true })
+      await queryClient.invalidateQueries({ queryKey: ["organizer-events"] })
+      await queryClient.invalidateQueries({ queryKey: ["organizer-events", "manage-events"] })
+      await queryClient.invalidateQueries({ queryKey: ["organizer-dashboard"] })
+    } finally {
+      setCancellingId(null)
+    }
   }
 
   const handleReschedule = (event: UpcomingManageEvent, clickEvent: React.MouseEvent) => {
@@ -288,11 +304,13 @@ export function UpcomingEventsSection({
                               Keep Event
                             </AlertDialogCancel>
                             <AlertDialogAction
+                              disabled={cancellingId === event.id}
                               onClick={(clickEvent) => {
                                 clickEvent.stopPropagation()
+                                void handleCancelEvent(event.id)
                               }}
                             >
-                              Cancel Event
+                              {cancellingId === event.id ? "Cancelling..." : "Cancel Event"}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
