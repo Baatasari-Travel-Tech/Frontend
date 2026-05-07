@@ -184,7 +184,12 @@ const buildCreateEventPayload = (
         .filter(Boolean),
     },
     postEventFollowUp: formData.postEventFollowUp || {},
-    contactInfo: formData.contactInfo || {},
+    contactInfo: {
+      mobile: formData.contactInfo?.mobile?.trim() || "",
+      email: formData.contactInfo?.email?.trim() || "",
+      website: normalizeOptionalUrl(formData.contactInfo?.website) ?? null,
+      additionalLinks: formData.contactInfo?.additionalLinks?.trim() || null,
+    },
     audienceRange: formData.audienceRange || { min: 0, max: 100 },
     targetAudience: formData.targetAudience || {},
     addOns: formData.addOns || {},
