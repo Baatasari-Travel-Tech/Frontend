@@ -138,7 +138,7 @@ export default function OrganizerDocumentUploadPage() {
       return
     }
     if (organizerVerificationStatus === "APPROVED") {
-      router.replace("/organizer/analytics")
+      router.replace("/organizer/dashboard")
     }
   }, [organizerVerificationStatus, router, user])
 

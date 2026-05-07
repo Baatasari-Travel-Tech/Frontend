@@ -20,7 +20,7 @@ export const ROLE_EMOJI: Record<AppRole, string> = {
 
 export const getRoleDashboard = (role: AppRole): string => {
   switch (role) {
-    case 'EVENT_ORGANIZER': return '/organizer/analytics'
+    case 'EVENT_ORGANIZER': return '/organizer/dashboard'
     case 'TALENT':          return '/talent/dashboard'
     default:                return '/dashboard'
   }

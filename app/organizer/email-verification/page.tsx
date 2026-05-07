@@ -24,7 +24,7 @@ export default function OrganizerEmailVerificationPage() {
     }
 
     if (organizerVerificationStatus === "APPROVED") {
-      router.replace("/organizer/analytics")
+      router.replace("/organizer/dashboard")
       return
     }
 
