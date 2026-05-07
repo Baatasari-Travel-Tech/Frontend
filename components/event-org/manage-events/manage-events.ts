@@ -181,10 +181,11 @@ export const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => 
           category: tier.name,
           numberOfTickets: tier.quantity >= UNLIMITED_TICKET_CAPACITY ? "" : String(tier.quantity),
           isLimited: tier.quantity < UNLIMITED_TICKET_CAPACITY,
+          isFree: Number(tier.price) === 0,
           price: String(tier.price),
           description: tier.description ?? "",
         }))
-      : [{ category: "", numberOfTickets: "", isLimited: true, price: "", description: "" }]
+      : [{ category: "", numberOfTickets: "", isLimited: true, isFree: false, price: "", description: "" }]
 
   const parsedTargetAudience = Object.fromEntries(
     Object.entries(targetAudience).map(([key, value]) => [key, asBoolean(value)])
@@ -241,8 +242,8 @@ export const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => 
           ? requirementHighlights.map((name) => ({ name, genre: "" }))
           : [{ name: "", genre: "" }],
     audienceRange: {
-      min: asNumber(audienceRange.min, 13),
-      max: asNumber(audienceRange.max, 86),
+      min: asNumber(audienceRange.min, 18),
+      max: asNumber(audienceRange.max, 60),
     },
     targetAudience: parsedTargetAudience,
     eventPhoto: null,

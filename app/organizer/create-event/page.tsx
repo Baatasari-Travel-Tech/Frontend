@@ -88,7 +88,7 @@ const buildTicketTiers = (formData: EventFormData): TicketTierPayload[] => {
       quantity: item.isLimited !== false
         ? Math.max(1, toNumber(item.numberOfTickets, 1))
         : UNLIMITED_TICKET_CAPACITY,
-      price: formData.ticketType === "free" ? 0 : Math.max(0, toNumber(item.price, 0)),
+      price: item.isFree ? 0 : Math.max(0, toNumber(item.price, 0)),
     }))
 
   if (fromAudienceCategory.length > 0) return fromAudienceCategory

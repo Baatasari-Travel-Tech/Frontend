@@ -45,10 +45,6 @@ export function validateEventForm(formData: Partial<EventFormData>): Record<stri
     errors.entrySide = "Entry side details must be 1000 characters or less."
   }
 
-  if (!formData.ticketType || (formData.ticketType !== "paid" && formData.ticketType !== "free")) {
-    errors.ticketType = "Ticket type is required."
-  }
-
   const tiers = formData.audienceCategory ?? []
   if (!Array.isArray(tiers) || tiers.length === 0) {
     errors["audienceCategory.0.category"] = "Add at least one ticket category."
@@ -66,10 +62,10 @@ export function validateEventForm(formData: Partial<EventFormData>): Record<stri
         }
       }
 
-      if (formData.ticketType === "paid") {
+      if (!tier.isFree) {
         const amount = Number(tier.price)
-        if (tier.price === "" || !Number.isFinite(amount) || amount < 0) {
-          errors[`audienceCategory.${index}.price`] = "Valid price is required."
+        if (tier.price === "" || !Number.isFinite(amount) || amount < 10) {
+          errors[`audienceCategory.${index}.price`] = "Price must be at least ₹10, or mark the ticket as Free."
         }
       }
 

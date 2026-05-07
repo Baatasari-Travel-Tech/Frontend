@@ -2,7 +2,6 @@ import Image from "next/image"
 import { FaInstagram, FaLinkedin, FaTwitter } from "react-icons/fa"
 import SuggestionsForm from "@/components/suggestions-form"
 import { EventList } from "@/components/events/event-list"
-import { EventsHero } from "@/components/events/hero"
 import { SuggestedEventsSection } from "@/components/events/suggested-events-section"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { formatCurrency } from "@/lib/format"
@@ -48,7 +47,7 @@ function asSponsorNames(value: unknown): string[] {
 
 function toEventCardData(event: EventSummary): EventData {
   const lowestPrice = event.startingPrice ?? 0
-  const readablePrice = formatCurrency(lowestPrice).replace(/[^\d.,-]+/, "INR ")
+  const readablePrice = lowestPrice === 0 ? "Free" : formatCurrency(lowestPrice).replace(/[^\d.,-]+/, "INR ")
   const routeId = event.slug ?? event.id
   const sponsors = asRecord(event.sponsors)
   const sponsorNames = [
@@ -133,7 +132,6 @@ export default async function EventsPage() {
           </section>
         ) : (
           <>
-            <EventsHero />
             {hasAnyEvents ? (
               <EventList rows={rows} />
             ) : (

@@ -98,12 +98,14 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     router.replace(nextHref, { scroll: false })
   }, [isLoggedIn, open, pathname, router, searchParams])
 
+  const tiers = event.ticketTiers ?? []
+  const isFreeEvent = tiers.length > 0 && tiers.every((t) => Number(t.price) === 0)
+
   const selectedTier = useMemo(() => {
-    const tiers = event.ticketTiers ?? []
     if (tiers.length === 0) return undefined
     if (!selectedTierId) return tiers[0]
     return tiers.find((tier) => tier.id === selectedTierId) ?? tiers[0]
-  }, [event, selectedTierId])
+  }, [tiers, selectedTierId])
 
   const eventHighlights = useMemo(() => {
     const requirements = asRecord(event.requirements)
@@ -121,10 +123,12 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   }, [event])
 
   const effectiveTierId = selectedTier?.id ?? selectedTierId
-  const subtotal = useMemo(() => Number(((selectedTier?.price ?? 0) * quantity).toFixed(2)), [quantity, selectedTier?.price])
-  const taxAmount = useMemo(() => Number((subtotal * 0.18).toFixed(2)), [subtotal])
-  const platformFee = useMemo(() => Number((subtotal * 0.02).toFixed(2)), [subtotal])
-  const totalAmount = useMemo(() => Number((subtotal + taxAmount + platformFee).toFixed(2)), [platformFee, subtotal, taxAmount])
+  const tierPrice = Number(selectedTier?.price ?? 0)
+  const subtotal = useMemo(() => Number((tierPrice * quantity).toFixed(2)), [quantity, tierPrice])
+  const PLATFORM_FEE_PER_TICKET = 10
+  const platformFee = useMemo(() => (isFreeEvent ? 0 : PLATFORM_FEE_PER_TICKET * quantity), [isFreeEvent, quantity])
+  const gatewayFee = useMemo(() => (isFreeEvent ? 0 : Number((subtotal * 0.02 * 1.18).toFixed(2))), [isFreeEvent, subtotal])
+  const totalAmount = useMemo(() => Number((subtotal + platformFee + gatewayFee).toFixed(2)), [gatewayFee, platformFee, subtotal])
 
   const handleCheckout = async (eventDetail: EventDetail) => {
     if (!isLoggedIn) {
@@ -170,8 +174,20 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
         }),
       })
 
-      await loadRazorpayScript()
       const order = orderResponse.data.order
+
+      if (isFreeEvent || order.breakdown.totalAmount === 0) {
+        setCheckoutSuccess("Your free ticket has been confirmed!")
+        const ticketHref = "/history"
+        if (user?.onboardingStatus !== "COMPLETED") {
+          router.push(`/onboarding?next=${encodeURIComponent(ticketHref)}`)
+          return
+        }
+        router.push(ticketHref)
+        return
+      }
+
+      await loadRazorpayScript()
       const Razorpay = window.Razorpay
 
       if (!Razorpay) {
@@ -337,7 +353,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                       Booking Details
                     </h3>
 
-                    {event.ticketTiers.length > 0 ? (
+                    {tiers.length > 1 ? (
                       <div>
                         <label htmlFor="tier" className="block text-xs sm:text-sm font-medium text-(--gray-700) mb-2">
                           Ticket Type *
@@ -348,28 +364,38 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                           onChange={(selectEvent) => setSelectedTierId(selectEvent.target.value)}
                           className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-(--gray-300) rounded-lg focus-visible:ring-2 focus-visible:ring-[#0C1D37] focus-visible:border-transparent transition-all duration-200 text-sm sm:text-base bg-white"
                         >
-                          {event.ticketTiers.map((tier) => (
+                          {tiers.map((tier) => (
                             <option key={tier.id ?? tier.name} value={tier.id}>
-                              {tier.name} - {formatCurrency(tier.price)}
+                              {tier.name} — {Number(tier.price) === 0 ? "Free" : formatCurrency(Number(tier.price))}
                             </option>
                           ))}
                         </select>
+                        {selectedTier?.description ? (
+                          <p className="mt-1.5 text-xs text-(--gray-500)">{selectedTier.description}</p>
+                        ) : null}
+                      </div>
+                    ) : tiers.length === 1 ? (
+                      <div className="rounded-lg border border-(--gray-200) bg-(--gray-50) px-4 py-3">
+                        <p className="text-sm font-semibold text-[#0C1D37]">{tiers[0]?.name}</p>
+                        {tiers[0]?.description ? (
+                          <p className="mt-0.5 text-xs text-(--gray-500)">{tiers[0].description}</p>
+                        ) : null}
                       </div>
                     ) : null}
 
                     <div>
                       <label htmlFor="tickets" className="block text-xs sm:text-sm font-medium text-(--gray-700) mb-2">
-                        No of Tickets *
+                        No. of Tickets * <span className="text-xs font-normal text-(--gray-400)">(max 10)</span>
                       </label>
                       <Input
                         type="number"
                         id="tickets"
                         min={1}
-                        max={20}
+                        max={10}
                         value={quantity}
                         onChange={(inputEvent) => {
                           const nextValue = Number(inputEvent.target.value)
-                          if (!Number.isNaN(nextValue)) setQuantity(Math.max(1, Math.min(20, nextValue)))
+                          if (!Number.isNaN(nextValue)) setQuantity(Math.max(1, Math.min(10, nextValue)))
                         }}
                         className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-(--gray-300) rounded-lg focus-visible:ring-2 focus-visible:ring-[#0C1D37] focus-visible:border-transparent transition-all duration-200 text-sm sm:text-base"
                       />
@@ -378,25 +404,34 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
 
                   <div className="bg-(--white) p-4 rounded-2xl border-2 border-[#0C1D37] shadow-lg">
                     <h3 className="text-xl font-bold text-center text-[#0C1D37] mb-4">Order Summary</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-(--gray-600)">
-                          Registration Fee ({formatCurrency(selectedTier?.price ?? 0)} x {quantity}):
-                        </span>
-                        <span className="font-medium text-(--gray-800)">{formatCurrency(subtotal)}</span>
+                    {isFreeEvent ? (
+                      <div className="text-center py-2">
+                        <span className="text-3xl font-bold text-emerald-600">Free</span>
+                        <p className="text-sm text-(--gray-500) mt-1">No charges — this is a free event</p>
                       </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-(--gray-600)">Tax (18%) & Platform Fee:</span>
-                        <span className="font-medium text-(--gray-800)">
-                          + {formatCurrency(Number((taxAmount + platformFee).toFixed(2)))}
-                        </span>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-(--gray-600)">
+                            {selectedTier?.name} ({formatCurrency(tierPrice)} × {quantity}):
+                          </span>
+                          <span className="font-medium text-(--gray-800)">{formatCurrency(subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-(--gray-600)">Platform Fee (₹10 × {quantity}):</span>
+                          <span className="font-medium text-(--gray-800)">+ {formatCurrency(platformFee)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-(--gray-600)">Payment Gateway (2% + GST):</span>
+                          <span className="font-medium text-(--gray-800)">+ {formatCurrency(gatewayFee)}</span>
+                        </div>
+                        <div className="border-t-2 border-dashed border-(--gray-300) my-3" />
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-semibold text-[#0C1D37]">Total Amount:</span>
+                          <span className="text-2xl font-bold text-[#0C1D37]">{formatCurrency(totalAmount)}</span>
+                        </div>
                       </div>
-                      <div className="border-t-2 border-dashed border-(--gray-300) my-3" />
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-semibold text-[#0C1D37]">Total Amount:</span>
-                        <span className="text-2xl font-bold text-[#0C1D37]">{formatCurrency(totalAmount)}</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -425,10 +460,10 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
 
                   <Button
                     type="submit"
-                    disabled={checkoutLoading || !event.ticketTiers.length}
+                    disabled={checkoutLoading || !tiers.length}
                     className="w-full bg-[#0C1D37] hover:bg-[#0A172C] text-(--white) py-3 sm:py-4 px-4 sm:px-6 rounded-lg font-semibold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60"
                   >
-                    {checkoutLoading ? "Processing..." : "Pay"}
+                    {checkoutLoading ? "Processing..." : isFreeEvent ? "Get Free Ticket" : "Pay"}
                   </Button>
                 </form>
               </div>
@@ -480,13 +515,26 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             </p>
           </div>
           <div>
-            <p className="font-semibold text-(--black) text-lg mb-1">Age Eligibility: 18+ Years</p>
+            <p className="font-semibold text-(--black) text-lg mb-1">
+              {(() => {
+                const range = event.audienceRange as { min?: number; max?: number } | null | undefined
+                if (range && typeof range.min === "number" && typeof range.max === "number") {
+                  return `Age Eligibility: ${range.min}–${range.max} Years`
+                }
+                return "Age Eligibility: All Ages"
+              })()}
+            </p>
           </div>
           <div>
-            <p className="font-semibold text-(--black) text-lg mb-1">Event Duration: 4hrs</p>
+            <p className="font-semibold text-(--black) text-lg mb-1">
+              Tickets:{" "}
+              {tiers.length > 0
+                ? tiers.map((t) => `${t.name} (${Number(t.price) === 0 ? "Free" : formatCurrency(Number(t.price))})`).join(", ")
+                : "—"}
+            </p>
           </div>
           <div>
-            <p className="font-semibold text-(--black) text-lg mb-1">Entry Time: 7 PM Onwards</p>
+            <p className="font-semibold text-(--black) text-lg mb-1">Entry Time: {event.startTime ?? "As per event"}</p>
           </div>
         </div>
 

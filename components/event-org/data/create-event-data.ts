@@ -19,9 +19,11 @@ export interface EventFormData {
     category: string
     numberOfTickets: string
     isLimited: boolean
+    isFree: boolean
     price: string
     description: string
   }[]
+  ageGroupPreset?: string
   ticketName: string
   ticketQuantity: string
   ticketPrice?: string
@@ -82,6 +84,7 @@ export const INITIAL_EVENT_FORM_DATA: EventFormData = {
       category: "",
       numberOfTickets: "",
       isLimited: true,
+      isFree: false,
       price: "",
       description: "",
     },
@@ -94,15 +97,9 @@ export const INITIAL_EVENT_FORM_DATA: EventFormData = {
     giftHampersDescription: "",
     addOtherDescription: "",
   },
-  audienceRange: { min: 13, max: 86 },
-  targetAudience: {
-    Entrepreneurs: false,
-    "High School Learners": false,
-    "University Scholars": true,
-    Artists: false,
-    Singers: false,
-    "General Public": true,
-  },
+  audienceRange: { min: 18, max: 60 },
+  ageGroupPreset: "",
+  targetAudience: {},
   sponsors: {
     titleSponsors: [],
     coPartners: [],
@@ -153,12 +150,34 @@ export const EVENT_CATEGORIES = [
 ]
 
 export const TARGET_AUDIENCE_OPTIONS = [
-  "Entrepreneurs",
-  "High School Learners",
-  "University Scholars",
-  "Artists",
-  "Singers",
-  "General Public",
+  "Student (School / College)",
+  "Job Seeker",
+  "Working Professional - IT / Tech",
+  "Working Professional - Non-Tech",
+  "Entrepreneur / Founder",
+  "Freelancer / Creator",
+  "Business Owner (SME)",
+  "Corporate Executive / Manager",
+  "Developer / Engineer",
+  "Designer / Creative Professional",
+  "Marketing / Sales Professional",
+  "Finance / Banking Professional",
+  "Healthcare Professional",
+  "Educator / Trainer",
+  "Government / Public Sector",
+  "Homemaker",
+  "Retired",
+  "Other",
+]
+
+export const AGE_GROUP_PRESETS = [
+  { label: "Newborns", min: 0, max: 2 },
+  { label: "Kids", min: 3, max: 12 },
+  { label: "Students", min: 13, max: 22 },
+  { label: "Teenagers", min: 13, max: 19 },
+  { label: "Adults", min: 20, max: 60 },
+  { label: "Elders", min: 60, max: 100 },
+  { label: "All Ages", min: 0, max: 100 },
 ]
 
 export const ADD_ON_OPTIONS = [

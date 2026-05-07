@@ -438,7 +438,7 @@ const EventPage: React.FC<EventPageProps> = ({
             : arrayName === "attractions"
               ? { name: "", description: "" }
               : arrayName === "audienceCategory"
-                ? { category: "", numberOfTickets: "", isLimited: true, price: "", description: "" }
+                ? { category: "", numberOfTickets: "", isLimited: true, isFree: false, price: "", description: "" }
                 : { name: "", logo: null, details: "" },
       ],
     }));
