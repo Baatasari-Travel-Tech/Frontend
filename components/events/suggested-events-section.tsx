@@ -43,6 +43,15 @@ export function SuggestedEventsSection() {
     }, 120)
   }, [query.isLoading, searchParams])
 
+  const displayedEvents = useMemo(
+    () =>
+      (query.data ?? [])
+        .slice()
+        .sort((a, b) => b.interestCount - a.interestCount)
+        .slice(0, 3),
+    [query.data]
+  )
+
   const interestMutation = useMutation({
     mutationFn: async (suggestedEventId: string) => markSuggestedEventInterest(suggestedEventId),
     onSuccess: async () => {
@@ -104,7 +113,7 @@ export function SuggestedEventsSection() {
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-800/70">Community Picks</p>
           <h2 className="mt-2 font-bricolage text-3xl text-brand-900 md:text-4xl">Suggested Events</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-            Fresh event ideas from the community. Each idea needs at least 3 interested people within 15 days to stay live.
+            Fresh event ideas from the community. Support the ones you want to see come to life by marking your interest, and share with friends to gather more support.
           </p>
         </div>
       </div>
@@ -122,7 +131,7 @@ export function SuggestedEventsSection() {
         <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-6 py-8 text-sm text-rose-600">
           Suggested events could not be loaded right now. Please try again in a moment.
         </div>
-      ) : (query.data?.length ?? 0) === 0 ? (
+      ) : displayedEvents.length === 0 ? (
         <div className="rounded-[2rem] border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
           <h3 className="text-xl font-semibold text-slate-900">No suggested events yet</h3>
           <p className="mt-2 text-sm text-slate-500">
@@ -131,7 +140,7 @@ export function SuggestedEventsSection() {
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {query.data?.map((event) => {
+          {displayedEvents.map((event) => {
             const action = actionByEventId.get(event.id)
 
             return (

@@ -3,21 +3,37 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { RefreshCw } from "lucide-react"
+import { Pencil, RefreshCw } from "lucide-react"
 import {
   deleteAdminUser,
   getAdminDashboard,
   isAdminAuthFailure,
   listAdminUsers,
   listPendingOrganizers,
+  updateAdminUser,
 } from "@/lib/api/admin"
 import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { clearAdminToken, getAdminToken } from "@/lib/admin/session"
-import type { AdminDashboardResponse, AdminPendingOrganizerUser, SafeUser } from "@/types/api"
+import type {
+  AdminDashboardResponse,
+  AdminPendingOrganizerUser,
+  BackendRole,
+  OnboardingStatus,
+  SafeUser,
+} from "@/types/api"
 
 type AdminListTab = "USERS" | "ORGANIZERS"
 type AdminDashboardUser = SafeUser & {
   organizationName: string | null
+}
+
+type EditTarget = {
+  id: string
+  email: string
+  role: BackendRole
+  onboardingStatus: OnboardingStatus
+  organizerApproved: boolean
+  isOrganizer: boolean
 }
 
 const formatDate = (value: string) =>
@@ -47,6 +63,11 @@ export default function AdminDashboardPage() {
   const [search, setSearch] = useState("")
   const [organizerSearch, setOrganizerSearch] = useState("")
   const [refreshing, setRefreshing] = useState(false)
+
+  // Edit modal state
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
+  const [editBusy, setEditBusy] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
 
   const refresh = useCallback(async (logoutOnFailure = true) => {
     try {
@@ -157,6 +178,39 @@ export default function AdminDashboardPage() {
       setError(requestError instanceof Error ? requestError.message : "Failed to delete user")
     } finally {
       setBusyKey(null)
+    }
+  }
+
+  const handleEditUser = (user: AdminDashboardUser, isOrganizer: boolean) => {
+    setEditTarget({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      onboardingStatus: user.onboardingStatus,
+      organizerApproved: user.organizerApproved,
+      isOrganizer,
+    })
+    setEditError(null)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editTarget) return
+    setEditBusy(true)
+    setEditError(null)
+    try {
+      await updateAdminUser(editTarget.id, {
+        role: editTarget.role,
+        onboardingStatus: editTarget.onboardingStatus,
+        organizerApproved: editTarget.organizerApproved,
+      })
+      setEditTarget(null)
+      await refresh(false)
+    } catch (requestError) {
+      setEditError(
+        requestError instanceof Error ? requestError.message : "Failed to update user"
+      )
+    } finally {
+      setEditBusy(false)
     }
   }
 
@@ -295,7 +349,7 @@ export default function AdminDashboardPage() {
             />
           </div>
           {tab === "USERS" ? (
-            <div className="max-h-[32rem] overflow-auto">
+            <div className="max-h-128 overflow-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-500">
@@ -314,13 +368,23 @@ export default function AdminDashboardPage() {
                       <td className="px-3 py-3">{user.onboardingStatus}</td>
                       <td className="px-3 py-3">{formatDate(user.createdAt)}</td>
                       <td className="px-3 py-3">
-                        <button
-                          onClick={() => void handleDeleteUser(user.id, user.email)}
-                          disabled={busyKey === `delete:${user.id}`}
-                          className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          {busyKey === `delete:${user.id}` ? "Deleting..." : "Delete"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditUser(user, false)}
+                            aria-label={`Edit user ${user.email}`}
+                            className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white p-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => void handleDeleteUser(user.id, user.email)}
+                            disabled={busyKey === `delete:${user.id}`}
+                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {busyKey === `delete:${user.id}` ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -335,7 +399,7 @@ export default function AdminDashboardPage() {
               </table>
             </div>
           ) : (
-            <div className="max-h-[32rem] overflow-auto">
+            <div className="max-h-128 overflow-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-500">
@@ -361,13 +425,23 @@ export default function AdminDashboardPage() {
                       <td className="px-3 py-3">{organizer.organizerApproved ? "Yes" : "No"}</td>
                       <td className="px-3 py-3">{formatDate(organizer.createdAt)}</td>
                       <td className="px-3 py-3">
-                        <button
-                          onClick={() => void handleDeleteUser(organizer.id, organizer.email)}
-                          disabled={busyKey === `delete:${organizer.id}`}
-                          className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          {busyKey === `delete:${organizer.id}` ? "Deleting..." : "Delete"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditUser(organizer, true)}
+                            aria-label={`Edit organizer ${organizer.email}`}
+                            className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white p-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => void handleDeleteUser(organizer.id, organizer.email)}
+                            disabled={busyKey === `delete:${organizer.id}`}
+                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {busyKey === `delete:${organizer.id}` ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -384,6 +458,126 @@ export default function AdminDashboardPage() {
           )}
         </section>
       </div>
+
+      {/* Edit Modal */}
+      {editTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Edit ${editTarget.isOrganizer ? "organizer" : "user"}`}
+        >
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => { if (!editBusy) setEditTarget(null) }}
+          />
+          <div className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-xl sm:mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-5">
+              Edit {editTarget.isOrganizer ? "Organizer" : "User"}
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email</p>
+                <p className="text-sm text-slate-700 font-mono">{editTarget.email}</p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="edit-role"
+                  className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1"
+                >
+                  Role
+                </label>
+                <select
+                  id="edit-role"
+                  value={editTarget.role}
+                  onChange={(e) =>
+                    setEditTarget((prev) =>
+                      prev ? { ...prev, role: e.target.value as BackendRole } : prev
+                    )
+                  }
+                  disabled={editBusy}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                >
+                  <option value="USER">USER</option>
+                  <option value="ORGANIZER">ORGANIZER</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="edit-onboarding"
+                  className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1"
+                >
+                  Onboarding Status
+                </label>
+                <select
+                  id="edit-onboarding"
+                  value={editTarget.onboardingStatus}
+                  onChange={(e) =>
+                    setEditTarget((prev) =>
+                      prev
+                        ? { ...prev, onboardingStatus: e.target.value as OnboardingStatus }
+                        : prev
+                    )
+                  }
+                  disabled={editBusy}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                >
+                  <option value="PENDING">PENDING</option>
+                  <option value="COMPLETED">COMPLETED</option>
+                </select>
+              </div>
+
+              {editTarget.isOrganizer && (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="edit-approved"
+                    checked={editTarget.organizerApproved}
+                    onChange={(e) =>
+                      setEditTarget((prev) =>
+                        prev ? { ...prev, organizerApproved: e.target.checked } : prev
+                      )
+                    }
+                    disabled={editBusy}
+                    className="h-4 w-4 rounded border-slate-300 accent-slate-900"
+                  />
+                  <label htmlFor="edit-approved" className="text-sm font-medium text-slate-700">
+                    Organizer Approved
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {editError && (
+              <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {editError}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setEditTarget(null)}
+                disabled={editBusy}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-70 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveEdit()}
+                disabled={editBusy}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70 transition"
+              >
+                {editBusy ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

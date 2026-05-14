@@ -22,6 +22,7 @@ interface HandpickedEventCardProps {
     sponsors?: string
     eventTime?: string
     highlights?: string[]
+    gridMode?: boolean
 }
 
 
@@ -37,7 +38,8 @@ export function HandpickedEventCard({
     chiefGuest,
     sponsors,
     eventTime = "All ages welcome",
-    highlights = []
+    highlights = [],
+    gridMode = false,
 }: HandpickedEventCardProps) {
     const [showDetails, setShowDetails] = useState(false)
     const [imageSrc, setImageSrc] = useState(image)
@@ -63,13 +65,13 @@ export function HandpickedEventCard({
 
     return (
         <div
-            className="flex flex-col md:flex-row items-center h-full mr-4 mb-4"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
+            className={gridMode ? "w-full" : "flex flex-col md:flex-row items-center h-full mr-4 mb-4"}
+            onMouseEnter={gridMode ? undefined : handleMouseEnter}
+            onMouseLeave={gridMode ? undefined : handleMouseLeave}
         >
-            <Link href={`/events/${id}`} className="block relative z-20">
+            <Link href={`/events/${id}`} className="block relative z-20 w-full">
                 {/* Main Card */}
-                <Card className={`w-75 md:w-85 shrink-0 border-0 shadow-sm transition-all duration-300 rounded-[24px] overflow-hidden bg-(--white) ${showDetails ? "-translate-y-2 shadow-2xl" : ""}`}>
+                <Card className={`${gridMode ? "w-full" : "w-75 md:w-85 shrink-0"} border-0 shadow-sm transition-all duration-300 rounded-[24px] overflow-hidden bg-(--white) ${!gridMode && showDetails ? "-translate-y-2 shadow-2xl" : ""}`}>
                     <CardContent className="p-4">
                         {/* Image Container */}
                         <div className="relative aspect-square w-full mb-4 overflow-hidden rounded-4xl">
@@ -130,9 +132,9 @@ export function HandpickedEventCard({
                 </Card>
             </Link>
 
-            {/* Details Panel - Mobile (Hidden) & Desktop (Slide-out) */}
+            {/* Details Panel - Mobile (Hidden) & Desktop (Slide-out) — hidden in gridMode */}
             <div
-                className={`hidden md:flex transition-all duration-500 ease-in-out bg-(--white) rounded-b-[24px] md:rounded-b-none md:rounded-r-[24px] border border-t-0 md:border-t md:border-l-0 border-(--gray-100) shadow-xl overflow-hidden flex-col z-10 relative md:h-[95%] md:my-auto -mt-5 pt-5 md:mt-0 md:pt-0 ${showDetails ? "md:w-85 md:opacity-100 md:ml-0" : "md:w-0 md:opacity-0 md:-ml-6"}`}
+                className={`${gridMode ? "hidden" : ""} hidden md:flex transition-all duration-500 ease-in-out bg-(--white) rounded-b-[24px] md:rounded-b-none md:rounded-r-[24px] border border-t-0 md:border-t md:border-l-0 border-(--gray-100) shadow-xl overflow-hidden flex-col z-10 relative md:h-[95%] md:my-auto -mt-5 pt-5 md:mt-0 md:pt-0 ${showDetails ? "md:w-85 md:opacity-100 md:ml-0" : "md:w-0 md:opacity-0 md:-ml-6"}`}
             >
                 <div className="min-w-75 md:min-w-85 p-6 flex flex-col h-full justify-between">
                     <div className="space-y-4">
@@ -178,9 +180,6 @@ export function HandpickedEventCard({
 
                     {/* Actions */}
                     <Link href={`/events/${id}`} className="space-y-3 mt-4 block">
-                        <Button className="w-full bg-(--promo-warm-bg) text-(--events-card-text) font-semibold py-2 rounded-full hover:bg-(--promo-warm-bg)/90 transition-colors h-auto">
-                            Buy 1 Get 1
-                        </Button>
                         <Button className="w-full bg-brand-900 text-(--white) font-semibold py-3 rounded-full hover:bg-(--brand-navy)/90 transition-colors h-auto">
                             Pay {price}
                         </Button>

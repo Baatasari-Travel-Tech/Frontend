@@ -130,17 +130,17 @@
      6) Feature tokens: Events
      ========================= */
   --events-bg-primary: #3b5f8f;
-  --events-white: #ffffff;
+  --events-white: var(--white);
 
-  --events-gray-50: #f9fafb;
-  --events-gray-100: #f3f4f6;
-  --events-gray-200: #e5e7eb;
-  --events-gray-300: #d1d5db;
-  --events-gray-400: #9ca3af;
-  --events-gray-500: #6b7280;
-  --events-gray-700: #374151;
-  --events-gray-800: #1f2937;
-  --events-gray-900: #111827;
+  --events-gray-50: var(--gray-50);
+  --events-gray-100: var(--gray-100);
+  --events-gray-200: var(--gray-200);
+  --events-gray-300: var(--gray-300);
+  --events-gray-400: var(--gray-400);
+  --events-gray-500: var(--gray-500);
+  --events-gray-700: var(--gray-700);
+  --events-gray-800: var(--gray-800);
+  --events-gray-900: var(--gray-900);
 
   --events-blue-600: #2563eb;
   --events-blue-800: #1e40af;
@@ -150,7 +150,7 @@
   /* =========================
      7) Feature tokens: Upcoming
      ========================= */
-  --upcoming-white: #ffffff;
+  --upcoming-white: var(--white);
 
   --upcoming-primary-900: #0c1d37;
   --upcoming-primary-800: #203d69;
@@ -158,12 +158,12 @@
 
   --upcoming-blue-600: #2563eb;
 
-  --upcoming-gray-900: #111827;
-  --upcoming-gray-800: #1f2937;
-  --upcoming-gray-700: #374151;
-  --upcoming-gray-600: #4b5563;
-  --upcoming-gray-500: #6b7280;
-  --upcoming-gray-200: #e5e7eb;
+  --upcoming-gray-900: var(--gray-900);
+  --upcoming-gray-800: var(--gray-800);
+  --upcoming-gray-700: var(--gray-700);
+  --upcoming-gray-600: var(--gray-600);
+  --upcoming-gray-500: var(--gray-500);
+  --upcoming-gray-200: var(--gray-200);
 
   --upcoming-red-700: #b91c1c;
   --upcoming-red-600: #dc2626;
@@ -427,19 +427,18 @@
   --talent-footer-strong: var(--brand-blue);
   
 
-  /* Movie Card */
+}
 
+
+
+@layer components {
   .movie-card {
     background-color: var(--movie-card-bg);
     border: 1px solid var(--movie-card-border);
     box-shadow: var(--movie-card-shadow);
     transition: all 0.3s ease;
   }
-
-
 }
-
-
 
 /* =========================
    Tailwind v4 theme mapping

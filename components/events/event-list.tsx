@@ -4,14 +4,8 @@ import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { HandpickedEventCard } from "@/components/events/handpicked-card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import {
-    EventData,
-    HANDPICKED_DATA,
-    NEXT_UP_DATA,
-    INTEREST_DATA,
-    SOLO_DATA,
-    SOLOPRENEUR_DATA,
-} from "@/lib/events-data";
+import type { EventData } from "@/lib/events-data";
+import Link from "next/link";
 
 interface EventRowProps {
     title: string;
@@ -20,6 +14,7 @@ interface EventRowProps {
 
 interface EventListProps {
     rows?: EventRowProps[];
+    showHero?: boolean;
 }
 
 function EventRow({ title, events }: EventRowProps) {
@@ -47,12 +42,12 @@ function EventRow({ title, events }: EventRowProps) {
             <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold text-(--brand-blue) font-bricolage">{title}</h2>
                 {hasEvents && (
-                    <a
-                        href="#"
+                    <Link
+                        href="/events/all"
                         className="bg-(--white) text-(--blue-600) hover:bg-(--white)/80 rounded-full px-4 py-1 font-poppins font-medium text-sm md:text-base transition-colors"
                     >
                         View All
-                    </a>
+                    </Link>
                 )}
             </div>
 
@@ -104,20 +99,28 @@ function EventRow({ title, events }: EventRowProps) {
     );
 }
 
-export function EventList({ rows }: EventListProps = {}) {
-    const defaultRows: EventRowProps[] = [
-        { title: "Handpicked For You", events: HANDPICKED_DATA },
-        { title: "Next Up: Events You'll Love", events: NEXT_UP_DATA },
-        { title: "Based on Your Interests", events: INTEREST_DATA },
-        { title: "Solo Performers", events: SOLO_DATA },
-        { title: "For Solopreneurs", events: SOLOPRENEUR_DATA },
-    ]
-
-    const sourceRows = rows ?? defaultRows
-    const visibleRows = sourceRows.filter((row) => row.events.length > 0)
+export function EventList({ rows = [], showHero = false }: EventListProps) {
+    const visibleRows = rows.filter((row) => row.events.length > 0);
 
     return (
         <section className="container mx-auto px-4 py-12">
+            {showHero && (
+                <div className="relative mb-12 overflow-hidden rounded-3xl bg-linear-to-br from-brand-900 via-[#1a3a6b] to-sky-800 px-8 py-14 text-white">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(147,197,253,0.18),transparent_55%)]" />
+                    <div className="relative">
+                        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-sky-300/80">
+                            Live Experiences
+                        </p>
+                        <h1 className="mt-2 font-bricolage text-4xl font-bold leading-tight md:text-5xl">
+                            Discover What&apos;s Happening
+                        </h1>
+                        <p className="mt-3 max-w-xl text-sm leading-7 text-white/75 md:text-base">
+                            Curated events, live performances, and community experiences — sorted by what people love most.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {visibleRows.map((row) => (
                 <EventRow key={row.title} title={row.title} events={row.events} />
             ))}

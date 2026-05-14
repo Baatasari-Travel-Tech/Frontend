@@ -427,7 +427,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {!isOrganizerActive && mobileMenuOpen && (
-          <nav className="border-t border-slate-200 bg-white px-4 py-3 md:hidden">
+          <nav className="absolute top-full left-0 right-0 z-50 shadow-lg bg-white rounded-b-2xl px-4 py-3 md:hidden">
             <div className="grid gap-2">
               {navLinks.map((link) => (
                 <Link

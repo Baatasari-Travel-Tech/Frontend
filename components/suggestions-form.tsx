@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/app/providers"
@@ -34,8 +34,17 @@ import {
   SUGGESTED_EVENT_DRAFT_STORAGE_KEY,
   SUGGESTED_EVENT_FORM_ID,
   SUGGESTED_EVENT_RESUME_PARAM,
+  SUGGESTED_EVENTS_SECTION_ID,
   type SuggestedEventDraft,
 } from "@/lib/suggested-events"
+
+type SubmissionRecord = {
+  userId: string
+  eventTitle: string
+  submittedAt: string
+}
+
+const SUBMISSIONS_STORAGE_KEY = "baatasari-user-submissions"
 
 type SuggestionsFormProps = {
   autoScrollOnDraft?: boolean
@@ -53,8 +62,20 @@ export default function SuggestionsForm({ autoScrollOnDraft = false }: Suggestio
     SUGGESTED_EVENT_DRAFT_STORAGE_KEY,
     EMPTY_SUGGESTED_EVENT_DRAFT
   )
+  const [submissions, setSubmissions, isSubmissionsReady] = useLocalStorage<SubmissionRecord[]>(
+    SUBMISSIONS_STORAGE_KEY,
+    []
+  )
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  const hasAlreadySubmitted = useMemo(
+    () =>
+      isSubmissionsReady &&
+      Boolean(user?.id) &&
+      submissions.some((r) => r.userId === user!.id),
+    [isSubmissionsReady, submissions, user]
+  )
 
   const inputClass =
     "w-full px-5 py-1 md:py-3 h-8 md:h-auto rounded-lg bg-(--white) dark:bg-(--white) text-(--gray-800) placeholder-(--gray-500) focus:outline-none focus:ring-2 focus:ring-(--white)/40 text-sm md:text-base border-0"
@@ -70,9 +91,19 @@ export default function SuggestionsForm({ autoScrollOnDraft = false }: Suggestio
 
   const createMutation = useMutation({
     mutationFn: async (currentDraft: SuggestedEventDraft) => createSuggestedEventFromDraft(currentDraft),
-    onSuccess: async () => {
+    onSuccess: async (_, submittedDraft) => {
       clearSuggestedEventDraft()
       setDraft(EMPTY_SUGGESTED_EVENT_DRAFT)
+      if (user?.id) {
+        setSubmissions((prev) => [
+          ...prev,
+          {
+            userId: user!.id,
+            eventTitle: submittedDraft.title,
+            submittedAt: new Date().toISOString(),
+          },
+        ])
+      }
       setSuccess("Your event idea has been added to Suggested Events.")
       setError(null)
       await queryClient.invalidateQueries({ queryKey: ["suggested-events"] })
@@ -197,6 +228,34 @@ export default function SuggestionsForm({ autoScrollOnDraft = false }: Suggestio
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
+    )
+  }
+
+  if (hasAlreadySubmitted) {
+    return (
+      <section ref={sectionRef} id={SUGGESTED_EVENT_FORM_ID} className="scroll-mt-28">
+        <div className="mx-auto px-1 md:px-2 max-w-8xl">
+          <div className="rounded-[5rem] bg-(--brand-blue) px-12 py-16 md:px-26 text-center">
+            <p className="font-bricolage font-semibold text-3xl md:text-[40px] text-(--white) mb-4">
+              You&apos;ve already pitched an event!
+            </p>
+            <p className="font-albert text-(--white)/80 text-base md:text-lg mb-8 max-w-lg mx-auto">
+              Check the Suggested Events section below to see how your idea is doing and track its support.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                document
+                  .getElementById(SUGGESTED_EVENTS_SECTION_ID)
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }}
+              className="rounded-full bg-(--white) text-(--brand-blue) px-8 py-3 font-semibold text-sm hover:bg-(--white)/90 transition"
+            >
+              See Suggested Events
+            </button>
+          </div>
+        </div>
+      </section>
     )
   }
 

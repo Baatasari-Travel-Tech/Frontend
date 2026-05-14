@@ -114,3 +114,12 @@ export const deleteAdminUser = (id: string) => {
     method: "DELETE",
   })
 }
+
+export const updateAdminUser = (
+  id: string,
+  payload: Partial<Pick<SafeUser, "role" | "onboardingStatus" | "organizerApproved">>
+) =>
+  requestAdmin<SafeUser>(`/api/v1/admin/users/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
