@@ -68,6 +68,11 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
 
   const [guestName, setGuestName] = useState(profile?.full_name ?? "")
   const [guestPhone, setGuestPhone] = useState(profile?.phone ?? "")
+
+  useEffect(() => {
+    if (profile?.full_name) setGuestName((prev) => prev || profile.full_name!)
+    if (profile?.phone) setGuestPhone((prev) => prev || profile.phone!)
+  }, [profile?.full_name, profile?.phone])
   const [quantity, setQuantity] = useState(1)
   const [selectedTierId, setSelectedTierId] = useState("")
   const [termsAccepted, setTermsAccepted] = useState(false)
