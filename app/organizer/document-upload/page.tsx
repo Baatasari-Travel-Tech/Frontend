@@ -8,26 +8,13 @@ import { useRouter } from "next/navigation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
 import { useAuth } from "@/app/providers"
-import { INDIA_STATES } from "@/lib/india-states"
 import {
   completeOrganizerDocuments,
   fetchOrganizerDocumentBlob,
   uploadOrganizerDocument,
 } from "@/lib/api/organizer-documents"
 
-type GstEntry = {
-  id: string
-  gstin: string
-  state: string
-}
-
 type SignatureTab = "upload" | "draw"
-
-const makeGstEntry = (): GstEntry => ({
-  id: crypto.randomUUID(),
-  gstin: "",
-  state: "",
-})
 
 const todayLabel = new Date().toLocaleDateString("en-IN", {
   day: "2-digit",
@@ -65,11 +52,6 @@ export default function OrganizerDocumentUploadPage() {
   const router = useRouter()
   const { user, profile, organizerProfile, organizerVerificationStatus, refreshOrganizerStatus } = useAuth()
 
-  const [gstAnswer, setGstAnswer] = useState<"YES" | "NO">("YES")
-  const [gstEntries, setGstEntries] = useState<GstEntry[]>([makeGstEntry()])
-  const [undertakingAccepted, setUndertakingAccepted] = useState(false)
-  const [undertakingState, setUndertakingState] = useState("")
-  const [isDeclarationOpen, setIsDeclarationOpen] = useState(false)
   const [panFileName, setPanFileName] = useState<string | null>(null)
   const [isUploadingPan, setIsUploadingPan] = useState(false)
   const [panUploaded, setPanUploaded] = useState(false)
@@ -92,7 +74,6 @@ export default function OrganizerDocumentUploadPage() {
   const drawingRef = useRef(false)
   const drawPointRef = useRef<{ x: number; y: number } | null>(null)
   const uploadObjectUrlRef = useRef<string | null>(null)
-  const undertakingDirtyRef = useRef(false)
 
   const organizerDisplayName = useMemo(() => {
     const fullName = profile?.full_name?.trim()
@@ -144,25 +125,6 @@ export default function OrganizerDocumentUploadPage() {
 
   useEffect(() => {
     if (!organizerProfile) return
-    if (organizerProfile.gstDeclarationMode === "HAS_GSTIN") {
-      setGstAnswer("YES")
-    } else if (organizerProfile.gstDeclarationMode === "NO_GSTIN") {
-      setGstAnswer("NO")
-    }
-    if (organizerProfile.gstDetails.length > 0) {
-      setGstEntries(
-        organizerProfile.gstDetails.map((entry) => ({
-          id: crypto.randomUUID(),
-          gstin: entry.gstin,
-          state: entry.state,
-        }))
-      )
-    }
-    const profileUndertakingState = organizerProfile.undertakingState ?? ""
-    if (!undertakingDirtyRef.current || organizerProfile.undertakingAccepted || profileUndertakingState.length > 0) {
-      setUndertakingAccepted(organizerProfile.undertakingAccepted)
-      setUndertakingState(profileUndertakingState)
-    }
     setPanUploaded(Boolean(organizerProfile.panDocumentKey))
     setAgreementDownloaded(Boolean(organizerProfile.agreementDownloadedAt))
   }, [organizerProfile])
@@ -176,13 +138,13 @@ export default function OrganizerDocumentUploadPage() {
   }, [])
 
   useEffect(() => {
-    if (!isDeclarationOpen && !signatureModalOpen && !agreementModalOpen) return
+    if (!signatureModalOpen && !agreementModalOpen) return
     const { overflow } = document.body.style
     document.body.style.overflow = "hidden"
     return () => {
       document.body.style.overflow = overflow
     }
-  }, [agreementModalOpen, isDeclarationOpen, signatureModalOpen])
+  }, [agreementModalOpen, signatureModalOpen])
 
   const renderUploadPreview = useCallback(() => {
     const canvas = uploadPreviewRef.current
@@ -337,29 +299,6 @@ export default function OrganizerDocumentUploadPage() {
     setSuccess("Organizer signature captured.")
   }
 
-  const getSanitizedGstEntries = () =>
-    gstEntries
-      .map((entry) => ({
-        gstin: entry.gstin.trim(),
-        state: entry.state.trim(),
-      }))
-      .filter((entry) => entry.gstin.length > 0 && entry.state.length > 0)
-
-  const validateDeclaration = () => {
-    if (gstAnswer === "YES") {
-      if (getSanitizedGstEntries().length === 0) {
-        throw new Error("Add at least one GSTIN and state entry.")
-      }
-      return
-    }
-    if (!undertakingAccepted) {
-      throw new Error("Accept the undertaking declaration to continue.")
-    }
-    if (!undertakingState.trim()) {
-      throw new Error("Select your state for the undertaking declaration.")
-    }
-  }
-
   const handlePanUpload = async (file: File) => {
     try {
       setError(null)
@@ -367,7 +306,6 @@ export default function OrganizerDocumentUploadPage() {
       if (!isPdfFile(file)) {
         throw new Error("PAN file must be a PDF.")
       }
-      validateDeclaration()
       setIsUploadingPan(true)
       await uploadOrganizerDocument("pan", file)
       setPanUploaded(true)
@@ -441,7 +379,6 @@ export default function OrganizerDocumentUploadPage() {
         return
       }
 
-      validateDeclaration()
       if (!panUploaded) {
         throw new Error("Upload PAN PDF before downloading agreement.")
       }
@@ -469,13 +406,11 @@ export default function OrganizerDocumentUploadPage() {
     try {
       setError(null)
       setSuccess(null)
-      validateDeclaration()
       if (!panUploaded || (!signatureDataUrl && !hasStoredAgreement)) {
         throw new Error("Upload PAN PDF and sign the agreement before submitting.")
       }
       setIsSubmitting(true)
 
-      // Auto-upload agreement when signed in this session (skip if backend already has one and no new signature)
       if (signatureDataUrl) {
         const agreementBlob = await buildAgreementPdf()
         if (agreementBlob.size > MAX_AGREEMENT_UPLOAD_BYTES) {
@@ -484,14 +419,7 @@ export default function OrganizerDocumentUploadPage() {
         await uploadOrganizerDocument("agreement", agreementBlob)
       }
 
-      const mode = gstAnswer === "YES" ? "HAS_GSTIN" : "NO_GSTIN"
-      const gstDetails = mode === "HAS_GSTIN" ? getSanitizedGstEntries() : []
-      await completeOrganizerDocuments({
-        gstDeclarationMode: mode,
-        gstDetails,
-        undertakingAccepted: mode === "NO_GSTIN" ? undertakingAccepted : undefined,
-        undertakingState: mode === "NO_GSTIN" ? undertakingState : null,
-      })
+      await completeOrganizerDocuments({})
       await refreshOrganizerStatus()
       router.replace("/organizer/pending")
     } catch (submitError) {
@@ -605,12 +533,7 @@ export default function OrganizerDocumentUploadPage() {
         <p style={{ margin: "0 0 4px" }}>Name: {organizerDisplayName}</p>
         <p style={{ margin: "0 0 4px" }}>PAN: {formatValue(organizerProfile?.panNumber, "Pending")}</p>
         <p style={{ margin: "0 0 4px" }}>
-          GST Status:{" "}
-          {gstAnswer === "YES"
-            ? getSanitizedGstEntries()
-                .map((entry) => `${entry.gstin} (${entry.state})`)
-                .join(", ") || formatValue(organizerProfile?.gstNumber, "GST details pending")
-            : `Not registered under GST (Undertaking accepted: ${undertakingAccepted ? "Yes" : "No"})`}
+          GST: {formatValue(organizerProfile?.gstNumber, "Not registered under GST")}
         </p>
         <p style={{ margin: 0 }}>
           Registered Address: <strong>{organizerAddress}</strong>
@@ -715,129 +638,6 @@ export default function OrganizerDocumentUploadPage() {
         description="Email verification is complete. Upload PAN and signed agreement to move into final approval review."
       >
         <div className="grid min-w-0 gap-6">
-          <SectionCard title="GST Declaration" className="min-w-0 p-4 sm:p-5">
-            <div className="space-y-4">
-              <p className="text-sm font-semibold text-slate-800">Do you have GSTIN number?</p>
-              <div className="flex flex-wrap gap-4">
-                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="gst-answer"
-                    checked={gstAnswer === "YES"}
-                    onChange={() => setGstAnswer("YES")}
-                  />
-                  Yes
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="gst-answer"
-                    checked={gstAnswer === "NO"}
-                    onChange={() => {
-                      setGstAnswer("NO")
-                      setIsDeclarationOpen(true)
-                    }}
-                  />
-                  No
-                </label>
-              </div>
-
-              {gstAnswer === "YES" ? (
-                <div className="space-y-3">
-                  {gstEntries.map((entry, index) => (
-                    <div key={entry.id} className="min-w-0 grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-[1fr_1fr_auto]">
-                      <input
-                        className="min-w-0 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                        placeholder={`GSTIN #${index + 1}`}
-                        value={entry.gstin}
-                        onChange={(event) =>
-                          setGstEntries((current) =>
-                            current.map((item) =>
-                              item.id === entry.id ? { ...item, gstin: event.target.value.toUpperCase() } : item
-                            )
-                          )
-                        }
-                      />
-                      <select
-                        className="min-w-0 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                        value={entry.state}
-                        onChange={(event) =>
-                          setGstEntries((current) =>
-                            current.map((item) =>
-                              item.id === entry.id ? { ...item, state: event.target.value } : item
-                            )
-                          )
-                        }
-                      >
-                        <option value="">Select state</option>
-                        {INDIA_STATES.map((state) => (
-                          <option key={state} value={state}>
-                            {state}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setGstEntries((current) => (current.length > 1 ? current.filter((item) => item.id !== entry.id) : current))
-                        }
-                        className="w-full max-w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 md:w-auto"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setGstEntries((current) => [...current, makeGstEntry()])}
-                    className="inline-flex w-full max-w-full justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:w-auto"
-                  >
-                    + Add more
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
-                  <label className="flex flex-wrap items-start gap-2 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={undertakingAccepted}
-                      onChange={(event) => {
-                        undertakingDirtyRef.current = true
-                        setUndertakingAccepted(event.target.checked)
-                      }}
-                    />
-                    I have read and accept the{" "}
-                    <button
-                      type="button"
-                      className="font-semibold text-brand-900 underline"
-                      onClick={() => setIsDeclarationOpen(true)}
-                    >
-                      undertaking
-                    </button>
-                  </label>
-                  <div className="grid min-w-0 gap-2 sm:max-w-sm">
-                    <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">State</label>
-                    <select
-                      className="min-w-0 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      value={undertakingState}
-                      onChange={(event) => {
-                        undertakingDirtyRef.current = true
-                        setUndertakingState(event.target.value)
-                      }}
-                    >
-                      <option value="">Select state</option>
-                      {INDIA_STATES.map((state) => (
-                        <option key={state} value={state}>
-                          {state}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-          </SectionCard>
-
           <SectionCard
             title="PAN Card Upload"
             description="Upload PAN card as PDF. Upload starts immediately after file selection."
@@ -944,65 +744,6 @@ export default function OrganizerDocumentUploadPage() {
           {success ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p> : null}
         </div>
       </PageShell>
-
-      {isDeclarationOpen ? (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 px-3 py-4 sm:px-4 sm:py-6">
-          <div className="flex min-h-full items-start justify-center py-1 sm:items-center sm:py-4">
-            <div
-              tabIndex={-1}
-              className="min-w-0 max-h-[95vh] w-full max-w-[605px] overflow-y-auto rounded-xl bg-white p-4 outline-none sm:p-6"
-            >
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="text-xl font-semibold text-slate-900">GST Declaration</h3>
-              <button
-                type="button"
-                onClick={() => setIsDeclarationOpen(false)}
-                className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600"
-              >
-                Close
-              </button>
-            </div>
-            <div className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
-              <p>
-                I/We, Organizer, confirm that we are a supplier providing services through an e-commerce platform as per the
-                applicable GST laws and that we are not registered under GST because annual turnover is below threshold limits.
-              </p>
-              <p>
-                I/We confirm that applicable taxes collected on tickets booked through Baatasari (baatasari.com) are our
-                liability and will be duly discharged by us.
-              </p>
-              <p>
-                I/We acknowledge that information furnished is true to the best of our knowledge. If information is found
-                incorrect later, membership may be cancelled and pending payments may be withheld.
-              </p>
-              <ol className="list-decimal space-y-1 pl-5">
-                <li>Breach, violation, or non-compliance with this declaration.</li>
-                <li>Any act by which the representations become untrue.</li>
-                <li>Violation of applicable laws including GST laws.</li>
-                <li>Non-compliance with GST laws.</li>
-                <li>Investigations, inquiries, summons, or inspections by authorities.</li>
-              </ol>
-              <p>
-                We undertake to inform Baatasari of subsequent changes in constitution or business operations affecting this declaration.
-              </p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  undertakingDirtyRef.current = true
-                  setUndertakingAccepted(true)
-                  setIsDeclarationOpen(false)
-                }}
-                className="rounded-full bg-brand-900 px-5 py-2.5 text-sm font-semibold text-white"
-              >
-                Accept
-              </button>
-            </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {agreementModalOpen ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 px-3 py-4 sm:px-4 sm:py-5">

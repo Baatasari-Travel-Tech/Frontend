@@ -26,6 +26,31 @@ const DOB_BOUNDS = getDobDateBounds()
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const TEN_DIGIT_PHONE_PATTERN = /^\d{10}$/
 const PINCODE_PATTERN = /^\d{6}$/
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/
+const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
+const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/
+
+const GST_STATE_CODES: Record<string, string> = {
+  "01": "Jammu and Kashmir", "02": "Himachal Pradesh", "03": "Punjab", "04": "Chandigarh",
+  "05": "Uttarakhand", "06": "Haryana", "07": "Delhi", "08": "Rajasthan", "09": "Uttar Pradesh",
+  "10": "Bihar", "11": "Sikkim", "12": "Arunachal Pradesh", "13": "Nagaland", "14": "Manipur",
+  "15": "Mizoram", "16": "Tripura", "17": "Meghalaya", "18": "Assam", "19": "West Bengal",
+  "20": "Jharkhand", "21": "Odisha", "22": "Chhattisgarh", "23": "Madhya Pradesh", "24": "Gujarat",
+  "25": "Daman and Diu", "26": "Dadra and Nagar Haveli", "27": "Maharashtra", "28": "Andhra Pradesh",
+  "29": "Karnataka", "30": "Goa", "31": "Lakshadweep", "32": "Kerala", "33": "Tamil Nadu",
+  "34": "Puducherry", "35": "Andaman and Nicobar Islands", "36": "Telangana", "37": "Andhra Pradesh (Amaravati)",
+  "38": "Ladakh", "97": "Other Territory", "99": "Centre"
+}
+
+type GstinVerifyResult = {
+  valid: boolean
+  embeddedPan: string
+  legalName?: string
+  status?: string
+  registrationDate?: string
+  address?: string
+  taxpayerType?: string
+}
 
 const getProfessionFormValues = (profession: string | null | undefined) => {
   const trimmedProfession = (profession ?? "").trim()
@@ -72,11 +97,18 @@ const schema = z
     websiteUrl: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
     instagramUrl: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
     linkedinUrl: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
-    panNumber: z.string().min(5, "Enter the PAN number"),
+    panNumber: z.string().min(1, "Enter your PAN number").refine(
+      (v) => PAN_RE.test(v.toUpperCase()),
+      { message: "Invalid PAN format (e.g. ABCDE1234F)" }
+    ),
     gstNumber: z.string().optional(),
     bankAccountName: z.string().min(2, "Enter the account holder name"),
     bankAccountNumber: z.string().min(6, "Enter a valid account number"),
-    bankIfsc: z.string().min(4, "Enter a valid IFSC code"),
+    confirmBankAccountNumber: z.string().optional(),
+    bankIfsc: z.string().min(4, "Enter a valid IFSC code").refine(
+      (v) => IFSC_RE.test(v.toUpperCase()),
+      { message: "Invalid IFSC format (e.g. SBIN0000001)" }
+    ),
   })
   .superRefine((value, ctx) => {
     if (value.dob && !isDobWithinBounds(value.dob, DOB_BOUNDS)) {
@@ -156,6 +188,34 @@ const schema = z
         message: "Pincode must be 6 digits",
       })
     }
+
+    if (value.confirmBankAccountNumber && value.confirmBankAccountNumber !== value.bankAccountNumber) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirmBankAccountNumber"],
+        message: "Account numbers do not match",
+      })
+    }
+
+    if (value.gstNumber && value.panNumber) {
+      const upper = value.gstNumber.toUpperCase().trim()
+      if (!GSTIN_RE.test(upper)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["gstNumber"],
+          message: "Invalid GSTIN format.",
+        })
+      } else {
+        const embedded = upper.slice(2, 12)
+        if (embedded !== value.panNumber.toUpperCase().trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["gstNumber"],
+            message: "GSTIN does not match your PAN.",
+          })
+        }
+      }
+    }
   })
 
 type Values = z.infer<typeof schema>
@@ -171,7 +231,7 @@ const steps = [
   },
   {
     id: 2,
-    title: "Bank Details",
+    title: "Bank & Compliance",
   },
 ]
 
@@ -209,6 +269,7 @@ const stepThreeFields: Array<keyof Values> = [
   "gstNumber",
   "bankAccountName",
   "bankAccountNumber",
+  "confirmBankAccountNumber",
   "bankIfsc",
 ]
 
@@ -263,6 +324,13 @@ export default function OrganizerOnboardingPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSavingStepOne, setIsSavingStepOne] = useState(false)
   const [isSavingStepTwo, setIsSavingStepTwo] = useState(false)
+  const [gstinVerifying, setGstinVerifying] = useState(false)
+  const [gstinResult, setGstinResult] = useState<GstinVerifyResult | null>(null)
+  const [gstinVerifyError, setGstinVerifyError] = useState<string | null>(null)
+  const [gstinVerifiedFor, setGstinVerifiedFor] = useState<string | null>(null)
+  const [ifscLoading, setIfscLoading] = useState(false)
+  const [ifscBranch, setIfscBranch] = useState<string | null>(null)
+  const [stateLockedByGstin, setStateLockedByGstin] = useState(false)
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
@@ -295,14 +363,25 @@ export default function OrganizerOnboardingPage() {
       gstNumber: "",
       bankAccountName: "",
       bankAccountNumber: "",
+      confirmBankAccountNumber: "",
       bankIfsc: "",
     },
   })
 
   const entityType = form.watch("entityType")
   const selectedProfession = form.watch("profession")
+  const gstinValue = form.watch("gstNumber")
+  const panValue = form.watch("panNumber")
   const showOrganizationStep = entityType !== "INDIVIDUAL"
   const activeSteps = showOrganizationStep ? steps : individualSteps
+
+  const gstinTrimmed = (gstinValue ?? "").toUpperCase().trim()
+  const gstinEnteredNotVerified = !!gstinTrimmed && gstinVerifiedFor !== gstinTrimmed
+  const gstinInactive = gstinResult?.status && gstinResult.status !== "Active"
+  const gstinPanMismatch =
+    gstinResult && panValue &&
+    gstinResult.embeddedPan.toUpperCase() !== (panValue ?? "").toUpperCase().trim()
+  const cannotSubmitStep3 = gstinEnteredNotVerified || !!gstinInactive || !!gstinPanMismatch
 
   useEffect(() => {
     if (!showOrganizationStep && step === 1) {
@@ -385,6 +464,15 @@ export default function OrganizerOnboardingPage() {
     profile?.profession,
     session?.user?.email,
   ])
+
+  useEffect(() => {
+    if (!gstinTrimmed) {
+      setGstinResult(null)
+      setGstinVerifiedFor(null)
+      setGstinVerifyError(null)
+      setStateLockedByGstin(false)
+    }
+  }, [gstinTrimmed])
 
   useEffect(() => {
     const subscription = form.watch((value) => {
@@ -542,11 +630,11 @@ export default function OrganizerOnboardingPage() {
     city: values.entityType === "INDIVIDUAL" ? null : values.city?.trim() || null,
     state: values.entityType === "INDIVIDUAL" ? null : values.state?.trim() || null,
     pincode: values.entityType === "INDIVIDUAL" ? null : values.pincode?.trim() || null,
-    panNumber: values.panNumber.trim() || null,
-    gstNumber: values.gstNumber?.trim() || null,
+    panNumber: values.panNumber.trim().toUpperCase() || null,
+    gstNumber: values.gstNumber?.trim().toUpperCase() || null,
     bankAccountName: values.bankAccountName.trim() || null,
     bankAccountNumber: values.bankAccountNumber.trim() || null,
-    bankIfsc: values.bankIfsc.trim() || null,
+    bankIfsc: values.bankIfsc.trim().toUpperCase() || null,
     websiteUrl: values.websiteUrl?.trim() || null,
     instagramUrl: values.instagramUrl?.trim() || null,
     linkedinUrl: values.linkedinUrl?.trim() || null,
@@ -557,6 +645,57 @@ export default function OrganizerOnboardingPage() {
     kycDocUrl: organizerProfile?.kycDocUrl ?? null,
     kycDocPublicId: organizerProfile?.kycDocPublicId ?? null,
   })
+
+  const verifyGstinField = async () => {
+    const gstin = (form.getValues("gstNumber") ?? "").toUpperCase().trim()
+    if (!gstin) return
+    if (!GSTIN_RE.test(gstin)) {
+      setGstinVerifyError("Invalid GSTIN format.")
+      return
+    }
+    setGstinVerifying(true)
+    setGstinResult(null)
+    setGstinVerifyError(null)
+    try {
+      const res = await apiRequest<{ data: GstinVerifyResult }>("/organizer/verify/gstin", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ gstin }),
+      })
+      setGstinResult(res.data)
+      setGstinVerifiedFor(gstin)
+      const stateCode = gstin.slice(0, 2)
+      const stateName = GST_STATE_CODES[stateCode]
+      if (stateName) {
+        form.setValue("state", stateName, { shouldValidate: true })
+        setStateLockedByGstin(true)
+      }
+    } catch (err) {
+      setGstinVerifyError(err instanceof Error ? err.message : "GSTIN verification failed.")
+    } finally {
+      setGstinVerifying(false)
+    }
+  }
+
+  const handleIfscBlur = async (code: string) => {
+    const upper = code.toUpperCase().trim()
+    if (!IFSC_RE.test(upper)) {
+      setIfscBranch(null)
+      return
+    }
+    setIfscLoading(true)
+    try {
+      const res = await apiRequest<{ data: { bank: string; branch: string } }>(
+        `/organizer/verify/ifsc/${upper}`,
+        { auth: true }
+      )
+      setIfscBranch(`${res.data.bank} — ${res.data.branch}`)
+    } catch {
+      setIfscBranch(null)
+    } finally {
+      setIfscLoading(false)
+    }
+  }
 
   const saveStepOne = async () => {
     setNotice(null)
@@ -631,6 +770,17 @@ export default function OrganizerOnboardingPage() {
     try {
       const isValid = await form.trigger(stepThreeFields)
       if (!isValid) return
+
+      if (cannotSubmitStep3) {
+        if (gstinEnteredNotVerified) {
+          setError("Please verify your GSTIN before submitting.")
+        } else if (gstinInactive) {
+          setError("Your GSTIN is not active. Only active GSTINs are accepted.")
+        } else if (gstinPanMismatch) {
+          setError("GSTIN and PAN do not match. Please check your details.")
+        }
+        return
+      }
 
       await uploadAvatarIfNeeded()
 
@@ -974,53 +1124,186 @@ export default function OrganizerOnboardingPage() {
 
             {step === 2 ? (
               <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-                <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                <div className="flex items-start gap-3 mb-5">
+                  <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
+                    <Landmark className="h-5 w-5" />
+                  </div>
                   <div>
-                    <div className="flex items-start gap-3">
-                      <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
-                        <Landmark className="h-5 w-5" />
+                    <p className="text-lg font-semibold text-slate-950">Bank &amp; Compliance</p>
+                    <p className="text-sm text-slate-500">Bank details, PAN, and GSTIN verification</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-5 lg:grid-cols-2">
+                  {/* Left: PAN + GSTIN */}
+                  <div className="grid gap-4 content-start">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">Tax Identity</p>
+
+                      {/* PAN */}
+                      <div className="mb-3">
+                        <label className="block text-sm font-semibold text-slate-700">
+                          PAN number *
+                        </label>
+                        <div className="mt-2 flex items-center gap-2">
+                          <input
+                            className={inputClassName}
+                            placeholder="ABCDE1234F"
+                            style={{ textTransform: "uppercase" }}
+                            {...form.register("panNumber")}
+                            onChange={(e) => {
+                              form.setValue("panNumber", e.target.value.toUpperCase(), { shouldValidate: true })
+                            }}
+                          />
+                          {panValue && PAN_RE.test((panValue ?? "").toUpperCase()) ? (
+                            <span className="shrink-0 text-xs font-semibold text-emerald-600">✓ Valid</span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs text-rose-600">{form.formState.errors.panNumber?.message ?? ""}</p>
                       </div>
+
+                      {/* GSTIN */}
                       <div>
-                        <p className="text-lg font-semibold text-slate-950">Bank and tax details</p>
+                        <label className="block text-sm font-semibold text-slate-700">
+                          GSTIN <span className="font-normal text-slate-400">(optional)</span>
+                        </label>
+                        <div className="mt-2 flex items-start gap-2">
+                          <div className="flex-1">
+                            <input
+                              className={inputClassName}
+                              placeholder="27AAPFU0939F1ZV"
+                              style={{ textTransform: "uppercase" }}
+                              {...form.register("gstNumber")}
+                              onChange={(e) => {
+                                form.setValue("gstNumber", e.target.value.toUpperCase(), { shouldValidate: false })
+                              }}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={!gstinTrimmed || !GSTIN_RE.test(gstinTrimmed) || gstinVerifying}
+                            onClick={() => void verifyGstinField()}
+                            className="mt-2 shrink-0 rounded-full bg-brand-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+                          >
+                            {gstinVerifying ? "Checking..." : "Verify"}
+                          </button>
+                        </div>
+                        <p className="mt-1 text-xs text-rose-600">{form.formState.errors.gstNumber?.message ?? ""}</p>
+
+                        {/* GSTIN format hint */}
+                        {gstinTrimmed && !GSTIN_RE.test(gstinTrimmed) ? (
+                          <p className="mt-1 text-xs text-amber-600">Enter a valid 15-character GSTIN to verify.</p>
+                        ) : gstinTrimmed && gstinEnteredNotVerified ? (
+                          <p className="mt-1 text-xs text-amber-600">Click Verify to validate your GSTIN before submitting.</p>
+                        ) : null}
+
+                        {/* GSTIN verify error */}
+                        {gstinVerifyError ? (
+                          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+                            {gstinVerifyError}
+                          </div>
+                        ) : null}
+
+                        {/* GSTIN success card */}
+                        {gstinResult && !gstinVerifyError ? (
+                          gstinInactive ? (
+                            <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-3">
+                              <p className="text-xs font-semibold text-rose-700">✗ GSTIN Inactive</p>
+                              <p className="mt-1 text-xs text-rose-600">Status: {gstinResult.status}</p>
+                              <p className="mt-1 text-xs text-rose-600">Only active GSTINs are accepted. Please use an active GSTIN or contact your CA.</p>
+                            </div>
+                          ) : gstinPanMismatch ? (
+                            <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-3">
+                              <p className="text-xs font-semibold text-rose-700">✗ PAN Mismatch</p>
+                              <p className="mt-1 text-xs text-rose-600">The GSTIN is registered under a different PAN. You cannot proceed until both match.</p>
+                            </div>
+                          ) : (
+                            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 space-y-1">
+                              <p className="text-xs font-semibold text-emerald-700">✓ GSTIN Verified</p>
+                              {gstinResult.legalName ? <p className="text-xs text-slate-700"><span className="font-medium">Legal Name:</span> {gstinResult.legalName}</p> : null}
+                              {gstinResult.status ? <p className="text-xs text-slate-700"><span className="font-medium">Status:</span> {gstinResult.status}</p> : null}
+                              {gstinResult.registrationDate ? <p className="text-xs text-slate-700"><span className="font-medium">Registered:</span> {gstinResult.registrationDate}</p> : null}
+                              {gstinResult.taxpayerType ? <p className="text-xs text-slate-700"><span className="font-medium">Taxpayer Type:</span> {gstinResult.taxpayerType}</p> : null}
+                              {gstinResult.address ? <p className="text-xs text-slate-700"><span className="font-medium">Address:</span> {gstinResult.address}</p> : null}
+                              <p className="text-xs text-emerald-700 font-medium">✓ PAN matches</p>
+                            </div>
+                          )
+                        ) : null}
                       </div>
                     </div>
+                  </div>
 
-                    <div className="mt-5 grid gap-3 md:grid-cols-2">
-                      <label className="block text-sm font-semibold text-slate-700">
-                        PAN number *
-                        <input className={inputClassName} placeholder="PAN number" {...form.register("panNumber")} />
-                        <p className="mt-1 text-xs text-rose-600">{form.formState.errors.panNumber?.message ?? ""}</p>
-                      </label>
+                  {/* Right: Bank details */}
+                  <div className="grid gap-4 content-start">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">Bank Account</p>
 
-                      <label className="block text-sm font-semibold text-slate-700">
-                        GST number
-                        <input className={inputClassName} placeholder="GST number, if applicable" {...form.register("gstNumber")} />
-                      </label>
-
-                      <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
                         Account holder name *
                         <input className={inputClassName} placeholder="Name as per bank account" {...form.register("bankAccountName")} />
                         <p className="mt-1 text-xs text-rose-600">{form.formState.errors.bankAccountName?.message ?? ""}</p>
                       </label>
 
-                      <label className="block text-sm font-semibold text-slate-700">
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
                         Account number *
                         <input className={inputClassName} placeholder="Bank account number" {...form.register("bankAccountNumber")} />
                         <p className="mt-1 text-xs text-rose-600">{form.formState.errors.bankAccountNumber?.message ?? ""}</p>
                       </label>
 
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
+                        Confirm account number *
+                        <input className={inputClassName} placeholder="Re-enter account number" {...form.register("confirmBankAccountNumber")} />
+                        <p className="mt-1 text-xs text-rose-600">{form.formState.errors.confirmBankAccountNumber?.message ?? ""}</p>
+                      </label>
+
                       <label className="block text-sm font-semibold text-slate-700">
                         IFSC code *
-                        <input className={inputClassName} placeholder="IFSC code" {...form.register("bankIfsc")} />
+                        <input
+                          className={inputClassName}
+                          placeholder="SBIN0000001"
+                          style={{ textTransform: "uppercase" }}
+                          {...form.register("bankIfsc")}
+                          onChange={(e) => {
+                            form.setValue("bankIfsc", e.target.value.toUpperCase(), { shouldValidate: true })
+                          }}
+                          onBlur={(e) => void handleIfscBlur(e.target.value)}
+                        />
                         <p className="mt-1 text-xs text-rose-600">{form.formState.errors.bankIfsc?.message ?? ""}</p>
+                        {ifscLoading ? (
+                          <p className="mt-1 text-xs text-slate-400">Looking up branch...</p>
+                        ) : ifscBranch ? (
+                          <p className="mt-1 text-xs text-emerald-700 font-medium">{ifscBranch}</p>
+                        ) : null}
                       </label>
                     </div>
-                  </div>
 
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
-                        <ShieldCheck className="h-5 w-5" />
+                    {/* State field */}
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">State / Region</p>
+                      {stateLockedByGstin ? (
+                        <div>
+                          <p className="text-sm font-semibold text-slate-700 mb-1">State</p>
+                          <div className="mt-1 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-700">
+                            {form.watch("state")}
+                          </div>
+                          <p className="mt-1 text-xs text-slate-400">Auto-filled from GSTIN. Clear GSTIN to edit.</p>
+                        </div>
+                      ) : (
+                        <label className="block text-sm font-semibold text-slate-700">
+                          State
+                          <input className={inputClassName} placeholder="State" {...form.register("state")} />
+                        </label>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700">
+                          <ShieldCheck className="h-4 w-4" />
+                        </div>
+                        <p className="text-xs leading-5 text-slate-500">
+                          Keep your PAN, GSTIN, and bank details ready. These are verified during the approval process to confirm your identity and enable payouts.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1075,7 +1358,7 @@ export default function OrganizerOnboardingPage() {
                 ) : (
                   <button
                     type="submit"
-                    disabled={form.formState.isSubmitting}
+                    disabled={form.formState.isSubmitting || cannotSubmitStep3}
                     className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
                   >
                     {form.formState.isSubmitting ? "Submitting..." : "Submit"}

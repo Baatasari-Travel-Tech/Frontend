@@ -37,12 +37,7 @@ export const uploadOrganizerDocument = async (documentType: OrganizerDocumentTyp
   )
 }
 
-export const completeOrganizerDocuments = async (payload: {
-  gstDeclarationMode: "HAS_GSTIN" | "NO_GSTIN"
-  gstDetails: Array<{ gstin: string; state: string }>
-  undertakingAccepted?: boolean
-  undertakingState?: string | null
-}) => {
+export const completeOrganizerDocuments = async (payload: Record<string, never> | Record<string, unknown> = {}) => {
   return apiRequest("/organizer/documents/complete", {
     method: "POST",
     auth: true,
