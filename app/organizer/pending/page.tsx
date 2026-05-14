@@ -9,14 +9,22 @@ import { useAuth } from "@/app/providers"
 
 export default function OrganizerPendingPage() {
   const router = useRouter()
-  const { user, organizerVerificationStatus, refreshOrganizerStatus, switchRole } = useAuth()
+  const { user, activeRole, organizerVerificationStatus, refreshOrganizerStatus, switchRole } = useAuth()
   const [switching, setSwitching] = useState(false)
+  const [pendingUserNav, setPendingUserNav] = useState(false)
+
+  // Navigate only after the context has flushed activeRole = "USER",
+  // so SiteShellContent re-renders with the user navbar before we land on /dashboard.
+  useEffect(() => {
+    if (!pendingUserNav || activeRole !== "USER") return
+    router.push("/dashboard")
+  }, [pendingUserNav, activeRole, router])
 
   const handleSwitchToUser = async () => {
     if (switching) return
     setSwitching(true)
     await switchRole("USER")
-    router.push("/dashboard")
+    setPendingUserNav(true)
   }
 
   useEffect(() => {
