@@ -3,14 +3,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Pencil, RefreshCw } from "lucide-react"
+import { Pencil, RefreshCw, X } from "lucide-react"
 import {
   deleteAdminUser,
   getAdminDashboard,
+  getAdminOrganizerDetails,
+  getAdminUserDetails,
   isAdminAuthFailure,
   listAdminUsers,
   listPendingOrganizers,
+  updateAdminOrganizerProfile,
   updateAdminUser,
+  updateAdminUserProfile,
 } from "@/lib/api/admin"
 import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { clearAdminToken, getAdminToken } from "@/lib/admin/session"
@@ -19,22 +23,47 @@ import type {
   AdminPendingOrganizerUser,
   BackendRole,
   OnboardingStatus,
+  OrganizerProfile,
   SafeUser,
+  UserProfile,
 } from "@/types/api"
 
 type AdminListTab = "USERS" | "ORGANIZERS"
-type AdminDashboardUser = SafeUser & {
-  organizationName: string | null
-}
+type AdminDashboardUser = SafeUser & { organizationName: string | null }
 
-type EditTarget = {
-  id: string
-  email: string
-  role: BackendRole
-  onboardingStatus: OnboardingStatus
-  organizerApproved: boolean
-  isOrganizer: boolean
-}
+type EditDrawerState =
+  | { status: "closed" }
+  | { status: "loading"; id: string; email: string; isOrganizer: boolean }
+  | {
+      status: "open"
+      id: string
+      isOrganizer: boolean
+      // account fields
+      role: BackendRole
+      onboardingStatus: OnboardingStatus
+      organizerApproved: boolean
+      // user profile
+      fullName: string
+      phone: string
+      dob: string
+      location: string
+      gender: string
+      profession: string
+      // organizer profile (only populated when isOrganizer)
+      orgName: string
+      contactEmail: string
+      contactPhone: string
+      address: string
+      city: string
+      state: string
+      pincode: string
+      websiteUrl: string
+      instagramUrl: string
+      linkedinUrl: string
+      primaryContactName: string
+      secondaryContactPhone: string
+      description: string
+    }
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString("en-IN", {
@@ -43,12 +72,80 @@ const formatDate = (value: string) =>
     year: "numeric",
   })
 
+const str = (v: string | null | undefined) => v ?? ""
+
 const getPendingOrganizationName = (pending: AdminPendingOrganizerUser | undefined) => {
   const profile = pending?.profile
   if (!profile || typeof profile !== "object" || Array.isArray(profile)) return "N/A"
-
   const orgName = (profile as Record<string, unknown>).org_name
   return typeof orgName === "string" && orgName.trim().length > 0 ? orgName : "N/A"
+}
+
+function Field({
+  label,
+  id,
+  value,
+  onChange,
+  type = "text",
+  disabled,
+}: {
+  label: string
+  id: string
+  value: string
+  onChange: (v: string) => void
+  type?: string
+  disabled?: boolean
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60"
+      />
+    </div>
+  )
+}
+
+function SelectField({
+  label,
+  id,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  label: string
+  id: string
+  value: string
+  options: { value: string; label: string }[]
+  onChange: (v: string) => void
+  disabled?: boolean
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
+  )
 }
 
 export default function AdminDashboardPage() {
@@ -64,10 +161,9 @@ export default function AdminDashboardPage() {
   const [organizerSearch, setOrganizerSearch] = useState("")
   const [refreshing, setRefreshing] = useState(false)
 
-  // Edit modal state
-  const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
-  const [editBusy, setEditBusy] = useState(false)
-  const [editError, setEditError] = useState<string | null>(null)
+  const [drawer, setDrawer] = useState<EditDrawerState>({ status: "closed" })
+  const [saveBusy, setSaveBusy] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const refresh = useCallback(async (logoutOnFailure = true) => {
     try {
@@ -76,14 +172,12 @@ export default function AdminDashboardPage() {
         listAdminUsers({ page: 1, limit: 100 }),
         listPendingOrganizers(),
       ])
-
       setDashboard(dashboardData)
       setUsers(usersData.users)
       setPendingOrganizers(pendingData)
       setError(null)
     } catch (requestError) {
-      const message =
-        requestError instanceof Error ? requestError.message : "Failed to load admin data"
+      const message = requestError instanceof Error ? requestError.message : "Failed to load admin data"
       setError(message)
       if (logoutOnFailure && isAdminAuthFailure(requestError)) {
         clearAdminToken()
@@ -96,69 +190,50 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const token = getAdminToken()
-    if (!token) {
-      router.replace(ADMIN_ROUTES.login)
-      return
-    }
-
+    if (!token) { router.replace(ADMIN_ROUTES.login); return }
     void refresh()
   }, [refresh, router])
 
-  const handleLogout = () => {
-    clearAdminToken()
-    router.replace("/")
-  }
+  const handleLogout = () => { clearAdminToken(); router.replace("/") }
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    try {
-      await refresh()
-    } finally {
-      setRefreshing(false)
-    }
+    try { await refresh() } finally { setRefreshing(false) }
   }
 
   const pendingById = useMemo(
-    () => new Map(pendingOrganizers.map((organizer) => [organizer.id, organizer])),
+    () => new Map(pendingOrganizers.map((o) => [o.id, o])),
     [pendingOrganizers]
   )
 
   const filteredUsers = useMemo(() => {
-    const emailSearch = search.trim().toLowerCase()
-    const source = users.filter((user) => user.role === "USER")
-    if (!emailSearch) return source
-    return source.filter((user) => user.email.toLowerCase().includes(emailSearch))
+    const q = search.trim().toLowerCase()
+    const source = users.filter((u) => u.role === "USER")
+    return q ? source.filter((u) => u.email.toLowerCase().includes(q)) : source
   }, [search, users])
 
   const filteredOrganizers = useMemo(() => {
-    const emailSearch = search.trim().toLowerCase()
-    const source = users.filter((user) => user.role === "ORGANIZER")
-    if (!emailSearch) return source
-    return source.filter((user) => user.email.toLowerCase().includes(emailSearch))
+    const q = search.trim().toLowerCase()
+    const source = users.filter((u) => u.role === "ORGANIZER")
+    return q ? source.filter((u) => u.email.toLowerCase().includes(q)) : source
   }, [search, users])
 
   const pendingOrganizersEligibleForApproval = useMemo(
-    () =>
-      pendingOrganizers.filter(
-        (user) =>
-          user.onboardingStatus === "COMPLETED" &&
-          user.emailVerified &&
-          user.organizerDocumentsSubmitted
-      ),
+    () => pendingOrganizers.filter(
+      (u) => u.onboardingStatus === "COMPLETED" && u.emailVerified && u.organizerDocumentsSubmitted
+    ),
     [pendingOrganizers]
   )
 
   const filteredPendingOrganizers = useMemo(() => {
-    const search = organizerSearch.trim().toLowerCase()
-    if (!search) return pendingOrganizersEligibleForApproval
-    return pendingOrganizersEligibleForApproval.filter((user) =>
-      user.email.toLowerCase().includes(search)
-    )
+    const q = organizerSearch.trim().toLowerCase()
+    return q
+      ? pendingOrganizersEligibleForApproval.filter((u) => u.email.toLowerCase().includes(q))
+      : pendingOrganizersEligibleForApproval
   }, [organizerSearch, pendingOrganizersEligibleForApproval])
 
   const cards = useMemo(() => {
     if (!dashboard) return []
-
     return [
       { label: "Total users", value: dashboard.stats.totalUsers },
       { label: "Organizers", value: dashboard.stats.organizerCount },
@@ -167,75 +242,168 @@ export default function AdminDashboardPage() {
   }, [dashboard, pendingOrganizersEligibleForApproval.length])
 
   const handleDeleteUser = async (id: string, email: string) => {
-    const isConfirmed = window.confirm(`Delete user ${email}? This action cannot be undone.`)
-    if (!isConfirmed) return
-
+    if (!window.confirm(`Delete user ${email}? This cannot be undone.`)) return
     setBusyKey(`delete:${id}`)
     try {
       await deleteAdminUser(id)
       await refresh(false)
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Failed to delete user")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete user")
     } finally {
       setBusyKey(null)
     }
   }
 
-  const handleEditUser = (user: AdminDashboardUser, isOrganizer: boolean) => {
-    setEditTarget({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      onboardingStatus: user.onboardingStatus,
-      organizerApproved: user.organizerApproved,
-      isOrganizer,
-    })
-    setEditError(null)
+  const handleOpenEdit = async (user: AdminDashboardUser, isOrganizer: boolean) => {
+    setDrawer({ status: "loading", id: user.id, email: user.email, isOrganizer })
+    setSaveError(null)
+
+    try {
+      if (isOrganizer) {
+        const details = await getAdminOrganizerDetails(user.id)
+        const up: UserProfile = details.userProfile ?? {} as UserProfile
+        const op: OrganizerProfile = details.organizerProfile ?? {} as OrganizerProfile
+        setDrawer({
+          status: "open",
+          id: user.id,
+          isOrganizer: true,
+          role: user.role,
+          onboardingStatus: user.onboardingStatus,
+          organizerApproved: user.organizerApproved,
+          fullName: str(up.fullName),
+          phone: str(up.phone),
+          dob: str(up.dob),
+          location: str(up.location),
+          gender: str(up.gender),
+          profession: str(up.profession),
+          orgName: str(op.orgName),
+          contactEmail: str(op.contactEmail),
+          contactPhone: str(op.contactPhone),
+          address: str(op.address),
+          city: str(op.city),
+          state: str(op.state),
+          pincode: str(op.pincode),
+          websiteUrl: str(op.websiteUrl),
+          instagramUrl: str(op.instagramUrl),
+          linkedinUrl: str(op.linkedinUrl),
+          primaryContactName: str(op.primaryContactName),
+          secondaryContactPhone: str(op.secondaryContactPhone),
+          description: str(op.description),
+        })
+      } else {
+        const details = await getAdminUserDetails(user.id)
+        const up: UserProfile = details.userProfile ?? {} as UserProfile
+        setDrawer({
+          status: "open",
+          id: user.id,
+          isOrganizer: false,
+          role: user.role,
+          onboardingStatus: user.onboardingStatus,
+          organizerApproved: user.organizerApproved,
+          fullName: str(up.fullName),
+          phone: str(up.phone),
+          dob: str(up.dob),
+          location: str(up.location),
+          gender: str(up.gender),
+          profession: str(up.profession),
+          orgName: "",
+          contactEmail: "",
+          contactPhone: "",
+          address: "",
+          city: "",
+          state: "",
+          pincode: "",
+          websiteUrl: "",
+          instagramUrl: "",
+          linkedinUrl: "",
+          primaryContactName: "",
+          secondaryContactPhone: "",
+          description: "",
+        })
+      }
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Failed to load profile")
+      setDrawer({ status: "closed" })
+    }
+  }
+
+  const patchDrawer = (patch: Partial<Exclude<EditDrawerState, { status: "closed" } | { status: "loading" }>>) => {
+    setDrawer((prev) => prev.status === "open" ? { ...prev, ...patch } : prev)
   }
 
   const handleSaveEdit = async () => {
-    if (!editTarget) return
-    setEditBusy(true)
-    setEditError(null)
+    if (drawer.status !== "open") return
+    setSaveBusy(true)
+    setSaveError(null)
     try {
-      await updateAdminUser(editTarget.id, {
-        role: editTarget.role,
-        onboardingStatus: editTarget.onboardingStatus,
-        organizerApproved: editTarget.organizerApproved,
-      })
-      setEditTarget(null)
+      const calls: Promise<unknown>[] = [
+        updateAdminUser(drawer.id, {
+          role: drawer.role,
+          onboardingStatus: drawer.onboardingStatus,
+          organizerApproved: drawer.organizerApproved,
+        }),
+        updateAdminUserProfile(drawer.id, {
+          fullName: drawer.fullName || null,
+          phone: drawer.phone || null,
+          dob: drawer.dob || null,
+          location: drawer.location || null,
+          gender: drawer.gender || null,
+          profession: drawer.profession || null,
+        }),
+      ]
+      if (drawer.isOrganizer) {
+        calls.push(
+          updateAdminOrganizerProfile(drawer.id, {
+            orgName: drawer.orgName || null,
+            contactEmail: drawer.contactEmail || null,
+            contactPhone: drawer.contactPhone || null,
+            address: drawer.address || null,
+            city: drawer.city || null,
+            state: drawer.state || null,
+            pincode: drawer.pincode || null,
+            websiteUrl: drawer.websiteUrl || null,
+            instagramUrl: drawer.instagramUrl || null,
+            linkedinUrl: drawer.linkedinUrl || null,
+            primaryContactName: drawer.primaryContactName || null,
+            secondaryContactPhone: drawer.secondaryContactPhone || null,
+            description: drawer.description || null,
+          })
+        )
+      }
+      await Promise.all(calls)
+      setDrawer({ status: "closed" })
       await refresh(false)
-    } catch (requestError) {
-      setEditError(
-        requestError instanceof Error ? requestError.message : "Failed to update user"
-      )
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Failed to save changes")
     } finally {
-      setEditBusy(false)
+      setSaveBusy(false)
     }
   }
+
+  const closeDrawer = () => { if (!saveBusy) setDrawer({ status: "closed" }) }
 
   if (loading) {
     return <div className="p-10 text-slate-700">Loading admin dashboard...</div>
   }
 
+  const drawerOpen = drawer.status === "open" || drawer.status === "loading"
+
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
+        {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
-            <p className="text-sm text-slate-600">
-              {dashboard?.message ?? "Manage users and organizer approvals."}
-            </p>
+            <p className="text-sm text-slate-600">{dashboard?.message ?? "Manage users and organizer approvals."}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => void handleRefresh()}
               disabled={refreshing}
-              aria-label="Refresh dashboard data"
-              title="Refresh dashboard data"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+              aria-label="Refresh"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-70"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             </button>
@@ -249,11 +417,10 @@ export default function AdminDashboardPage() {
         </div>
 
         {error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         ) : null}
 
+        {/* Stat cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((card) => (
             <div key={card.label} className="rounded-xl bg-white p-5 shadow-sm">
@@ -263,12 +430,13 @@ export default function AdminDashboardPage() {
           ))}
         </div>
 
+        {/* Pending organizers */}
         <section className="rounded-xl bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-slate-900">Pending organizer approvals</h2>
             <input
               value={organizerSearch}
-              onChange={(event) => setOrganizerSearch(event.target.value)}
+              onChange={(e) => setOrganizerSearch(e.target.value)}
               placeholder="Search by organizer email"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-72"
             />
@@ -316,38 +484,31 @@ export default function AdminDashboardPage() {
           )}
         </section>
 
+        {/* Users / Organizers table */}
         <section className="rounded-xl bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-              <button
-                type="button"
-                onClick={() => setTab("USERS")}
-                className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
-                  tab === "USERS" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Users
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("ORGANIZERS")}
-                className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
-                  tab === "ORGANIZERS"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Organizers
-              </button>
+              {(["USERS", "ORGANIZERS"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTab(t)}
+                  className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+                    tab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {t === "USERS" ? "Users" : "Organizers"}
+                </button>
+              ))}
             </div>
-
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder={tab === "USERS" ? "Search users by email" : "Search organizers by email"}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-72"
             />
           </div>
+
           {tab === "USERS" ? (
             <div className="max-h-128 overflow-auto">
               <table className="min-w-full text-sm">
@@ -371,16 +532,17 @@ export default function AdminDashboardPage() {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleEditUser(user, false)}
-                            aria-label={`Edit user ${user.email}`}
-                            className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white p-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+                            onClick={() => void handleOpenEdit(user, false)}
+                            disabled={drawer.status === "loading" && drawer.id === user.id}
+                            aria-label={`Edit ${user.email}`}
+                            className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white p-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition disabled:opacity-50"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => void handleDeleteUser(user.id, user.email)}
                             disabled={busyKey === `delete:${user.id}`}
-                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-70"
                           >
                             {busyKey === `delete:${user.id}` ? "Deleting..." : "Delete"}
                           </button>
@@ -388,13 +550,9 @@ export default function AdminDashboardPage() {
                       </td>
                     </tr>
                   ))}
-                  {filteredUsers.length === 0 ? (
-                    <tr>
-                      <td className="px-3 py-6 text-center text-slate-500" colSpan={5}>
-                        No users found.
-                      </td>
-                    </tr>
-                  ) : null}
+                  {filteredUsers.length === 0 && (
+                    <tr><td className="px-3 py-6 text-center text-slate-500" colSpan={5}>No users found.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -416,8 +574,7 @@ export default function AdminDashboardPage() {
                   {filteredOrganizers.map((organizer) => (
                     <tr key={organizer.id} className="border-b border-slate-100 text-slate-700">
                       <td className="px-3 py-3 font-semibold text-slate-900">
-                        {organizer.organizationName?.trim() ||
-                          getPendingOrganizationName(pendingById.get(organizer.id))}
+                        {organizer.organizationName?.trim() || getPendingOrganizationName(pendingById.get(organizer.id))}
                       </td>
                       <td className="px-3 py-3">{organizer.email}</td>
                       <td className="px-3 py-3 text-xs font-mono text-slate-500">{organizer.id}</td>
@@ -428,16 +585,17 @@ export default function AdminDashboardPage() {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleEditUser(organizer, true)}
-                            aria-label={`Edit organizer ${organizer.email}`}
-                            className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white p-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+                            onClick={() => void handleOpenEdit(organizer, true)}
+                            disabled={drawer.status === "loading" && drawer.id === organizer.id}
+                            aria-label={`Edit ${organizer.email}`}
+                            className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white p-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition disabled:opacity-50"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => void handleDeleteUser(organizer.id, organizer.email)}
                             disabled={busyKey === `delete:${organizer.id}`}
-                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-70"
                           >
                             {busyKey === `delete:${organizer.id}` ? "Deleting..." : "Delete"}
                           </button>
@@ -445,13 +603,9 @@ export default function AdminDashboardPage() {
                       </td>
                     </tr>
                   ))}
-                  {filteredOrganizers.length === 0 ? (
-                    <tr>
-                      <td className="px-3 py-6 text-center text-slate-500" colSpan={7}>
-                        No organizers found.
-                      </td>
-                    </tr>
-                  ) : null}
+                  {filteredOrganizers.length === 0 && (
+                    <tr><td className="px-3 py-6 text-center text-slate-500" colSpan={7}>No organizers found.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -459,124 +613,181 @@ export default function AdminDashboardPage() {
         </section>
       </div>
 
-      {/* Edit Modal */}
-      {editTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Edit ${editTarget.isOrganizer ? "organizer" : "user"}`}
-        >
+      {/* Edit slide-over drawer */}
+      {drawerOpen && (
+        <>
+          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => { if (!editBusy) setEditTarget(null) }}
+            className="fixed inset-0 z-40 bg-black/40 transition-opacity"
+            onClick={closeDrawer}
+            aria-hidden
           />
-          <div className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-xl sm:mx-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-5">
-              Edit {editTarget.isOrganizer ? "Organizer" : "User"}
-            </h3>
 
-            <div className="space-y-4">
+          {/* Panel */}
+          <aside
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit user"
+          >
+            {/* Drawer header */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email</p>
-                <p className="text-sm text-slate-700 font-mono">{editTarget.email}</p>
+                <h2 className="text-base font-semibold text-slate-900">
+                  Edit {drawer.status === "loading"
+                    ? (drawer.isOrganizer ? "Organizer" : "User")
+                    : (drawer.isOrganizer ? "Organizer" : "User")}
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-500 font-mono">
+                  {drawer.status === "loading" ? drawer.email : ""}
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={closeDrawer}
+                disabled={saveBusy}
+                aria-label="Close"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-              <div>
-                <label
-                  htmlFor="edit-role"
-                  className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1"
-                >
-                  Role
-                </label>
-                <select
-                  id="edit-role"
-                  value={editTarget.role}
-                  onChange={(e) =>
-                    setEditTarget((prev) =>
-                      prev ? { ...prev, role: e.target.value as BackendRole } : prev
-                    )
-                  }
-                  disabled={editBusy}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
-                >
-                  <option value="USER">USER</option>
-                  <option value="ORGANIZER">ORGANIZER</option>
-                </select>
+            {drawer.status === "loading" ? (
+              <div className="flex flex-1 items-center justify-center text-sm text-slate-500">
+                Loading profile...
               </div>
+            ) : drawer.status === "open" ? (
+              <>
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
 
-              <div>
-                <label
-                  htmlFor="edit-onboarding"
-                  className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1"
-                >
-                  Onboarding Status
-                </label>
-                <select
-                  id="edit-onboarding"
-                  value={editTarget.onboardingStatus}
-                  onChange={(e) =>
-                    setEditTarget((prev) =>
-                      prev
-                        ? { ...prev, onboardingStatus: e.target.value as OnboardingStatus }
-                        : prev
-                    )
-                  }
-                  disabled={editBusy}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
-                >
-                  <option value="PENDING">PENDING</option>
-                  <option value="COMPLETED">COMPLETED</option>
-                </select>
-              </div>
+                  {/* — Account — */}
+                  <section>
+                    <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Account</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <SelectField
+                        label="Role"
+                        id="edit-role"
+                        value={drawer.role}
+                        options={[
+                          { value: "USER", label: "USER" },
+                          { value: "ORGANIZER", label: "ORGANIZER" },
+                        ]}
+                        onChange={(v) => patchDrawer({ role: v as BackendRole })}
+                        disabled={saveBusy}
+                      />
+                      <SelectField
+                        label="Onboarding Status"
+                        id="edit-onboarding"
+                        value={drawer.onboardingStatus}
+                        options={[
+                          { value: "PENDING", label: "PENDING" },
+                          { value: "COMPLETED", label: "COMPLETED" },
+                        ]}
+                        onChange={(v) => patchDrawer({ onboardingStatus: v as OnboardingStatus })}
+                        disabled={saveBusy}
+                      />
+                    </div>
+                    {drawer.isOrganizer && (
+                      <div className="mt-4 flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="edit-approved"
+                          checked={drawer.organizerApproved}
+                          onChange={(e) => patchDrawer({ organizerApproved: e.target.checked })}
+                          disabled={saveBusy}
+                          className="h-4 w-4 rounded border-slate-300 accent-slate-900"
+                        />
+                        <label htmlFor="edit-approved" className="text-sm font-medium text-slate-700">
+                          Organizer Approved
+                        </label>
+                      </div>
+                    )}
+                  </section>
 
-              {editTarget.isOrganizer && (
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="edit-approved"
-                    checked={editTarget.organizerApproved}
-                    onChange={(e) =>
-                      setEditTarget((prev) =>
-                        prev ? { ...prev, organizerApproved: e.target.checked } : prev
-                      )
-                    }
-                    disabled={editBusy}
-                    className="h-4 w-4 rounded border-slate-300 accent-slate-900"
-                  />
-                  <label htmlFor="edit-approved" className="text-sm font-medium text-slate-700">
-                    Organizer Approved
-                  </label>
+                  {/* — User Profile — */}
+                  <section>
+                    <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Personal Profile</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Full Name" id="edit-fullName" value={drawer.fullName} onChange={(v) => patchDrawer({ fullName: v })} disabled={saveBusy} />
+                      <Field label="Phone" id="edit-phone" value={drawer.phone} onChange={(v) => patchDrawer({ phone: v })} disabled={saveBusy} />
+                      <Field label="Date of Birth" id="edit-dob" value={drawer.dob} onChange={(v) => patchDrawer({ dob: v })} type="date" disabled={saveBusy} />
+                      <Field label="Location" id="edit-location" value={drawer.location} onChange={(v) => patchDrawer({ location: v })} disabled={saveBusy} />
+                      <SelectField
+                        label="Gender"
+                        id="edit-gender"
+                        value={drawer.gender}
+                        options={[
+                          { value: "", label: "Not specified" },
+                          { value: "Male", label: "Male" },
+                          { value: "Female", label: "Female" },
+                          { value: "Non-binary", label: "Non-binary" },
+                          { value: "Prefer not to say", label: "Prefer not to say" },
+                        ]}
+                        onChange={(v) => patchDrawer({ gender: v })}
+                        disabled={saveBusy}
+                      />
+                      <Field label="Profession" id="edit-profession" value={drawer.profession} onChange={(v) => patchDrawer({ profession: v })} disabled={saveBusy} />
+                    </div>
+                  </section>
+
+                  {/* — Organizer Profile — */}
+                  {drawer.isOrganizer && (
+                    <section>
+                      <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Organizer Profile</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Field label="Organization Name" id="edit-orgName" value={drawer.orgName} onChange={(v) => patchDrawer({ orgName: v })} disabled={saveBusy} />
+                        <Field label="Primary Contact Name" id="edit-primaryContact" value={drawer.primaryContactName} onChange={(v) => patchDrawer({ primaryContactName: v })} disabled={saveBusy} />
+                        <Field label="Contact Email" id="edit-contactEmail" value={drawer.contactEmail} onChange={(v) => patchDrawer({ contactEmail: v })} type="email" disabled={saveBusy} />
+                        <Field label="Contact Phone" id="edit-contactPhone" value={drawer.contactPhone} onChange={(v) => patchDrawer({ contactPhone: v })} disabled={saveBusy} />
+                        <Field label="Secondary Phone" id="edit-secondaryPhone" value={drawer.secondaryContactPhone} onChange={(v) => patchDrawer({ secondaryContactPhone: v })} disabled={saveBusy} />
+                        <Field label="City" id="edit-city" value={drawer.city} onChange={(v) => patchDrawer({ city: v })} disabled={saveBusy} />
+                        <Field label="State" id="edit-state" value={drawer.state} onChange={(v) => patchDrawer({ state: v })} disabled={saveBusy} />
+                        <Field label="Pincode" id="edit-pincode" value={drawer.pincode} onChange={(v) => patchDrawer({ pincode: v })} disabled={saveBusy} />
+                        <div className="col-span-2">
+                          <Field label="Address" id="edit-address" value={drawer.address} onChange={(v) => patchDrawer({ address: v })} disabled={saveBusy} />
+                        </div>
+                        <div className="col-span-2">
+                          <Field label="Description" id="edit-description" value={drawer.description} onChange={(v) => patchDrawer({ description: v })} disabled={saveBusy} />
+                        </div>
+                        <Field label="Website URL" id="edit-website" value={drawer.websiteUrl} onChange={(v) => patchDrawer({ websiteUrl: v })} type="url" disabled={saveBusy} />
+                        <Field label="Instagram URL" id="edit-instagram" value={drawer.instagramUrl} onChange={(v) => patchDrawer({ instagramUrl: v })} type="url" disabled={saveBusy} />
+                        <Field label="LinkedIn URL" id="edit-linkedin" value={drawer.linkedinUrl} onChange={(v) => patchDrawer({ linkedinUrl: v })} type="url" disabled={saveBusy} />
+                      </div>
+                    </section>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {editError && (
-              <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {editError}
-              </div>
-            )}
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setEditTarget(null)}
-                disabled={editBusy}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-70 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSaveEdit()}
-                disabled={editBusy}
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70 transition"
-              >
-                {editBusy ? "Saving..." : "Save changes"}
-              </button>
-            </div>
-          </div>
-        </div>
+                {/* Drawer footer */}
+                <div className="border-t border-slate-200 px-6 py-4">
+                  {saveError && (
+                    <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {saveError}
+                    </p>
+                  )}
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={closeDrawer}
+                      disabled={saveBusy}
+                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-70 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveEdit()}
+                      disabled={saveBusy}
+                      className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70 transition"
+                    >
+                      {saveBusy ? "Saving..." : "Save changes"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : null}
+          </aside>
+        </>
       )}
     </div>
   )

@@ -2,13 +2,16 @@ import { apiFetch } from "@/lib/api"
 import type {
   AdminDashboardResponse,
   AdminOrganizerDetailsResponse,
+  AdminUserDetailsResponse,
   AdminPendingOrganizerUser,
   AdminLoginPayload,
   AdminUserListResponse,
   AdminVerifyPayload,
   ApiErrorPayload,
   BackendRole,
+  OrganizerProfile,
   SafeUser,
+  UserProfile,
 } from "@/types/api"
 
 type ApiEnvelope<T> = {
@@ -120,6 +123,33 @@ export const updateAdminUser = (
   payload: Partial<Pick<SafeUser, "role" | "onboardingStatus" | "organizerApproved">>
 ) =>
   requestAdmin<SafeUser>(`/api/v1/admin/users/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
+
+export const getAdminUserDetails = (id: string) =>
+  requestAdmin<AdminUserDetailsResponse>(`/api/v1/admin/users/${id}`)
+
+export const updateAdminUserProfile = (
+  id: string,
+  payload: Partial<Pick<UserProfile, "fullName" | "phone" | "dob" | "location" | "gender" | "profession">>
+) =>
+  requestAdmin<UserProfile>(`/api/v1/admin/users/${id}/profile`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
+
+export const updateAdminOrganizerProfile = (
+  id: string,
+  payload: Partial<Pick<OrganizerProfile,
+    | "orgName" | "contactEmail" | "contactPhone"
+    | "address" | "city" | "state" | "pincode"
+    | "websiteUrl" | "instagramUrl" | "linkedinUrl"
+    | "primaryContactName" | "secondaryContactPhone"
+    | "description"
+  >>
+) =>
+  requestAdmin<OrganizerProfile>(`/api/v1/admin/organizers/${id}/profile`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   })

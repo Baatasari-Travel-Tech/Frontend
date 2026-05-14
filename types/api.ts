@@ -266,6 +266,11 @@ export type AdminOrganizerDetailsResponse = {
   organizerProfile: OrganizerProfile | null;
 };
 
+export type AdminUserDetailsResponse = {
+  user: SafeUser;
+  userProfile: UserProfile | null;
+};
+
 export class ApiError extends Error {
   code: string;
   status: number;
