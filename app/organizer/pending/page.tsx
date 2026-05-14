@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
@@ -9,7 +9,15 @@ import { useAuth } from "@/app/providers"
 
 export default function OrganizerPendingPage() {
   const router = useRouter()
-  const { user, organizerVerificationStatus, refreshOrganizerStatus } = useAuth()
+  const { user, organizerVerificationStatus, refreshOrganizerStatus, switchRole } = useAuth()
+  const [switching, setSwitching] = useState(false)
+
+  const handleSwitchToUser = async () => {
+    if (switching) return
+    setSwitching(true)
+    await switchRole("USER")
+    router.push("/dashboard")
+  }
 
   useEffect(() => {
     const id = setInterval(() => { void refreshOrganizerStatus() }, 10_000)
@@ -73,12 +81,14 @@ export default function OrganizerPendingPage() {
                 >
                   Open organizer profile
                 </Link>
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                <button
+                  type="button"
+                  onClick={() => void handleSwitchToUser()}
+                  disabled={switching}
+                  className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                 >
                   Switch to user side
-                </Link>
+                </button>
               </div>
             </div>
           </SectionCard>
