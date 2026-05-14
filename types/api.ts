@@ -271,6 +271,28 @@ export type AdminUserDetailsResponse = {
   userProfile: UserProfile | null;
 };
 
+export type SiteConfig = {
+  instagram: string;
+  linkedin: string;
+  twitter: string;
+  contactEmail: string;
+};
+
+export type GstinVerifyResult = {
+  valid: boolean;
+  embeddedPan: string;
+  legalName?: string;
+  status?: string;
+  registrationDate?: string;
+  address?: string;
+  taxpayerType?: string;
+};
+
+export type PanVerifyResult = {
+  valid: boolean;
+  pan: string;
+};
+
 export class ApiError extends Error {
   code: string;
   status: number;

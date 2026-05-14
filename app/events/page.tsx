@@ -4,9 +4,11 @@ import { EventList } from "@/components/events/event-list"
 import { SuggestedEventsSection } from "@/components/events/suggested-events-section"
 import { FooterSocialLinks } from "@/components/events/footer-social-edit"
 import { toEventCardData, fetchPublicEvents } from "@/lib/event-helpers"
+import { fetchPublicSiteConfig } from "@/lib/api/admin"
 
 export default async function EventsPage() {
   const { events, error } = await fetchPublicEvents()
+  const siteConfig = await fetchPublicSiteConfig()
   const sortedEvents = events
     .map(toEventCardData)
     .sort((a, b) => (b.bookedCount ?? 0) - (a.bookedCount ?? 0))
@@ -83,7 +85,7 @@ export default async function EventsPage() {
               </div>
             </div>
 
-            <FooterSocialLinks />
+            <FooterSocialLinks config={siteConfig} />
           </div>
 
           <div className="mt-4 flex flex-col gap-2 border-t border-slate-700 pt-4 text-xs text-slate-400 md:flex-row md:items-center md:justify-between">

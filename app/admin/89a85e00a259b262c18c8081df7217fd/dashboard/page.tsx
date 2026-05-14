@@ -3,18 +3,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Pencil, RefreshCw, X } from "lucide-react"
+import { CheckCircle, Pencil, RefreshCw, X, XCircle } from "lucide-react"
 import {
   deleteAdminUser,
+  fetchPublicSiteConfig,
   getAdminDashboard,
   getAdminOrganizerDetails,
+  getAdminSiteConfig,
   getAdminUserDetails,
   isAdminAuthFailure,
   listAdminUsers,
   listPendingOrganizers,
   updateAdminOrganizerProfile,
+  updateAdminSiteConfig,
   updateAdminUser,
   updateAdminUserProfile,
+  verifyAdminOrganizerGstin,
+  verifyAdminOrganizerPan,
 } from "@/lib/api/admin"
 import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { clearAdminToken, getAdminToken } from "@/lib/admin/session"
@@ -22,9 +27,12 @@ import type {
   AdminDashboardResponse,
   AdminPendingOrganizerUser,
   BackendRole,
+  GstinVerifyResult,
   OnboardingStatus,
   OrganizerProfile,
+  PanVerifyResult,
   SafeUser,
+  SiteConfig,
   UserProfile,
 } from "@/types/api"
 
@@ -38,6 +46,7 @@ type EditDrawerState =
       status: "open"
       id: string
       isOrganizer: boolean
+      entityType: "ORGANIZATION" | "INDIVIDUAL" | ""
       // account fields
       role: BackendRole
       onboardingStatus: OnboardingStatus
@@ -49,7 +58,7 @@ type EditDrawerState =
       location: string
       gender: string
       profession: string
-      // organizer profile (only populated when isOrganizer)
+      // organizer profile
       orgName: string
       contactEmail: string
       contactPhone: string
@@ -63,6 +72,12 @@ type EditDrawerState =
       primaryContactName: string
       secondaryContactPhone: string
       description: string
+      // bank + compliance
+      panNumber: string
+      gstNumber: string
+      bankAccountName: string
+      bankAccountNumber: string
+      bankIfsc: string
     }
 
 const formatDate = (value: string) =>
@@ -88,6 +103,7 @@ function Field({
   onChange,
   type = "text",
   disabled,
+  mono,
 }: {
   label: string
   id: string
@@ -95,6 +111,7 @@ function Field({
   onChange: (v: string) => void
   type?: string
   disabled?: boolean
+  mono?: boolean
 }) {
   return (
     <div>
@@ -107,7 +124,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60"
+        className={`w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60 ${mono ? "font-mono tracking-widest" : ""}`}
       />
     </div>
   )
@@ -148,6 +165,29 @@ function SelectField({
   )
 }
 
+function VerifyBadge({ result, type }: { result: GstinVerifyResult | PanVerifyResult | "error" | null; type: "gstin" | "pan" }) {
+  if (!result) return null
+  if (result === "error") return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+      <XCircle className="h-3 w-3" /> Invalid
+    </span>
+  )
+  if (type === "pan") {
+    const r = result as PanVerifyResult
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+        <CheckCircle className="h-3 w-3" /> Valid — {r.pan}
+      </span>
+    )
+  }
+  const r = result as GstinVerifyResult
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+      <CheckCircle className="h-3 w-3" /> {r.legalName ?? "Valid"}{r.status ? ` · ${r.status}` : ""}
+    </span>
+  )
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -165,16 +205,27 @@ export default function AdminDashboardPage() {
   const [saveBusy, setSaveBusy] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  // Verify state (reset when drawer closes)
+  const [panVerify, setPanVerify] = useState<{ busy: boolean; result: PanVerifyResult | "error" | null }>({ busy: false, result: null })
+  const [gstinVerify, setGstinVerify] = useState<{ busy: boolean; result: GstinVerifyResult | "error" | null }>({ busy: false, result: null })
+
+  // Site config
+  const [siteConfigDraft, setSiteConfigDraft] = useState<SiteConfig>({ instagram: "#", linkedin: "#", twitter: "#", contactEmail: "contact-us@baatasari.com" })
+  const [siteConfigBusy, setSiteConfigBusy] = useState(false)
+  const [siteConfigMsg, setSiteConfigMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
   const refresh = useCallback(async (logoutOnFailure = true) => {
     try {
-      const [dashboardData, usersData, pendingData] = await Promise.all([
+      const [dashboardData, usersData, pendingData, configData] = await Promise.all([
         getAdminDashboard(),
         listAdminUsers({ page: 1, limit: 100 }),
         listPendingOrganizers(),
+        getAdminSiteConfig(),
       ])
       setDashboard(dashboardData)
       setUsers(usersData.users)
       setPendingOrganizers(pendingData)
+      setSiteConfigDraft(configData)
       setError(null)
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : "Failed to load admin data"
@@ -257,6 +308,8 @@ export default function AdminDashboardPage() {
   const handleOpenEdit = async (user: AdminDashboardUser, isOrganizer: boolean) => {
     setDrawer({ status: "loading", id: user.id, email: user.email, isOrganizer })
     setSaveError(null)
+    setPanVerify({ busy: false, result: null })
+    setGstinVerify({ busy: false, result: null })
 
     try {
       if (isOrganizer) {
@@ -267,6 +320,7 @@ export default function AdminDashboardPage() {
           status: "open",
           id: user.id,
           isOrganizer: true,
+          entityType: op.entityType ?? "",
           role: user.role,
           onboardingStatus: user.onboardingStatus,
           organizerApproved: user.organizerApproved,
@@ -289,6 +343,11 @@ export default function AdminDashboardPage() {
           primaryContactName: str(op.primaryContactName),
           secondaryContactPhone: str(op.secondaryContactPhone),
           description: str(op.description),
+          panNumber: str(op.panNumber),
+          gstNumber: str(op.gstNumber),
+          bankAccountName: str(op.bankAccountName),
+          bankAccountNumber: str(op.bankAccountNumber),
+          bankIfsc: str(op.bankIfsc),
         })
       } else {
         const details = await getAdminUserDetails(user.id)
@@ -297,6 +356,7 @@ export default function AdminDashboardPage() {
           status: "open",
           id: user.id,
           isOrganizer: false,
+          entityType: "",
           role: user.role,
           onboardingStatus: user.onboardingStatus,
           organizerApproved: user.organizerApproved,
@@ -319,6 +379,11 @@ export default function AdminDashboardPage() {
           primaryContactName: "",
           secondaryContactPhone: "",
           description: "",
+          panNumber: "",
+          gstNumber: "",
+          bankAccountName: "",
+          bankAccountNumber: "",
+          bankIfsc: "",
         })
       }
     } catch (e) {
@@ -367,6 +432,11 @@ export default function AdminDashboardPage() {
             primaryContactName: drawer.primaryContactName || null,
             secondaryContactPhone: drawer.secondaryContactPhone || null,
             description: drawer.description || null,
+            panNumber: drawer.panNumber || null,
+            gstNumber: drawer.gstNumber || null,
+            bankAccountName: drawer.bankAccountName || null,
+            bankAccountNumber: drawer.bankAccountNumber || null,
+            bankIfsc: drawer.bankIfsc || null,
           })
         )
       }
@@ -380,7 +450,49 @@ export default function AdminDashboardPage() {
     }
   }
 
-  const closeDrawer = () => { if (!saveBusy) setDrawer({ status: "closed" }) }
+  const handleVerifyPan = async () => {
+    if (drawer.status !== "open") return
+    setPanVerify({ busy: true, result: null })
+    try {
+      const result = await verifyAdminOrganizerPan(drawer.id, drawer.panNumber)
+      setPanVerify({ busy: false, result })
+    } catch {
+      setPanVerify({ busy: false, result: "error" })
+    }
+  }
+
+  const handleVerifyGstin = async () => {
+    if (drawer.status !== "open") return
+    setGstinVerify({ busy: true, result: null })
+    try {
+      const result = await verifyAdminOrganizerGstin(drawer.id, drawer.gstNumber)
+      setGstinVerify({ busy: false, result })
+    } catch {
+      setGstinVerify({ busy: false, result: "error" })
+    }
+  }
+
+  const handleSaveSiteConfig = async () => {
+    setSiteConfigBusy(true)
+    setSiteConfigMsg(null)
+    try {
+      const updated = await updateAdminSiteConfig(siteConfigDraft)
+      setSiteConfigDraft(updated)
+      setSiteConfigMsg({ type: "success", text: "Site config saved." })
+    } catch (e) {
+      setSiteConfigMsg({ type: "error", text: e instanceof Error ? e.message : "Failed to save" })
+    } finally {
+      setSiteConfigBusy(false)
+    }
+  }
+
+  const closeDrawer = () => {
+    if (!saveBusy) {
+      setDrawer({ status: "closed" })
+      setPanVerify({ busy: false, result: null })
+      setGstinVerify({ busy: false, result: null })
+    }
+  }
 
   if (loading) {
     return <div className="p-10 text-slate-700">Loading admin dashboard...</div>
@@ -611,19 +723,69 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </section>
+
+        {/* Site Settings */}
+        <section className="rounded-xl bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold text-slate-900">Site Settings</h2>
+          <p className="mb-5 text-sm text-slate-500">
+            Configure footer social links and contact details. These appear on the events page footer and contact-us page.
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {(["instagram", "linkedin", "twitter"] as const).map((platform) => (
+              <div key={platform}>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1 capitalize">
+                  {platform} URL
+                </label>
+                <input
+                  type="url"
+                  value={siteConfigDraft[platform]}
+                  onChange={(e) => setSiteConfigDraft((prev) => ({ ...prev, [platform]: e.target.value }))}
+                  disabled={siteConfigBusy}
+                  placeholder={`https://${platform}.com/baatasari`}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60"
+                />
+              </div>
+            ))}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                Contact Email
+              </label>
+              <input
+                type="email"
+                value={siteConfigDraft.contactEmail}
+                onChange={(e) => setSiteConfigDraft((prev) => ({ ...prev, contactEmail: e.target.value }))}
+                disabled={siteConfigBusy}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60"
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleSaveSiteConfig()}
+              disabled={siteConfigBusy}
+              className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70 transition"
+            >
+              {siteConfigBusy ? "Saving..." : "Save settings"}
+            </button>
+            {siteConfigMsg && (
+              <span className={`text-sm font-medium ${siteConfigMsg.type === "success" ? "text-green-700" : "text-red-700"}`}>
+                {siteConfigMsg.text}
+              </span>
+            )}
+          </div>
+        </section>
       </div>
 
       {/* Edit slide-over drawer */}
       {drawerOpen && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-40 bg-black/40 transition-opacity"
             onClick={closeDrawer}
             aria-hidden
           />
 
-          {/* Panel */}
           <aside
             className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col bg-white shadow-2xl"
             role="dialog"
@@ -634,12 +796,10 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">
-                  Edit {drawer.status === "loading"
-                    ? (drawer.isOrganizer ? "Organizer" : "User")
-                    : (drawer.isOrganizer ? "Organizer" : "User")}
+                  Edit {drawer.isOrganizer ? "Organizer" : "User"}
                 </h2>
                 <p className="mt-0.5 text-xs text-slate-500 font-mono">
-                  {drawer.status === "loading" ? drawer.email : ""}
+                  {drawer.status === "open" ? drawer.id : drawer.email}
                 </p>
               </div>
               <button
@@ -705,7 +865,7 @@ export default function AdminDashboardPage() {
                     )}
                   </section>
 
-                  {/* — User Profile — */}
+                  {/* — Personal Profile — */}
                   <section>
                     <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Personal Profile</p>
                     <div className="grid grid-cols-2 gap-4">
@@ -734,9 +894,26 @@ export default function AdminDashboardPage() {
                   {/* — Organizer Profile — */}
                   {drawer.isOrganizer && (
                     <section>
-                      <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Organizer Profile</p>
+                      <div className="mb-3 flex items-center gap-3">
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Organizer Profile</p>
+                        {drawer.entityType && (
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${drawer.entityType === "INDIVIDUAL" ? "bg-amber-50 text-amber-700" : "bg-sky-50 text-sky-700"}`}>
+                            {drawer.entityType}
+                          </span>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <Field label="Organization Name" id="edit-orgName" value={drawer.orgName} onChange={(v) => patchDrawer({ orgName: v })} disabled={saveBusy} />
+
+                        {/* Org fields — hidden for INDIVIDUAL */}
+                        {drawer.entityType !== "INDIVIDUAL" && (
+                          <>
+                            <Field label="Organization Name" id="edit-orgName" value={drawer.orgName} onChange={(v) => patchDrawer({ orgName: v })} disabled={saveBusy} />
+                            <div className="col-span-2">
+                              <Field label="Description" id="edit-description" value={drawer.description} onChange={(v) => patchDrawer({ description: v })} disabled={saveBusy} />
+                            </div>
+                          </>
+                        )}
+
                         <Field label="Primary Contact Name" id="edit-primaryContact" value={drawer.primaryContactName} onChange={(v) => patchDrawer({ primaryContactName: v })} disabled={saveBusy} />
                         <Field label="Contact Email" id="edit-contactEmail" value={drawer.contactEmail} onChange={(v) => patchDrawer({ contactEmail: v })} type="email" disabled={saveBusy} />
                         <Field label="Contact Phone" id="edit-contactPhone" value={drawer.contactPhone} onChange={(v) => patchDrawer({ contactPhone: v })} disabled={saveBusy} />
@@ -747,12 +924,81 @@ export default function AdminDashboardPage() {
                         <div className="col-span-2">
                           <Field label="Address" id="edit-address" value={drawer.address} onChange={(v) => patchDrawer({ address: v })} disabled={saveBusy} />
                         </div>
-                        <div className="col-span-2">
-                          <Field label="Description" id="edit-description" value={drawer.description} onChange={(v) => patchDrawer({ description: v })} disabled={saveBusy} />
-                        </div>
                         <Field label="Website URL" id="edit-website" value={drawer.websiteUrl} onChange={(v) => patchDrawer({ websiteUrl: v })} type="url" disabled={saveBusy} />
                         <Field label="Instagram URL" id="edit-instagram" value={drawer.instagramUrl} onChange={(v) => patchDrawer({ instagramUrl: v })} type="url" disabled={saveBusy} />
                         <Field label="LinkedIn URL" id="edit-linkedin" value={drawer.linkedinUrl} onChange={(v) => patchDrawer({ linkedinUrl: v })} type="url" disabled={saveBusy} />
+                      </div>
+
+                      {/* — PAN — */}
+                      <div className="mt-5">
+                        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">PAN</p>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <Field
+                              label="PAN Number"
+                              id="edit-pan"
+                              value={drawer.panNumber}
+                              onChange={(v) => { patchDrawer({ panNumber: v.toUpperCase() }); setPanVerify({ busy: false, result: null }) }}
+                              disabled={saveBusy}
+                              mono
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleVerifyPan()}
+                            disabled={panVerify.busy || !drawer.panNumber || saveBusy}
+                            className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition"
+                          >
+                            {panVerify.busy ? "Verifying..." : "Verify"}
+                          </button>
+                        </div>
+                        {panVerify.result !== null && (
+                          <div className="mt-1.5">
+                            <VerifyBadge result={panVerify.result} type="pan" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* — GSTIN — */}
+                      <div className="mt-5">
+                        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">GSTIN</p>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <Field
+                              label="GSTIN"
+                              id="edit-gstin"
+                              value={drawer.gstNumber}
+                              onChange={(v) => { patchDrawer({ gstNumber: v.toUpperCase() }); setGstinVerify({ busy: false, result: null }) }}
+                              disabled={saveBusy}
+                              mono
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleVerifyGstin()}
+                            disabled={gstinVerify.busy || !drawer.gstNumber || saveBusy}
+                            className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition"
+                          >
+                            {gstinVerify.busy ? "Verifying..." : "Verify"}
+                          </button>
+                        </div>
+                        {gstinVerify.result !== null && (
+                          <div className="mt-1.5">
+                            <VerifyBadge result={gstinVerify.result} type="gstin" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* — Bank Details — */}
+                      <div className="mt-5">
+                        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Bank Details</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="col-span-2">
+                            <Field label="Account Holder Name" id="edit-bankName" value={drawer.bankAccountName} onChange={(v) => patchDrawer({ bankAccountName: v })} disabled={saveBusy} />
+                          </div>
+                          <Field label="Account Number" id="edit-bankAccNum" value={drawer.bankAccountNumber} onChange={(v) => patchDrawer({ bankAccountNumber: v })} disabled={saveBusy} mono />
+                          <Field label="IFSC Code" id="edit-ifsc" value={drawer.bankIfsc} onChange={(v) => patchDrawer({ bankIfsc: v.toUpperCase() })} disabled={saveBusy} mono />
+                        </div>
                       </div>
                     </section>
                   )}

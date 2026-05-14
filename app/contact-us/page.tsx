@@ -3,13 +3,21 @@
 import { useEffect, useState } from "react"
 import { FaInstagram, FaLinkedin, FaTwitter } from "react-icons/fa"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
-import { getFooterConfig, type FooterConfig } from "@/lib/footer-config"
+import { fetchPublicSiteConfig } from "@/lib/api/admin"
+import type { SiteConfig } from "@/types/api"
+
+const DEFAULT_CONFIG: SiteConfig = {
+  instagram: "#",
+  linkedin: "#",
+  twitter: "#",
+  contactEmail: "contact-us@baatasari.com",
+}
 
 export default function ContactUsPage() {
-  const [config, setConfig] = useState<FooterConfig>(getFooterConfig)
+  const [config, setConfig] = useState<SiteConfig>(DEFAULT_CONFIG)
 
   useEffect(() => {
-    setConfig(getFooterConfig())
+    void fetchPublicSiteConfig().then(setConfig)
   }, [])
 
   const hasAnyLink =
@@ -23,10 +31,10 @@ export default function ContactUsPage() {
     >
       <SectionCard title="Official Email">
         <a
-          href="mailto:contact-us@baatasari.com"
+          href={`mailto:${config.contactEmail}`}
           className="inline-flex rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-800 transition"
         >
-          contact-us@baatasari.com
+          {config.contactEmail}
         </a>
       </SectionCard>
 
@@ -69,11 +77,7 @@ export default function ContactUsPage() {
           </div>
         ) : (
           <p className="text-sm text-slate-500">
-            Social links not configured yet. Visit the{" "}
-            <a href="/events" className="underline hover:text-slate-700">
-              events page
-            </a>{" "}
-            footer to add them.
+            Social links not configured yet.
           </p>
         )}
       </SectionCard>

@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api"
+import { apiFetch, API_URL } from "@/lib/api"
 import type {
   AdminDashboardResponse,
   AdminOrganizerDetailsResponse,
@@ -9,8 +9,11 @@ import type {
   AdminVerifyPayload,
   ApiErrorPayload,
   BackendRole,
+  GstinVerifyResult,
   OrganizerProfile,
+  PanVerifyResult,
   SafeUser,
+  SiteConfig,
   UserProfile,
 } from "@/types/api"
 
@@ -144,12 +147,53 @@ export const updateAdminOrganizerProfile = (
   payload: Partial<Pick<OrganizerProfile,
     | "orgName" | "contactEmail" | "contactPhone"
     | "address" | "city" | "state" | "pincode"
+    | "panNumber" | "gstNumber"
+    | "bankAccountName" | "bankAccountNumber" | "bankIfsc"
     | "websiteUrl" | "instagramUrl" | "linkedinUrl"
     | "primaryContactName" | "secondaryContactPhone"
     | "description"
   >>
 ) =>
   requestAdmin<OrganizerProfile>(`/api/v1/admin/organizers/${id}/profile`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
+
+export const verifyAdminOrganizerGstin = (id: string, gstin: string) =>
+  requestAdmin<GstinVerifyResult>(`/api/v1/admin/organizers/${id}/verify/gstin`, {
+    method: "POST",
+    body: JSON.stringify({ gstin }),
+  })
+
+export const verifyAdminOrganizerPan = (id: string, pan: string) =>
+  requestAdmin<PanVerifyResult>(`/api/v1/admin/organizers/${id}/verify/pan`, {
+    method: "POST",
+    body: JSON.stringify({ pan }),
+  })
+
+const DEFAULT_SITE_CONFIG: SiteConfig = {
+  instagram: "#",
+  linkedin: "#",
+  twitter: "#",
+  contactEmail: "contact-us@baatasari.com",
+}
+
+export const fetchPublicSiteConfig = async (): Promise<SiteConfig> => {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/admin/site-config`)
+    if (!res.ok) return { ...DEFAULT_SITE_CONFIG }
+    const body = (await res.json()) as ApiEnvelope<SiteConfig>
+    return body.success && body.data ? body.data : { ...DEFAULT_SITE_CONFIG }
+  } catch {
+    return { ...DEFAULT_SITE_CONFIG }
+  }
+}
+
+export const getAdminSiteConfig = () =>
+  requestAdmin<SiteConfig>("/api/v1/admin/site-config")
+
+export const updateAdminSiteConfig = (payload: Partial<SiteConfig>) =>
+  requestAdmin<SiteConfig>("/api/v1/admin/site-config", {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
