@@ -50,6 +50,7 @@ type CreateOrderResponse = {
     totalAmount: number
     currency: string
   }
+  ticket?: { id: string }
 }
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -178,7 +179,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
 
       if (isFreeEvent || order.breakdown.totalAmount === 0) {
         setCheckoutSuccess("Your free ticket has been confirmed!")
-        const ticketHref = "/history"
+        const ticketHref = order.ticket?.id ? `/history/${order.ticket.id}` : "/history"
         if (user?.onboardingStatus !== "COMPLETED") {
           router.push(`/onboarding?next=${encodeURIComponent(ticketHref)}`)
           return
