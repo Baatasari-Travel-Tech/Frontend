@@ -334,6 +334,7 @@ export default function OrganizerOnboardingPage() {
   const [ifscLoading, setIfscLoading] = useState(false)
   const [ifscBranch, setIfscBranch] = useState<string | null>(null)
   const [stateLockedByGstin, setStateLockedByGstin] = useState(false)
+  const [dobOpen, setDobOpen] = useState(false)
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
@@ -936,7 +937,7 @@ export default function OrganizerOnboardingPage() {
 
                   <div className="block text-sm font-semibold text-slate-700">
                     Date of birth *
-                    <Popover>
+                    <Popover open={dobOpen} onOpenChange={setDobOpen}>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
@@ -961,11 +962,12 @@ export default function OrganizerOnboardingPage() {
                           onSelect={(date) => {
                             if (date) {
                               form.setValue("dob", format(date, "yyyy-MM-dd"), { shouldValidate: true })
+                              setDobOpen(false)
                             }
                           }}
                           captionLayout="dropdown"
                           fromYear={new Date().getFullYear() - 100}
-                          toYear={new Date().getFullYear()}
+                          toYear={new Date().getFullYear() - 18}
                           initialFocus
                         />
                       </PopoverContent>

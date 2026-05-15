@@ -33,6 +33,7 @@ export default function OnboardingPage() {
   const [profession, setProfession] = useState("")
   const [otherProfession, setOtherProfession] = useState("")
 
+  const [dobOpen, setDobOpen] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
@@ -327,7 +328,7 @@ export default function OnboardingPage() {
 
                 <div className="block text-sm font-semibold text-slate-700">
                   Date of birth *
-                  <Popover>
+                  <Popover open={dobOpen} onOpenChange={setDobOpen}>
                     <PopoverTrigger asChild>
                       <button
                         type="button"
@@ -344,11 +345,14 @@ export default function OnboardingPage() {
                         mode="single"
                         selected={dob ? new Date(dob + "T00:00:00") : undefined}
                         onSelect={(date) => {
-                          if (date) setDob(format(date, "yyyy-MM-dd"))
+                          if (date) {
+                            setDob(format(date, "yyyy-MM-dd"))
+                            setDobOpen(false)
+                          }
                         }}
                         captionLayout="dropdown"
                         fromYear={new Date().getFullYear() - 100}
-                        toYear={new Date().getFullYear()}
+                        toYear={new Date().getFullYear() - 18}
                         initialFocus
                       />
                     </PopoverContent>

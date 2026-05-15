@@ -4,7 +4,7 @@ import * as React from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { addMonths, subMonths, format } from "date-fns"
+import { format } from "date-fns"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
 
@@ -40,8 +40,9 @@ function useDateRequests(eventId?: string) {
 }
 
 export function DateReviewsSection({ eventId }: { eventId?: string }) {
+  const currentYear = new Date().getFullYear()
   const [date, setDate] = React.useState<Date | undefined>(undefined)
-  const [month, setMonth] = React.useState<Date>(new Date())
+  const [month, setMonth] = React.useState<Date>(new Date(currentYear, 0, 1))
   const [submitted, setSubmitted] = React.useState(false)
 
   const queryClient = useQueryClient()
@@ -65,6 +66,12 @@ export function DateReviewsSection({ eventId }: { eventId?: string }) {
     mutation.mutate(date)
   }
 
+  const isFirstMonth = month.getMonth() === 0 && month.getFullYear() === currentYear
+  const isLastMonth = month.getMonth() === 11 && month.getFullYear() === currentYear
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 w-full h-full justify-center items-center lg:items-stretch">
       {/* Calendar Card */}
@@ -76,9 +83,12 @@ export function DateReviewsSection({ eventId }: { eventId?: string }) {
               variant="ghost"
               size="icon"
               className="h-8 w-8 hover:bg-transparent"
-              onClick={() => setMonth((prev) => subMonths(prev, 1))}
+              disabled={isFirstMonth}
+              onClick={() => {
+                if (!isFirstMonth) setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
+              }}
             >
-              <ChevronLeft className="h-5 w-5 text-gray-600" />
+              <ChevronLeft className={`h-5 w-5 ${isFirstMonth ? "text-gray-300" : "text-gray-600"}`} />
             </Button>
 
             <span className="text-lg text-gray-900 font-normal">
@@ -89,9 +99,12 @@ export function DateReviewsSection({ eventId }: { eventId?: string }) {
               variant="ghost"
               size="icon"
               className="h-8 w-8 hover:bg-transparent"
-              onClick={() => setMonth((prev) => addMonths(prev, 1))}
+              disabled={isLastMonth}
+              onClick={() => {
+                if (!isLastMonth) setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
+              }}
             >
-              <ChevronRight className="h-5 w-5 text-gray-600" />
+              <ChevronRight className={`h-5 w-5 ${isLastMonth ? "text-gray-300" : "text-gray-600"}`} />
             </Button>
           </div>
 
@@ -102,6 +115,7 @@ export function DateReviewsSection({ eventId }: { eventId?: string }) {
             selected={date}
             onSelect={setDate}
             weekStartsOn={1}
+            disabled={(d) => d < today || d.getFullYear() !== currentYear}
             formatters={{
               formatWeekdayName: (d) => format(d, "EEE"),
             }}
@@ -130,6 +144,7 @@ export function DateReviewsSection({ eventId }: { eventId?: string }) {
                 if (data) wrapperClass = "bg-[#dcfce7] text-gray-900 hover:bg-[#bbf7d0]"
                 if (modifiers.selected && !data) wrapperClass = "border border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
                 if (modifiers.selected && data) wrapperClass = "border-2 border-emerald-500 bg-[#dcfce7] text-gray-900"
+                if (modifiers.disabled) wrapperClass = "bg-gray-50 text-gray-300 cursor-not-allowed"
 
                 return (
                   <button

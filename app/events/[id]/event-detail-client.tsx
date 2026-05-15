@@ -7,11 +7,6 @@ import {
   MapPin,
   CalendarX2,
   CalendarPlus,
-  HelpCircle,
-  Footprints,
-  Car,
-  Bus,
-  Flag,
 } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import { useAuthModal } from "@/components/auth/auth-modal-context"
@@ -572,32 +567,33 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             </ul>
           </div>
 
-          <div className="border border-(--gray-200) rounded-xl p-8 bg-(--white) shadow-sm text-center">
-            <div className="flex justify-center mb-4">
-              <CalendarX2 className="h-10 w-10 text-(--black)" />
-            </div>
-            <h3 className="font-bold text-lg text-(--black) mb-2">Can&apos;t make it this time?</h3>
-            <p className="text-(--gray-600) mb-6 max-w-lg mx-auto">
-              Can&apos;t attend on the scheduled date? You can request a different day that suits you and also view how many
-              others are interested in the same.
-            </p>
+          {isLoggedIn ? (
+            <div className="border border-(--gray-200) rounded-xl p-8 bg-(--white) shadow-sm text-center">
+              <div className="flex justify-center mb-4">
+                <CalendarX2 className="h-10 w-10 text-(--black)" />
+              </div>
+              <h3 className="font-bold text-lg text-(--black) mb-2">Can&apos;t make it this time?</h3>
+              <p className="text-(--gray-600) mb-6 max-w-lg mx-auto">
+                It would have been better to have this event some other time of the year
+              </p>
 
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-brand-900 text-(--white) hover:bg-(--black)/90 rounded-full px-6">
-                  <CalendarPlus className="h-4 w-4 mr-2" /> Request a New Date
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="p-0 overflow-hidden w-[95vw] max-w-5xl rounded-3xl bg-(--white) border-0 max-h-[85vh] flex flex-col items-center justify-center">
-                <VisuallyHidden>
-                  <DialogTitle>Select Date and View Reviews</DialogTitle>
-                </VisuallyHidden>
-                <div className="w-full h-full overflow-y-auto p-6 md:p-8 flex items-center justify-center">
-                  <DateReviewsSection eventId={event.id} />
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="bg-brand-900 text-(--white) hover:bg-(--black)/90 rounded-full px-6">
+                    <CalendarPlus className="h-4 w-4 mr-2" /> Request a New Date
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="p-0 overflow-hidden w-[95vw] max-w-5xl rounded-3xl bg-(--white) border-0 max-h-[85vh] flex flex-col items-center justify-center">
+                  <VisuallyHidden>
+                    <DialogTitle>Select Date and View Reviews</DialogTitle>
+                  </VisuallyHidden>
+                  <div className="w-full h-full overflow-y-auto p-6 md:p-8 flex items-center justify-center">
+                    <DateReviewsSection eventId={event.id} />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          ) : null}
 
           <div className="space-y-8">
             <Accordion type="single" collapsible className="w-full">
@@ -622,85 +618,6 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               </AccordionItem>
             </Accordion>
 
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="item-2" className="border border-(--gray-200) rounded-xl bg-(--white) px-6 data-[state=open]:pb-4 last:border-b">
-                <AccordionTrigger className="hover:no-underline font-bold text-(--black) text-lg py-6">
-                  <span className="flex items-center gap-3">
-                    <HelpCircle className="h-5 w-5" />
-                    How to Get Here
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="text-(--gray-600)">
-                  <div className="space-y-6 pt-2">
-                    <div className="flex flex-col md:flex-row gap-4 md:gap-8 text-sm text-brand-900 font-medium border-b border-(--gray-100) pb-6">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-(--gray-400)" />
-                        <span>Venue: {event.venue}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Bus className="h-4 w-4 text-(--gray-400)" />
-                        <span>{event.transportToEvent || "Travel details will be shared by organizer."}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Flag className="h-4 w-4 text-(--gray-400)" />
-                        <span>{event.entrySide || "Entry gate details shared before the event."}</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="rounded-xl overflow-hidden min-h-75 relative bg-(--slate-100) border border-(--slate-200)">
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-(--slate-400) gap-2">
-                          <MapPin className="h-8 w-8 opacity-50" />
-                          <span className="text-sm font-medium">Map View</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-8">
-                        <div>
-                          <h4 className="font-bold text-(--black) mb-3 text-base">First time this way?</h4>
-                          <ul className="list-disc pl-5 space-y-1.5 text-sm text-(--gray-600)">
-                            <li>Ola/Uber autos and bikes are available in most areas.</li>
-                            <li>Use nearby landmarks if drivers are unsure.</li>
-                          </ul>
-                        </div>
-
-                        <div className="space-y-6">
-                          <div>
-                            <h4 className="font-bold text-(--black) mb-2 text-base flex items-center gap-2">
-                              <Footprints className="h-4 w-4" /> By Foot
-                            </h4>
-                            <ul className="list-disc pl-5 space-y-1.5 text-sm text-(--gray-600)">
-                              <li>Walk from the nearest stop using venue signage.</li>
-                              <li>Entry gate details are shared at check-in.</li>
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h4 className="font-bold text-(--black) mb-2 text-base flex items-center gap-2">
-                              <Car className="h-4 w-4" /> By Car
-                            </h4>
-                            <ul className="list-disc pl-5 space-y-1.5 text-sm text-(--gray-600)">
-                              <li>Use Google Maps for the most accurate route.</li>
-                              <li>Parking availability depends on venue capacity.</li>
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h4 className="font-bold text-(--black) mb-2 text-base flex items-center gap-2">
-                              <Bus className="h-4 w-4" /> By Bus
-                            </h4>
-                            <ul className="list-disc pl-5 space-y-1.5 text-sm text-(--gray-600)">
-                              <li>Use the nearest city bus route to the venue area.</li>
-                              <li>Walk a short distance from the last stop.</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
           </div>
         </div>
       </main>

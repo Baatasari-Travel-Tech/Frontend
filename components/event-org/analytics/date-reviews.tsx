@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { addMonths, subMonths, format } from "date-fns"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
 
 function isSameDay(a: Date, b: Date) {
@@ -47,31 +47,10 @@ export function DateReviewsSection({
   eventId?: string
   dateRequests?: HighlightedDate[]
 }) {
-  const [date, setDate] = React.useState<Date | undefined>(undefined)
   const [month, setMonth] = React.useState<Date>(new Date())
-  const [submitted, setSubmitted] = React.useState(false)
 
-  const queryClient = useQueryClient()
   const { data: fetchedDates } = useDateRequests(eventId)
   const dateRequests = eventId ? (fetchedDates ?? []) : (propDateRequests ?? [])
-
-  const mutation = useMutation({
-    mutationFn: async (selectedDate: Date) => {
-      await apiRequest(`/events/${eventId}/date-requests`, {
-        method: "POST",
-        body: JSON.stringify({ requestedDate: format(selectedDate, "yyyy-MM-dd") }),
-      })
-    },
-    onSuccess: () => {
-      setSubmitted(true)
-      queryClient.invalidateQueries({ queryKey: ["event-date-requests", eventId] })
-    },
-  })
-
-  const handleSubmit = () => {
-    if (!date || !eventId) return
-    mutation.mutate(date)
-  }
 
   return (
     <div className="grid grid-cols-1 gap-8 xl:grid-cols-[520px_1fr] lg:grid-cols-[480px_1fr] w-full">
@@ -105,8 +84,6 @@ export function DateReviewsSection({
             mode="single"
             month={month}
             onMonthChange={setMonth}
-            selected={date}
-            onSelect={setDate}
             weekStartsOn={1}
             formatters={{ formatWeekdayName: (d) => format(d, "EEE") }}
             className="p-0 w-full max-w-full"
@@ -126,18 +103,18 @@ export function DateReviewsSection({
             }}
             components={{
               DayButton: (props) => {
-                const { day, modifiers, ...buttonProps } = props
+                const { day, ...buttonProps } = props
                 const dateObj = day.date
                 const data = dateRequests.find((d) => isSameDay(d.date, dateObj))
-                let wrapperClass = "bg-gray-50 text-gray-900 hover:bg-gray-100"
-                if (data) wrapperClass = "bg-[#dcfce7] text-gray-900 hover:bg-[#bbf7d0]"
-                if (modifiers.selected && !data) wrapperClass = "border border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
-                if (modifiers.selected && data) wrapperClass = "border-2 border-emerald-500 bg-[#dcfce7] text-gray-900"
+                const wrapperClass = data
+                  ? "bg-[#dcfce7] text-gray-900 hover:bg-[#bbf7d0]"
+                  : "bg-gray-50 text-gray-900"
 
                 return (
                   <button
                     {...buttonProps}
-                    className={`w-full aspect-square flex flex-col items-center justify-center rounded-xl transition-all ${wrapperClass}`}
+                    disabled
+                    className={`w-full aspect-square flex flex-col items-center justify-center rounded-xl ${wrapperClass} cursor-default`}
                   >
                     <span className="text-sm font-medium">{dateObj.getDate()}</span>
                     {data ? (
@@ -150,28 +127,6 @@ export function DateReviewsSection({
               },
             }}
           />
-
-          {eventId && (
-            <div className="mt-4 px-2">
-              {submitted ? (
-                <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 text-center">
-                  Your date request has been submitted!
-                </p>
-              ) : (
-                <Button
-                  className="w-full rounded-xl"
-                  disabled={!date || mutation.isPending}
-                  onClick={handleSubmit}
-                >
-                  {mutation.isPending
-                    ? "Submitting..."
-                    : date
-                    ? `Request ${format(date, "MMM d, yyyy")}`
-                    : "Select a date to request"}
-                </Button>
-              )}
-            </div>
-          )}
         </div>
       </div>
 

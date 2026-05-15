@@ -4,7 +4,10 @@ import { useEffect, useState } from "react"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Camera, FileBadge2 } from "lucide-react"
+import { CalendarIcon, Camera, FileBadge2 } from "lucide-react"
+import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
 import { useAuth } from "@/app/providers"
@@ -54,6 +57,7 @@ const stripIndianCode = (value: string | null | undefined) => (value ?? "").repl
 export default function OrganizerProfilePage() {
   const { session, profile, organizerProfile, updateProfile, refreshOrganizerStatus } = useAuth()
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [dobOpen, setDobOpen] = useState(false)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [kycFile, setKycFile] = useState<File | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -278,11 +282,45 @@ export default function OrganizerProfilePage() {
                 </div>
                 <p className="mt-1 text-xs text-rose-600">{form.formState.errors.personalPhone?.message ?? ""}</p>
               </label>
-              <label className="block text-sm font-semibold text-slate-700">
+              <div className="block text-sm font-semibold text-slate-700">
                 Date of birth *
-                <input type="date" className={inputClassName} {...form.register("dob")} />
+                <Popover open={dobOpen} onOpenChange={setDobOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={`${inputClassName} flex items-center justify-between`}
+                    >
+                      <span className={form.watch("dob") ? "text-slate-900" : "text-slate-400"}>
+                        {form.watch("dob") && !Number.isNaN(new Date(form.watch("dob") + "T00:00:00").getTime())
+                          ? format(new Date(form.watch("dob") + "T00:00:00"), "PPP")
+                          : "Select date of birth"}
+                      </span>
+                      <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={
+                        form.watch("dob") && !Number.isNaN(new Date(form.watch("dob") + "T00:00:00").getTime())
+                          ? new Date(form.watch("dob") + "T00:00:00")
+                          : undefined
+                      }
+                      onSelect={(date) => {
+                        if (date) {
+                          form.setValue("dob", format(date, "yyyy-MM-dd"), { shouldValidate: true })
+                          setDobOpen(false)
+                        }
+                      }}
+                      captionLayout="dropdown"
+                      fromYear={new Date().getFullYear() - 100}
+                      toYear={new Date().getFullYear() - 18}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <p className="mt-1 text-xs text-rose-600">{form.formState.errors.dob?.message ?? ""}</p>
-              </label>
+              </div>
               <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
                 Location *
                 <input className={inputClassName} placeholder="City, State" {...form.register("location")} />
