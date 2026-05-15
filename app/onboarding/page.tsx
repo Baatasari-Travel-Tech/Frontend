@@ -13,22 +13,11 @@ import {
   PROFESSION_OPTIONS,
 } from "@/lib/profile-validation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import {
-  clearSuggestedEventDraft,
-  COMPLETE_SUGGESTED_EVENT_PARAM,
-  createSuggestedEventFromDraft,
-  draftHasAnyValue,
-  getSuggestedEventResumePath,
-  getSuggestedEventsRedirectPath,
-  isSuggestedEventDraftComplete,
-  readSuggestedEventDraft,
-} from "@/lib/suggested-events"
 
 export default function OnboardingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const nextHref = searchParams.get("next") || "/dashboard"
-  const shouldCompleteSuggestedEvent = searchParams.get(COMPLETE_SUGGESTED_EVENT_PARAM) === "1"
   const { user, profile, completeRoleOnboarding } = useAuth()
 
   const [name, setName] = useState("")
@@ -243,33 +232,7 @@ export default function OnboardingPage() {
         profession: resolvedProfession,
       })
 
-      let redirectTarget = nextHref
-
-      if (shouldCompleteSuggestedEvent) {
-        const pendingDraft = readSuggestedEventDraft()
-
-        if (draftHasAnyValue(pendingDraft)) {
-          if (!isSuggestedEventDraftComplete(pendingDraft)) {
-            router.replace(getSuggestedEventResumePath())
-            return
-          }
-
-          try {
-            await createSuggestedEventFromDraft(pendingDraft)
-            clearSuggestedEventDraft()
-            redirectTarget = getSuggestedEventsRedirectPath()
-          } catch (submitError) {
-            setError(
-              submitError instanceof Error
-                ? `Profile saved, but your event idea could not be published yet: ${submitError.message}`
-                : "Profile saved, but your event idea could not be published yet."
-            )
-            return
-          }
-        }
-      }
-
-      router.replace(redirectTarget)
+      router.replace(nextHref)
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not save profile. Please try again.")
     } finally {

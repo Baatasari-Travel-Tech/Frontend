@@ -166,6 +166,12 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
         </label>
       </div>
 
+      <div className="flex justify-end">
+        <a href="/forgot-password" className="text-xs font-semibold text-brand-800 hover:underline">
+          Forgot password?
+        </a>
+      </div>
+
       {errorToShow && (
         <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
           {errorToShow}

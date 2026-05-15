@@ -52,6 +52,7 @@ export function UpcomingEventsSection({
   const [api, setApi] = useState<CarouselApi>()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const upcomingEvents = useMemo(() => toUpcomingManageEvents(events), [events])
 
@@ -74,11 +75,14 @@ export function UpcomingEventsSection({
 
   const handleCancelEvent = async (eventId: string) => {
     setCancellingId(eventId)
+    setDeleteError(null)
     try {
       await apiRequest(`/organizer/events/${eventId}`, { method: "DELETE", auth: true })
       await queryClient.invalidateQueries({ queryKey: ["organizer-events"] })
       await queryClient.invalidateQueries({ queryKey: ["organizer-events", "manage-events"] })
       await queryClient.invalidateQueries({ queryKey: ["organizer-dashboard"] })
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Failed to delete event. Please try again.")
     } finally {
       setCancellingId(null)
     }
@@ -154,6 +158,12 @@ export function UpcomingEventsSection({
   const activeEvent = upcomingEvents[activeIndex]
 
   return (
+    <>
+      {deleteError && (
+        <p className="mb-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+          {deleteError}
+        </p>
+      )}
     <Card
       className="mb-8 transition-shadow cursor-pointer bg-(--upcoming-white)"
       onClick={() => handleEventClick(activeEvent)}
@@ -342,6 +352,7 @@ export function UpcomingEventsSection({
         </Carousel>
       </CardContent>
     </Card>
+    </>
   )
 }
 

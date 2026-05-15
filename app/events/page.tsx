@@ -1,7 +1,5 @@
 import Image from "next/image"
-import SuggestionsForm from "@/components/suggestions-form"
 import { EventList } from "@/components/events/event-list"
-import { SuggestedEventsSection } from "@/components/events/suggested-events-section"
 import { FooterSocialLinks } from "@/components/events/footer-social-edit"
 import { toEventCardData, fetchPublicEvents } from "@/lib/event-helpers"
 import { fetchPublicSiteConfig } from "@/lib/api/admin"
@@ -34,8 +32,6 @@ export default async function EventsPage() {
                 <p className="mt-3 text-gray-500">Check back later or pitch an event you want to attend.</p>
               </section>
             )}
-            <SuggestionsForm />
-            <SuggestedEventsSection />
           </>
         )}
       </div>

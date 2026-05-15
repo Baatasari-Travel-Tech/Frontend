@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { apiRequest } from "@/lib/api/client"
 
 type UpcomingEventHighlightsProps = {
   event?: UpcomingManageEvent | null
@@ -29,6 +32,20 @@ export function UpcomingEventHighlights({
   errorMessage = null,
 }: UpcomingEventHighlightsProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const [cancelError, setCancelError] = useState<string | null>(null)
+
+  const cancelMutation = useMutation({
+    mutationFn: () =>
+      apiRequest(`/organizer/events/${event!.id}/cancel`, { method: "POST", auth: true }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["organizer-events"] })
+      await queryClient.invalidateQueries({ queryKey: ["organizer-dashboard"] })
+    },
+    onError: (err) => {
+      setCancelError(err instanceof Error ? err.message : "Failed to cancel event. Please try again.")
+    },
+  })
 
   const handleViewDetails = () => {
     if (!event) return
@@ -99,18 +116,24 @@ export function UpcomingEventHighlights({
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="shrink-0">
-            <Image
-              src={event.posterImage}
-              alt={`${event.title} poster`}
-              width={234}
-              height={363}
-              className="object-cover rounded-lg mx-auto lg:mx-0"
-              sizes="(max-width: 640px) 70vw, 234px"
-              unoptimized
-              onError={(imageEvent) => {
-                imageEvent.currentTarget.src = "/event-img.svg"
-              }}
-            />
+            {event.posterImage ? (
+              <Image
+                src={event.posterImage}
+                alt={`${event.title} poster`}
+                width={234}
+                height={363}
+                className="object-cover rounded-lg mx-auto lg:mx-0"
+                sizes="(max-width: 640px) 70vw, 234px"
+                unoptimized
+                onError={(imageEvent) => {
+                  imageEvent.currentTarget.src = "/event-img.svg"
+                }}
+              />
+            ) : (
+              <div className="w-58.5 h-90.75 rounded-lg bg-slate-100 flex items-center justify-center mx-auto lg:mx-0">
+                <span className="text-slate-400 text-sm">No image</span>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 text-sm space-y-2 lg:pl-4">
@@ -155,13 +178,21 @@ export function UpcomingEventHighlights({
               <Stat title="Date Change" value={event.stats.dateChange} />
             </div>
 
+            {cancelError && (
+              <p className="mb-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                {cancelError}
+              </p>
+            )}
             <div className="flex flex-nowrap items-center gap-2 sm:gap-3 mt-10 w-full justify-between sm:justify-start pb-2">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="outline"
                     className="rounded-full text-xs sm:text-sm px-2 sm:px-4 py-2 border-destructive text-destructive whitespace-nowrap flex-1 sm:flex-none"
-                    onClick={(clickEvent) => clickEvent.stopPropagation()}
+                    onClick={(clickEvent) => {
+                      clickEvent.stopPropagation()
+                      setCancelError(null)
+                    }}
                   >
                     Cancel
                   </Button>
@@ -170,19 +201,21 @@ export function UpcomingEventHighlights({
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Event cancellation workflow is not connected yet. You can still edit or reschedule this event.
+                      This will cancel the event. This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel onClick={(clickEvent) => clickEvent.stopPropagation()}>
-                      Close
+                      Keep Event
                     </AlertDialogCancel>
                     <AlertDialogAction
+                      disabled={cancelMutation.isPending}
                       onClick={(clickEvent) => {
                         clickEvent.stopPropagation()
+                        cancelMutation.mutate()
                       }}
                     >
-                      Understood
+                      {cancelMutation.isPending ? "Cancelling..." : "Cancel Event"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

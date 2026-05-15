@@ -268,8 +268,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       })
 
       await hydrateForUser(me.user)
-    } catch {
-      clearSession()
+    } catch (error) {
+      // Only clear session on explicit auth rejection — not on transient network errors
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        clearSession()
+      }
+      // Transient failures (timeout, 5xx, network) leave the session intact
     } finally {
       setBootstrapping(false)
     }

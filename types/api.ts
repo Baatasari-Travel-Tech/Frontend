@@ -153,6 +153,7 @@ export type EventSummary = {
 
 export type EventDetail = EventSummary & {
   ticketTiers: OrganizerEventTicketTier[];
+  cancelledAt: string | null;
 };
 
 export type OrganizerAnalytics = {
@@ -163,22 +164,6 @@ export type OrganizerAnalytics = {
   grossRevenue: number;
 };
 
-export type SuggestedEventSummary = {
-  id: string;
-  creatorUserId: string;
-  creatorName: string;
-  title: string;
-  location: string;
-  category: string;
-  month: string;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
-  supportDeadline: string;
-  interestCount: number;
-  interestedByCurrentUser: boolean;
-  isCreator: boolean;
-};
 
 export type OrderBreakdown = {
   subtotal: number;

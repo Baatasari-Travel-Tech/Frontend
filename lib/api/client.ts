@@ -117,6 +117,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     response = await makeRequest()
   }
 
+  if (response.status >= 500 && response.status < 600) {
+    await new Promise(r => setTimeout(r, 1000))
+    response = await makeRequest()
+  }
+
   const payload = await tryParseJson(response)
   if (!response.ok) {
     throw new ApiError(

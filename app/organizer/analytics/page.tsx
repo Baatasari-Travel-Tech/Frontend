@@ -1,11 +1,13 @@
 "use client"
 
-import { Suspense } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
+import { Download } from "lucide-react"
 
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { apiRequest } from "@/lib/api/client"
+import { Button } from "@/components/ui/button"
 import type { EventDetail } from "@/types/api"
 
 import { EventOverview } from "@/components/event-org/analytics/event-overview"
@@ -17,6 +19,33 @@ function AnalyticsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const eventId = searchParams.get("eventId")
+  const [exportLoading, setExportLoading] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
+
+  const handleExportCsv = async () => {
+    if (!eventId) return
+    setExportLoading(true)
+    setExportError(null)
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? ""
+      const res = await fetch(`${base}/api/v1/organizer/events/${eventId}/attendees/export`, {
+        credentials: "include",
+        headers: { "x-active-role": "ORGANIZER" },
+      })
+      if (!res.ok) throw new Error("Export failed. Please try again.")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `attendees-${eventId}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Export failed.")
+    } finally {
+      setExportLoading(false)
+    }
+  }
 
   const eventQuery = useQuery<EventDetail, Error>({
     queryKey: ["organizer-event-analytics", eventId],
@@ -79,6 +108,21 @@ function AnalyticsContent() {
       </div>
       <RevenueStats event={event} isLoading={isLoading} />
       <DateReviewsSection eventId={event?.id} />
+
+      <div className="flex flex-col gap-2 px-4 md:px-8">
+        {exportError && (
+          <p className="text-sm text-rose-600">{exportError}</p>
+        )}
+        <Button
+          variant="outline"
+          className="w-fit gap-2 rounded-full"
+          onClick={() => void handleExportCsv()}
+          disabled={exportLoading || !event}
+        >
+          <Download className="h-4 w-4" />
+          {exportLoading ? "Exporting..." : "Export Attendees CSV"}
+        </Button>
+      </div>
     </div>
   )
 }

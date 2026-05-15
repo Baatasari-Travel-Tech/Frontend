@@ -218,31 +218,44 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
           razorpay_payment_id: string
           razorpay_signature: string
         }) => {
-          const verifyResponse = await apiRequest<{ data: { result: { ticket?: { id?: string } } } }>(
-            "/payments/razorpay/verify",
-            {
-              method: "POST",
-              auth: true,
-              body: JSON.stringify({
-                orderId: order.orderId,
-                razorpayOrderId: payment.razorpay_order_id,
-                razorpayPaymentId: payment.razorpay_payment_id,
-                razorpaySignature: payment.razorpay_signature,
-              }),
+          try {
+            const verifyResponse = await apiRequest<{ data: { result: { ticket?: { id?: string } } } }>(
+              "/payments/razorpay/verify",
+              {
+                method: "POST",
+                auth: true,
+                body: JSON.stringify({
+                  orderId: order.orderId,
+                  razorpayOrderId: payment.razorpay_order_id,
+                  razorpayPaymentId: payment.razorpay_payment_id,
+                  razorpaySignature: payment.razorpay_signature,
+                }),
+              }
+            )
+
+            setCheckoutSuccess("Payment verified successfully.")
+
+            const ticketId = verifyResponse.data.result.ticket?.id
+            const ticketHref = ticketId ? `/history/${ticketId}` : "/history"
+
+            if (user?.onboardingStatus !== "COMPLETED") {
+              router.push(`/onboarding?next=${encodeURIComponent(ticketHref)}`)
+              return
             }
-          )
 
-          setCheckoutSuccess("Payment verified successfully.")
-
-          const ticketId = verifyResponse.data.result.ticket?.id
-          const ticketHref = ticketId ? `/history/${ticketId}` : "/history"
-
-          if (user?.onboardingStatus !== "COMPLETED") {
-            router.push(`/onboarding?next=${encodeURIComponent(ticketHref)}`)
-            return
+            router.push(ticketHref)
+          } catch (verifyError) {
+            setCheckoutError(
+              verifyError instanceof Error
+                ? verifyError.message
+                : "Payment was received but verification failed. Please contact support."
+            )
           }
-
-          router.push(ticketHref)
+        },
+        modal: {
+          ondismiss: () => {
+            setCheckoutLoading(false)
+          },
         },
       })
 
