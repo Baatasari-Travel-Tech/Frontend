@@ -13,6 +13,10 @@ import {
   PROFESSION_OPTIONS,
 } from "@/lib/profile-validation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { format } from "date-fns"
+import { CalendarIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -321,17 +325,35 @@ export default function OnboardingPage() {
                   </div>
                 </label>
 
-                <label className="block text-sm font-semibold text-slate-700">
+                <div className="block text-sm font-semibold text-slate-700">
                   Date of birth *
-                  <input
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
-                    type="date"
-                    min={dobBounds.min}
-                    max={dobBounds.max}
-                    value={dob}
-                    onChange={(event) => setDob(event.target.value)}
-                  />
-                </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10 flex items-center justify-between"
+                      >
+                        <span className={dob ? "text-slate-900" : "text-slate-400"}>
+                          {dob ? format(new Date(dob + "T00:00:00"), "PPP") : "Select date of birth"}
+                        </span>
+                        <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dob ? new Date(dob + "T00:00:00") : undefined}
+                        onSelect={(date) => {
+                          if (date) setDob(format(date, "yyyy-MM-dd"))
+                        }}
+                        captionLayout="dropdown"
+                        fromYear={new Date().getFullYear() - 100}
+                        toYear={new Date().getFullYear()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
                 <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
                   Location *

@@ -27,7 +27,6 @@ export default async function EventsPage() {
               <EventList rows={rows} showHero />
             ) : (
               <section className="flex flex-col items-center justify-center py-24 text-center">
-                <p className="mb-4 text-5xl">🎪</p>
                 <h2 className="text-2xl font-semibold text-(--brand-blue)">No events available</h2>
                 <p className="mt-3 text-gray-500">Check back later or pitch an event you want to attend.</p>
               </section>

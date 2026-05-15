@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, Suspense } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { Download } from "lucide-react"
@@ -47,6 +47,27 @@ function AnalyticsContent() {
     }
   }
 
+  const eventsQuery = useQuery<EventDetail[], Error>({
+    queryKey: ["organizer-events"],
+    queryFn: async () => {
+      const response = await apiRequest<{ data: { events: EventDetail[] } }>("/organizer/events", { auth: true })
+      return response.data.events
+    },
+    enabled: !eventId,
+  })
+
+  useEffect(() => {
+    if (eventId || !eventsQuery.data) return
+    const events = eventsQuery.data
+    if (events.length === 0) return
+    const now = Date.now()
+    const sorted = [...events].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    const nearest = sorted.find((e) => new Date(e.date).getTime() >= now) ?? sorted[sorted.length - 1]
+    if (nearest) {
+      router.replace(`/organizer/analytics?eventId=${encodeURIComponent(nearest.id)}`)
+    }
+  }, [eventId, eventsQuery.data, router])
+
   const eventQuery = useQuery<EventDetail, Error>({
     queryKey: ["organizer-event-analytics", eventId],
     queryFn: async () => {
@@ -70,19 +91,25 @@ function AnalyticsContent() {
   }
 
   if (!eventId) {
+    if (eventsQuery.isLoading || (eventsQuery.data && eventsQuery.data.length > 0)) {
+      return (
+        <div className="w-full px-0 sm:px-6 lg:px-8 py-4">
+          <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center">
+            <p className="text-slate-500 text-sm">Loading events...</p>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="w-full px-0 sm:px-6 lg:px-8 py-4">
-        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center">
-          <p className="text-slate-500 text-sm">
-            No event selected. Go to{" "}
-            <button
-              className="text-blue-600 underline underline-offset-2"
-              onClick={() => router.push("/organizer/manage-events")}
-            >
-              Manage Events
-            </button>{" "}
-            and click an event to view its analytics.
-          </p>
+        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center flex flex-col items-center gap-3">
+          <p className="text-slate-500 text-sm">No events yet. Create your first event to view analytics.</p>
+          <button
+            className="rounded-full bg-slate-900 text-white px-5 py-2 text-sm font-semibold hover:bg-slate-800 transition"
+            onClick={() => router.push("/organizer/create-event?mode=create")}
+          >
+            Create Event
+          </button>
         </div>
       </div>
     )

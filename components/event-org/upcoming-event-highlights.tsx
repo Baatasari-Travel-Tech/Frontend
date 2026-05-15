@@ -50,7 +50,7 @@ export function UpcomingEventHighlights({
   const handleViewDetails = () => {
     if (!event) return
     localStorage.setItem("analyticsEventData", JSON.stringify(event.analyticsData))
-    router.push("/organizer/analytics")
+    router.push(`/organizer/analytics?eventId=${encodeURIComponent(event.id)}`)
   }
 
   const handleReschedule = () => {

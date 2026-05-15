@@ -212,6 +212,7 @@ const EventForm: React.FC<EventFormProps> = ({
                           }
                         }}
                         fromDate={new Date()}
+                        toDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
                         disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                         initialFocus
                       />
