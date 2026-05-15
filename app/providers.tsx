@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
 import { isAdminRoutePath } from "@/lib/admin/routes"
 import { useAuthStore } from "@/lib/auth/store"
+import { ApiError } from "@/types/api"
 import type {
   ActiveRole,
   AuthResponse,
