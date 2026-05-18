@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import {
   ArrowLeft,
   CalendarDays,
@@ -27,6 +30,35 @@ import type { ApiEnvelope, ApiError, EventDetail } from "@/types/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TermsDialog } from "@/components/common/terms-dialog"
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const checkoutSchema = z
+  .object({
+    bookingFor: z.enum(["self", "other"]),
+    guestName: z.string().trim().min(1, "Please enter the full name."),
+    guestEmail: z.string().trim(),
+    guestPhone: z.string().regex(/^\d{10}$/, "Phone number must be 10 digits."),
+    sendCopyToMe: z.boolean(),
+    quantity: z.number().int().min(1).max(10),
+    selectedTierId: z.string().min(1, "No ticket tier available for this event."),
+    termsAccepted: z
+      .boolean()
+      .refine((v) => v === true, { message: "Please accept terms and conditions to continue." }),
+  })
+  // Email is only validated for "other" bookings — for "self" it's the account
+  // email (always valid) and the field is disabled in the UI.
+  .superRefine((data, ctx) => {
+    if (data.bookingFor === "other" && !EMAIL_RE.test(data.guestEmail)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["guestEmail"],
+        message: "Please enter a valid email for the attendee.",
+      })
+    }
+  })
+
+type CheckoutFormValues = z.infer<typeof checkoutSchema>
 
 type CreateOrderResponse = {
   orderId: string
@@ -56,40 +88,68 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
 
   const lockedTierId = searchParams.get("tierId") ?? ""
 
-  const [bookingFor, setBookingFor] = useState<"self" | "other">("self")
-  const [guestName, setGuestName] = useState(profile?.full_name ?? "")
-  const [guestPhone, setGuestPhone] = useState(profile?.phone ?? "")
-  const [guestEmail, setGuestEmail] = useState(accountEmail)
-  const [sendCopyToMe, setSendCopyToMe] = useState(false)
-  const [quantity, setQuantity] = useState(1)
-  const [selectedTierId, setSelectedTierId] = useState(lockedTierId)
-  const [termsAccepted, setTermsAccepted] = useState(false)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutSuccess, setCheckoutSuccess] = useState<string | null>(null)
   const [coverImageSrc, setCoverImageSrc] = useState(getEventCoverImageUrl(event.id, event.updatedAt))
 
+  const {
+    register,
+    control,
+    handleSubmit,
+    setValue,
+    getValues,
+    formState: { errors },
+  } = useForm<CheckoutFormValues>({
+    resolver: zodResolver(checkoutSchema),
+    mode: "onBlur",
+    defaultValues: {
+      bookingFor: "self",
+      guestName: profile?.full_name ?? "",
+      guestPhone: (profile?.phone ?? "").replace(/^\+91/, ""),
+      guestEmail: accountEmail,
+      sendCopyToMe: false,
+      quantity: 1,
+      selectedTierId: lockedTierId,
+      termsAccepted: false,
+    },
+  })
+
+  // Reactive form values — derived totals + UI branching depend on these.
+  const bookingFor = useWatch({ control, name: "bookingFor" })
+  const quantity = useWatch({ control, name: "quantity" })
+  const selectedTierId = useWatch({ control, name: "selectedTierId" })
+
+  // When the user logs in (or profile loads) mid-flow on "self" mode, populate
+  // any empty self-fields from the account profile. Skips "other" mode.
   useEffect(() => {
-    if (bookingFor !== "self") return
-    if (profile?.full_name) setGuestName((prev) => prev || profile.full_name!)
-    if (profile?.phone) setGuestPhone((prev) => prev || profile.phone!)
-    if (accountEmail) setGuestEmail((prev) => prev || accountEmail)
-  }, [profile?.full_name, profile?.phone, accountEmail, bookingFor])
+    if (getValues("bookingFor") !== "self") return
+    if (profile?.full_name && !getValues("guestName")) {
+      setValue("guestName", profile.full_name, { shouldValidate: false })
+    }
+    if (profile?.phone && !getValues("guestPhone")) {
+      setValue("guestPhone", profile.phone.replace(/^\+91/, ""), { shouldValidate: false })
+    }
+    if (accountEmail && !getValues("guestEmail")) {
+      setValue("guestEmail", accountEmail, { shouldValidate: false })
+    }
+  }, [profile?.full_name, profile?.phone, accountEmail, getValues, setValue])
 
   const switchBookingFor = (next: "self" | "other") => {
-    if (next === bookingFor) return
-    setBookingFor(next)
+    if (next === getValues("bookingFor")) return
     setCheckoutError(null)
     if (next === "other") {
-      setGuestName("")
-      setGuestPhone("")
-      setGuestEmail("")
-      setSendCopyToMe(true)
+      setValue("bookingFor", "other")
+      setValue("guestName", "")
+      setValue("guestPhone", "")
+      setValue("guestEmail", "")
+      setValue("sendCopyToMe", true)
     } else {
-      setGuestName(profile?.full_name ?? "")
-      setGuestPhone(profile?.phone ?? "")
-      setGuestEmail(accountEmail)
-      setSendCopyToMe(false)
+      setValue("bookingFor", "self")
+      setValue("guestName", profile?.full_name ?? "")
+      setValue("guestPhone", (profile?.phone ?? "").replace(/^\+91/, ""))
+      setValue("guestEmail", accountEmail)
+      setValue("sendCopyToMe", false)
     }
   }
 
@@ -113,7 +173,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     router.replace(nextHref, { scroll: false })
   }, [isLoggedIn, open, pathname, router, searchParams])
 
-  const tiers = event.ticketTiers ?? []
+  const tiers = useMemo(() => event.ticketTiers ?? [], [event.ticketTiers])
 
   const selectedTier = useMemo(() => {
     if (tiers.length === 0) return undefined
@@ -121,7 +181,17 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     return tiers.find((tier) => tier.id === selectedTierId) ?? tiers[0]
   }, [tiers, selectedTierId])
 
-  const effectiveTierId = selectedTier?.id ?? selectedTierId
+  // Keep the form's selectedTierId in sync with the fallback chosen by
+  // selectedTier (first tier if the URL-locked id is missing or invalid).
+  // Without this, an empty form value would fail schema validation even
+  // though the UI shows a tier selected.
+  useEffect(() => {
+    const id = selectedTier?.id
+    if (!id) return
+    if (getValues("selectedTierId") === id) return
+    setValue("selectedTierId", id, { shouldValidate: false })
+  }, [selectedTier?.id, getValues, setValue])
+
   const tierPrice = Number(selectedTier?.price ?? 0)
   const isFreeEvent = tierPrice === 0
   const subtotal = useMemo(() => Number((tierPrice * quantity).toFixed(2)), [quantity, tierPrice])
@@ -139,33 +209,10 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     [gatewayFee, platformFee, subtotal]
   )
 
-  const handleCheckout = async () => {
+  const onSubmit = handleSubmit(async (values) => {
     if (!isLoggedIn) {
       setCheckoutError("Please login to continue.")
       openBookingAuthModal("login")
-      return
-    }
-    if (!effectiveTierId) {
-      setCheckoutError("No ticket tier available for this event.")
-      return
-    }
-    if (!guestName.trim()) {
-      setCheckoutError("Please enter your full name.")
-      return
-    }
-    if (!guestPhone.trim()) {
-      setCheckoutError("Please enter your phone number.")
-      return
-    }
-    if (bookingFor === "other") {
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())
-      if (!emailOk) {
-        setCheckoutError("Please enter a valid email for the attendee.")
-        return
-      }
-    }
-    if (!termsAccepted) {
-      setCheckoutError("Please accept terms and conditions to continue.")
       return
     }
 
@@ -174,21 +221,19 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     setCheckoutLoading(true)
 
     try {
-      // BE `createEventOrderSchema` is .strict() — `bookingFor` and
-      // `sendCopyToBooker` are FE-only UI state used to determine the
-      // post-checkout flow and the "send a copy to me" email behavior.
-      // They are deliberately NOT in the request body.
+      // BE `createEventOrderSchema` is .strict() — bookingFor and sendCopyToMe
+      // are FE-only UI state; deliberately NOT in the request body.
       const orderResponse = await apiRequest<ApiEnvelope<{ order: CreateOrderResponse }>>(
         `/events/${event.id}/orders`,
         {
           method: "POST",
           auth: true,
           body: JSON.stringify({
-            ticketTierId: effectiveTierId,
-            quantity,
-            guestName: guestName.trim(),
-            guestEmail: guestEmail.trim(),
-            guestPhone: guestPhone.trim(),
+            ticketTierId: values.selectedTierId,
+            quantity: values.quantity,
+            guestName: values.guestName.trim(),
+            guestEmail: values.guestEmail.trim(),
+            guestPhone: values.guestPhone.trim(),
           }),
         }
       )
@@ -218,9 +263,9 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
         description: event.title,
         order_id: order.providerOrderId,
         prefill: {
-          name: guestName.trim(),
-          email: guestEmail.trim(),
-          contact: guestPhone.trim(),
+          name: values.guestName.trim(),
+          email: values.guestEmail.trim(),
+          contact: values.guestPhone.trim(),
         },
         theme: { color: "#0c1d37" },
         handler: async (payment: {
@@ -276,7 +321,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     } finally {
       setCheckoutLoading(false)
     }
-  }
+  })
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-linear-to-br from-(--brand-navy) via-[#142a4f] to-[#1a3a6b]">
@@ -429,13 +474,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                     !isLoggedIn ? "pointer-events-none select-none blur-[14px]" : ""
                   }`}
                 >
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      void handleCheckout()
-                    }}
-                    className="space-y-7"
-                  >
+                  <form onSubmit={onSubmit} className="space-y-7" noValidate>
                     {/* Personal */}
                     <section className="space-y-4">
                       <div className="flex flex-col gap-3 border-b border-(--gray-200) pb-3 sm:flex-row sm:items-center sm:justify-between">
@@ -500,13 +539,12 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                           id="name"
                           type="text"
                           placeholder={bookingFor === "other" ? "Enter attendee's full name" : "Enter your full name"}
-                          value={guestName}
-                          onChange={(e) => {
-                            setGuestName(e.target.value)
-                            setCheckoutError(null)
-                          }}
+                          {...register("guestName")}
                           className="w-full rounded-lg border border-(--gray-300) px-3 py-2 text-sm sm:px-4 sm:py-3 sm:text-base"
                         />
+                        {errors.guestName ? (
+                          <p className="mt-1 text-xs text-rose-600">{errors.guestName.message}</p>
+                        ) : null}
                       </div>
 
                       <div>
@@ -516,17 +554,16 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                         <Input
                           id="email"
                           type="email"
-                          value={guestEmail}
                           placeholder={bookingFor === "other" ? "attendee@example.com" : ""}
                           disabled={bookingFor === "self"}
-                          onChange={(e) => {
-                            setGuestEmail(e.target.value)
-                            setCheckoutError(null)
-                          }}
+                          {...register("guestEmail")}
                           className={`w-full rounded-lg border border-(--gray-300) px-3 py-2 text-sm sm:px-4 sm:py-3 sm:text-base ${
                             bookingFor === "self" ? "bg-slate-50" : "bg-white"
                           }`}
                         />
+                        {errors.guestEmail ? (
+                          <p className="mt-1 text-xs text-rose-600">{errors.guestEmail.message}</p>
+                        ) : null}
                       </div>
 
                       <div>
@@ -541,16 +578,22 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                             id="mobile"
                             type="tel"
                             placeholder="10-digit mobile number"
-                            value={guestPhone}
-                            onChange={(e) => {
-                              const v = e.target.value.replace(/\D/g, "")
-                              if (v.length <= 10) setGuestPhone(v)
-                              setCheckoutError(null)
-                            }}
                             inputMode="numeric"
+                            {...register("guestPhone", {
+                              onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                                // Digits-only mask, capped at 10 chars.
+                                const masked = e.target.value.replace(/\D/g, "").slice(0, 10)
+                                if (masked !== e.target.value) {
+                                  setValue("guestPhone", masked, { shouldValidate: false })
+                                }
+                              },
+                            })}
                             className="w-full rounded-lg border border-(--gray-300) py-2 pl-10 pr-3 text-sm sm:py-3 sm:pl-12 sm:pr-4 sm:text-base"
                           />
                         </div>
+                        {errors.guestPhone ? (
+                          <p className="mt-1 text-xs text-rose-600">{errors.guestPhone.message}</p>
+                        ) : null}
                       </div>
 
                       {/* Send a copy to my email */}
@@ -566,8 +609,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                           >
                             <input
                               type="checkbox"
-                              checked={sendCopyToMe}
-                              onChange={(e) => setSendCopyToMe(e.target.checked)}
+                              {...register("sendCopyToMe")}
                               className="mt-0.5 h-4 w-4 rounded border-(--gray-300) text-(--brand-navy) focus:ring-2 focus:ring-(--brand-navy)"
                             />
                             <div className="min-w-0">
@@ -620,13 +662,24 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                           type="number"
                           min={1}
                           max={10}
-                          value={quantity}
-                          onChange={(e) => {
-                            const n = Number(e.target.value)
-                            if (!Number.isNaN(n)) setQuantity(Math.max(1, Math.min(10, n)))
-                          }}
+                          {...register("quantity", {
+                            valueAsNumber: true,
+                            // Clamp to 1–10 on input, matching the original UX
+                            onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                              const n = Number(e.target.value)
+                              if (Number.isFinite(n)) {
+                                const clamped = Math.max(1, Math.min(10, n))
+                                if (clamped !== n) {
+                                  setValue("quantity", clamped, { shouldValidate: false })
+                                }
+                              }
+                            },
+                          })}
                           className="w-full rounded-lg border border-(--gray-300) px-3 py-2 text-sm sm:px-4 sm:py-3 sm:text-base"
                         />
+                        {errors.quantity ? (
+                          <p className="mt-1 text-xs text-rose-600">{errors.quantity.message}</p>
+                        ) : null}
                       </div>
                     </section>
 
@@ -667,8 +720,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                     <label className="flex cursor-pointer items-start space-x-3">
                       <input
                         type="checkbox"
-                        checked={termsAccepted}
-                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        {...register("termsAccepted")}
                         className="mt-0.5 h-4 w-4 rounded border-(--gray-300) text-(--brand-navy) focus:ring-2 focus:ring-(--brand-navy) sm:h-5 sm:w-5"
                       />
                       <span className="text-xs text-(--gray-700) sm:text-sm">
@@ -683,6 +735,12 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                         </TermsDialog>
                       </span>
                     </label>
+                    {errors.termsAccepted ? (
+                      <p className="-mt-3 text-xs text-rose-600">{errors.termsAccepted.message}</p>
+                    ) : null}
+                    {errors.selectedTierId ? (
+                      <p className="text-xs text-rose-600">{errors.selectedTierId.message}</p>
+                    ) : null}
 
                     {checkoutError ? (
                       <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
