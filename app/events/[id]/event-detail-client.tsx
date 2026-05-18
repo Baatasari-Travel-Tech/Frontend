@@ -126,7 +126,6 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                 fill
                 className="object-cover object-center transition-transform duration-[1200ms] ease-out group-hover:scale-105"
                 priority
-                unoptimized
                 onError={() => setCoverImageSrc("/e1.png")}
               />
               <div className="absolute inset-0 bg-linear-to-t from-(--brand-navy)/85 via-(--brand-navy)/20 to-transparent" />

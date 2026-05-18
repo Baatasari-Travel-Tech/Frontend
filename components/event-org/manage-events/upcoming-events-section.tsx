@@ -230,7 +230,6 @@ export function UpcomingEventsSection({
                       width={180}
                       height={260}
                       className="rounded-lg object-cover mx-auto lg:mx-0"
-                      unoptimized
                       onError={(imageEvent) => {
                         imageEvent.currentTarget.src = "/event-img.svg"
                       }}

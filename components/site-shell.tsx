@@ -116,7 +116,6 @@ function UserMenu({
               width={36}
               height={36}
               className="h-full w-full object-cover"
-              unoptimized
               onError={() => {
                 setFailedAvatarUrl(displayAvatarUrl)
               }}
@@ -146,7 +145,6 @@ function UserMenu({
                   width={48}
                   height={48}
                   className="h-full w-full object-cover"
-                  unoptimized
                 />
               ) : (
                 <span className="text-sm font-semibold text-slate-500">{initials}</span>
@@ -398,7 +396,6 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
               height={32}
               style={{ width: 'auto', height: 'auto' }}
               priority
-              unoptimized
             />
             <span className="text-lg font-semibold tracking-tight">Baatasari</span>
           </Link>

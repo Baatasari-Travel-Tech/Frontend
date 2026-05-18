@@ -387,7 +387,6 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                       alt={event.title}
                       fill
                       className="object-cover"
-                      unoptimized
                       onError={() => setCoverImageSrc("/e1.png")}
                     />
                     <div className="absolute inset-0 bg-linear-to-t from-(--brand-navy)/80 to-transparent md:bg-linear-to-r" />

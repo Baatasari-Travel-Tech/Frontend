@@ -75,7 +75,6 @@ export default function AboutPage() {
                       width={100}
                       height={40}
                       style={{ width: 'auto', height: 'auto' }}
-                      unoptimized
                     />
                   </div>
 

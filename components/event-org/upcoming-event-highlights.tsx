@@ -124,7 +124,6 @@ export function UpcomingEventHighlights({
                 height={363}
                 className="object-cover rounded-lg mx-auto lg:mx-0"
                 sizes="(max-width: 640px) 70vw, 234px"
-                unoptimized
                 onError={(imageEvent) => {
                   imageEvent.currentTarget.src = "/event-img.svg"
                 }}
