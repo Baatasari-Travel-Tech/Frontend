@@ -76,7 +76,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   }, [event])
 
   const ageRange = (() => {
-    const range = event.audienceRange as { min?: number; max?: number } | null | undefined
+    const range = event.audienceRange
     if (range && typeof range.min === "number" && typeof range.max === "number") {
       return `${range.min}–${range.max} yrs`
     }

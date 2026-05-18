@@ -123,6 +123,56 @@ export type OrganizerEventTicketTier = {
   saleEndsAt?: string | null;
 };
 
+// Sub-shapes for the previously-untyped JSON blobs on EventSummary. All leaf
+// fields are optional because the API does not enforce presence — the FE
+// consumers (lib/event-helpers.ts, components/event-org/manage-events) read
+// them defensively via asString/asNumber/asBoolean helpers, which is the
+// safety net for any drift from this shape.
+export type EventSponsor = {
+  name: string;
+  website: string;
+};
+
+export type EventSponsorGroups = {
+  titleSponsors?: EventSponsor[];
+  coPartners?: EventSponsor[];
+  mediaPartners?: EventSponsor[];
+};
+
+export type EventRequirements = {
+  highlights?: string[];
+  personnel?: string;
+};
+
+export type EventPostEventFollowUp = {
+  thankYouNote?: string;
+};
+
+export type EventContactInfo = {
+  mobile?: string;
+  email?: string;
+  website?: string;
+  additionalLinks?: string;
+};
+
+export type EventAudienceRange = {
+  min?: number;
+  max?: number;
+};
+
+export type EventAddOns = {
+  freebies?: boolean;
+  giftHampers?: boolean;
+  merchandise?: boolean;
+  addOther?: boolean;
+  giftHampersDescription?: string;
+  addOtherDescription?: string;
+};
+
+export type EventGuidelines = {
+  text?: string;
+};
+
 export type EventSummary = {
   id: string;
   organizerId: string;
@@ -144,15 +194,18 @@ export type EventSummary = {
   entrySide: string | null;
   transportOptions: Record<string, boolean>;
   artists: Array<{ name: string; genre?: string | null }>;
-  sponsors: Record<string, unknown>;
-  requirements: Record<string, unknown>;
-  postEventFollowUp: Record<string, unknown>;
-  contactInfo: Record<string, unknown>;
-  audienceRange: Record<string, unknown>;
+  sponsors: EventSponsorGroups;
+  requirements: EventRequirements;
+  postEventFollowUp: EventPostEventFollowUp;
+  contactInfo: EventContactInfo;
+  audienceRange: EventAudienceRange;
   targetAudience: Record<string, boolean>;
-  addOns: Record<string, unknown>;
+  addOns: EventAddOns;
+  // No FE consumer reads from `discounts` yet — kept as an open record so the
+  // backend can populate it without churning this type when a real consumer
+  // arrives.
   discounts: Record<string, unknown>;
-  guidelines: Record<string, unknown>;
+  guidelines: EventGuidelines;
   published: boolean;
   createdAt: string;
   updatedAt: string;
