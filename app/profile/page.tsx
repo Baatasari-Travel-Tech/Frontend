@@ -78,16 +78,6 @@ export default function ProfilePage() {
     }
   }
 
-  // interests (UI-only)
-  const ALL_INTERESTS = [
-    "Music", "Comedy", "Workshops", "Festivals", "Movies", "Theatre",
-    "Food", "Sports", "Tech", "Art", "Networking", "Wellness",
-  ]
-  const [interests, setInterests] = useState<string[]>([])
-  const toggleInterest = (name: string) => {
-    setInterests((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))
-  }
-
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
@@ -97,7 +87,6 @@ export default function ProfilePage() {
   const [gender, setGender] = useState("")
   const [profession, setProfession] = useState("")
 
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
   const [cropSource, setCropSource] = useState<string | null>(null)
@@ -130,13 +119,6 @@ export default function ProfilePage() {
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
   const avatarFileInputRef = useRef<HTMLInputElement>(null)
-
-  const greetingName = useMemo(() => {
-    const full = (name || profile?.full_name || "").trim()
-    if (full) return full.split(/\s+/)[0]
-    const e = email || session?.user?.email || ""
-    return e.split("@")[0] || "there"
-  }, [name, profile?.full_name, email, session?.user?.email])
 
   useEffect(() => {
     setEmail(session?.user?.email ?? profile?.email ?? "")
@@ -308,7 +290,6 @@ export default function ProfilePage() {
     previewUrlRef.current = previewUrl
 
     setAvatarPreview(previewUrl)
-    setAvatarFile(croppedFile)
     setIsCropOpen(false)
 
     // Upload immediately — independent of the rest of the profile form.
@@ -320,7 +301,6 @@ export default function ProfilePage() {
       const fallback = user?.id ? getAvatarImageUrl("users", user.id, upload.version) : null
       const nextUrl = upload.publicUrl ?? fallback
       if (nextUrl) setAvatarPreview(nextUrl)
-      setAvatarFile(null)
       // Refresh global auth profile so the navbar/dropdown avatar picks up the new image
       try {
         await refreshProfile()
@@ -1537,59 +1517,6 @@ function InfoCard({
           {pill}
         </span>
       ) : null}
-    </div>
-  )
-}
-
-function ToggleRow({
-  icon: Icon,
-  title,
-  description,
-  checked,
-  onChange,
-  badge,
-}: {
-  icon: LucideIcon
-  title: string
-  description: string
-  checked: boolean
-  onChange: (next: boolean) => void
-  badge?: string
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-          <Icon className="h-4 w-4" />
-        </span>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-slate-900">{title}</p>
-            {badge ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                {badge}
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-0.5 text-xs text-slate-500">{description}</p>
-        </div>
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        disabled={!!badge}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-50 ${
-          checked ? "bg-(--brand-navy)" : "bg-slate-200"
-        }`}
-      >
-        <span
-          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-            checked ? "translate-x-5" : "translate-x-0.5"
-          }`}
-        />
-      </button>
     </div>
   )
 }
