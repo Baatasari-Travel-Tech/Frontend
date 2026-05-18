@@ -345,7 +345,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                       unoptimized
                       onError={() => setCoverImageSrc("/e1.png")}
                     />
-                    <div className="absolute inset-0 bg-linear-to-t from-[#0C1D37]/80 to-transparent md:bg-linear-to-r" />
+                    <div className="absolute inset-0 bg-linear-to-t from-(--brand-navy)/80 to-transparent md:bg-linear-to-r" />
                     <div className="absolute inset-x-0 bottom-0 p-4 md:hidden">
                       <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-200/90">
                         You&apos;re booking
@@ -439,7 +439,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                     {/* Personal */}
                     <section className="space-y-4">
                       <div className="flex flex-col gap-3 border-b border-(--gray-200) pb-3 sm:flex-row sm:items-center sm:justify-between">
-                        <h3 className="text-base font-semibold text-[#0C1D37] sm:text-lg">
+                        <h3 className="text-base font-semibold text-(--brand-navy) sm:text-lg">
                           Personal Details
                         </h3>
 
@@ -568,10 +568,10 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                               type="checkbox"
                               checked={sendCopyToMe}
                               onChange={(e) => setSendCopyToMe(e.target.checked)}
-                              className="mt-0.5 h-4 w-4 rounded border-(--gray-300) text-[#0C1D37] focus:ring-2 focus:ring-[#0C1D37]"
+                              className="mt-0.5 h-4 w-4 rounded border-(--gray-300) text-(--brand-navy) focus:ring-2 focus:ring-(--brand-navy)"
                             />
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2 text-sm font-semibold text-[#0C1D37]">
+                              <div className="flex items-center gap-2 text-sm font-semibold text-(--brand-navy)">
                                 <Mail className="h-4 w-4" />
                                 Send a copy to my email too
                               </div>
@@ -587,7 +587,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
 
                     {/* Booking */}
                     <section className="space-y-4">
-                      <h3 className="border-b border-(--gray-200) pb-2 text-base font-semibold text-[#0C1D37] sm:text-lg">
+                      <h3 className="border-b border-(--gray-200) pb-2 text-base font-semibold text-(--brand-navy) sm:text-lg">
                         Booking Details
                       </h3>
 
@@ -598,12 +598,12 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                           </p>
                           <div className="flex items-center justify-between rounded-lg border border-(--gray-200) bg-(--gray-50) px-4 py-3">
                             <div className="min-w-0">
-                              <p className="text-sm font-semibold text-[#0C1D37]">{selectedTier.name}</p>
+                              <p className="text-sm font-semibold text-(--brand-navy)">{selectedTier.name}</p>
                               {selectedTier.description ? (
                                 <p className="mt-0.5 text-xs text-(--gray-500)">{selectedTier.description}</p>
                               ) : null}
                             </div>
-                            <p className="ml-3 shrink-0 text-sm font-bold text-[#0C1D37]">
+                            <p className="ml-3 shrink-0 text-sm font-bold text-(--brand-navy)">
                               {tierPrice === 0 ? "Free" : formatCurrency(tierPrice)}
                             </p>
                           </div>
@@ -631,8 +631,8 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                     </section>
 
                     {/* Order summary card */}
-                    <div className="rounded-2xl border-2 border-[#0C1D37] bg-(--white) p-4 shadow-lg">
-                      <h3 className="mb-4 text-center text-xl font-bold text-[#0C1D37]">Order Summary</h3>
+                    <div className="rounded-2xl border-2 border-(--brand-navy) bg-(--white) p-4 shadow-lg">
+                      <h3 className="mb-4 text-center text-xl font-bold text-(--brand-navy)">Order Summary</h3>
                       {isFreeEvent ? (
                         <div className="py-2 text-center">
                           <span className="text-3xl font-bold text-emerald-600">Free</span>
@@ -656,8 +656,8 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                           </div>
                           <div className="my-3 border-t-2 border-dashed border-(--gray-300)" />
                           <div className="flex items-center justify-between">
-                            <span className="text-lg font-semibold text-[#0C1D37]">Total Amount</span>
-                            <span className="text-2xl font-bold text-[#0C1D37]">{formatCurrency(totalAmount)}</span>
+                            <span className="text-lg font-semibold text-(--brand-navy)">Total Amount</span>
+                            <span className="text-2xl font-bold text-(--brand-navy)">{formatCurrency(totalAmount)}</span>
                           </div>
                         </div>
                       )}
@@ -669,14 +669,14 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                         type="checkbox"
                         checked={termsAccepted}
                         onChange={(e) => setTermsAccepted(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 rounded border-(--gray-300) text-[#0C1D37] focus:ring-2 focus:ring-[#0C1D37] sm:h-5 sm:w-5"
+                        className="mt-0.5 h-4 w-4 rounded border-(--gray-300) text-(--brand-navy) focus:ring-2 focus:ring-(--brand-navy) sm:h-5 sm:w-5"
                       />
                       <span className="text-xs text-(--gray-700) sm:text-sm">
                         I accept the{" "}
                         <TermsDialog>
                           <button
                             type="button"
-                            className="font-medium text-[#0C1D37] underline-offset-2 hover:underline"
+                            className="font-medium text-(--brand-navy) underline-offset-2 hover:underline"
                           >
                             terms and conditions
                           </button>
@@ -700,7 +700,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                       whileTap={{ scale: 0.98 }}
                       type="submit"
                       disabled={checkoutLoading || !tiers.length}
-                      className="w-full rounded-xl bg-[#0C1D37] px-4 py-3 text-base font-semibold text-(--white) shadow-lg transition-all hover:bg-[#0A172C] hover:shadow-xl disabled:opacity-60 sm:px-6 sm:py-4 sm:text-lg"
+                      className="w-full rounded-xl bg-(--brand-navy) px-4 py-3 text-base font-semibold text-(--white) shadow-lg transition-all hover:bg-[#0A172C] hover:shadow-xl disabled:opacity-60 sm:px-6 sm:py-4 sm:text-lg"
                     >
                       {checkoutLoading ? "Processing..." : isFreeEvent ? "Get Free Ticket" : "Pay Now"}
                     </motion.button>

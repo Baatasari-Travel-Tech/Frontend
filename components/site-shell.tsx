@@ -435,7 +435,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                       </button>
                       <Link
                         href="/organizer/create-event"
-                        className="inline-flex items-center justify-center gap-1 rounded-full bg-[#0c1D37] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
+                        className="inline-flex items-center justify-center gap-1 rounded-full bg-(--brand-navy) px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
                       >
                         <Plus className="h-4 w-4" />
                         <span className="hidden sm:inline">Create Event</span>

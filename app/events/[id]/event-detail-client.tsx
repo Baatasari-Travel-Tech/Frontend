@@ -129,7 +129,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                 unoptimized
                 onError={() => setCoverImageSrc("/e1.png")}
               />
-              <div className="absolute inset-0 bg-linear-to-t from-[#0C1D37]/85 via-[#0C1D37]/20 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-(--brand-navy)/85 via-(--brand-navy)/20 to-transparent" />
 
               {/* Floating category chip */}
               {event.category ? (
