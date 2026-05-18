@@ -23,7 +23,7 @@ import { apiRequest } from "@/lib/api/client"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { loadRazorpayScript } from "@/lib/payments/razorpay"
-import type { ApiError, EventDetail } from "@/types/api"
+import type { ApiEnvelope, ApiError, EventDetail } from "@/types/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TermsDialog } from "@/components/common/terms-dialog"
@@ -174,7 +174,11 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     setCheckoutLoading(true)
 
     try {
-      const orderResponse = await apiRequest<{ data: { order: CreateOrderResponse } }>(
+      // BE `createEventOrderSchema` is .strict() — `bookingFor` and
+      // `sendCopyToBooker` are FE-only UI state used to determine the
+      // post-checkout flow and the "send a copy to me" email behavior.
+      // They are deliberately NOT in the request body.
+      const orderResponse = await apiRequest<ApiEnvelope<{ order: CreateOrderResponse }>>(
         `/events/${event.id}/orders`,
         {
           method: "POST",
@@ -185,8 +189,6 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
             guestName: guestName.trim(),
             guestEmail: guestEmail.trim(),
             guestPhone: guestPhone.trim(),
-            bookingFor,
-            sendCopyToBooker: bookingFor === "other" ? sendCopyToMe : false,
           }),
         }
       )

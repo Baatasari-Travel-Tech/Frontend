@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   approveOrganizer,
+  fetchAdminBlob,
   getAdminOrganizerDetails,
   isAdminAuthFailure,
   listPendingOrganizers,
 } from "@/lib/api/admin"
-import { API_URL } from "@/lib/api"
 import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { clearAdminToken, getAdminToken } from "@/lib/admin/session"
 import type { AdminOrganizerDetailsResponse, OrganizerProfile } from "@/types/api"
@@ -230,22 +230,15 @@ export default function OrganizerProfilePage() {
 
     const loadPreview = async (type: "pan" | "agreement", setter: (value: string | null) => void) => {
       try {
-        const token = getAdminToken()
-        if (!token || !details?.user?.id) {
+        if (!details?.user?.id) {
           setter(null)
           return
         }
-        const response = await fetch(`${API_URL}/api/v1/admin/organizers/${details.user.id}/documents/${type}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        if (!response.ok) {
+        const blob = await fetchAdminBlob(`/admin/organizers/${details.user.id}/documents/${type}`)
+        if (!blob || cancelled) {
           setter(null)
           return
         }
-        const blob = await response.blob()
-        if (cancelled) return
         const objectUrl = URL.createObjectURL(blob)
         objectUrls.push(objectUrl)
         setter(objectUrl)

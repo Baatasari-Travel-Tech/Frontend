@@ -3,6 +3,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
+import {
+  broadcastSessionCleared,
+  onSessionCleared,
+} from "@/lib/auth/session-channel"
 import { isAdminRoutePath } from "@/lib/admin/routes"
 import { useAuthStore } from "@/lib/auth/store"
 import { ApiError } from "@/types/api"
@@ -299,6 +303,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     void bootstrap()
   }, [bootstrap, setBootstrapping])
 
+  // Cross-tab session sync. When tab A signs out (or hits a refresh
+  // failure), the API client broadcasts on the "baatasari-auth" channel.
+  // Tab B's listener fires here and clears its own session state, so the
+  // UI doesn't lie about being signed in until the next API call 401s.
+  useEffect(() => {
+    const unsubscribe = onSessionCleared(() => {
+      if (typeof window !== "undefined" && isAdminRoutePath(window.location.pathname)) {
+        return
+      }
+      clearSession()
+    })
+    return unsubscribe
+  }, [clearSession])
+
   const login = async (payload: { email: string; password: string }) => {
     const response = await apiRequest<AuthResponse>("/auth/login", {
       method: "POST",
@@ -326,6 +344,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       })
     } finally {
       clearSession()
+      // Tell any other tabs in this browser that the session is gone
+      // — same channel that auto-refresh failure uses.
+      broadcastSessionCleared("logout")
     }
   }
 

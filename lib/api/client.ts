@@ -1,6 +1,7 @@
 "use client"
 
 import { useAuthStore } from "@/lib/auth/store"
+import { broadcastSessionCleared } from "@/lib/auth/session-channel"
 import { ApiError, type ActiveRole, type ApiErrorPayload } from "@/types/api"
 
 const API_PREFIX = "/api/v1"
@@ -40,6 +41,9 @@ const refreshAccessToken = async () => {
       .then(async (response) => {
         if (!response.ok) {
           useAuthStore.getState().clearSession()
+          // Tell sibling tabs to clear too — otherwise tab B continues
+          // showing the user as "signed in" until its next API call.
+          broadcastSessionCleared("refresh_failed")
           redirectToLogin()
           return false
         }
@@ -58,6 +62,10 @@ type RequestOptions = RequestInit & {
   retryOn401?: boolean
   activeRole?: ActiveRole | null
   timeoutMs?: number
+  // Bearer token for endpoints that authenticate via the Authorization
+  // header rather than the refresh-cookie flow (currently: admin). May be
+  // a string or a thunk that returns the latest token from storage.
+  bearerToken?: string | null | (() => string | null | undefined)
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -67,6 +75,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     activeRole,
     timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
     headers,
+    bearerToken,
     ...init
   } = options
   const roleHeader = activeRole ?? useAuthStore.getState().activeRole
@@ -78,6 +87,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (roleHeader) {
     finalHeaders.set("x-active-role", roleHeader)
+  }
+
+  const resolvedBearer =
+    typeof bearerToken === "function" ? bearerToken() : bearerToken
+  if (resolvedBearer && !finalHeaders.has("Authorization")) {
+    finalHeaders.set("Authorization", `Bearer ${resolvedBearer}`)
   }
 
   const makeRequest = async () => {

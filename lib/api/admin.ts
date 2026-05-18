@@ -1,4 +1,5 @@
-import { apiFetch, API_URL } from "@/lib/api"
+import { apiRequest } from "@/lib/api/client"
+import { getAdminToken } from "@/lib/admin/session"
 import type {
   AdminDashboardResponse,
   AdminOrganizerDetailsResponse,
@@ -7,6 +8,8 @@ import type {
   AdminLoginPayload,
   AdminUserListResponse,
   AdminVerifyPayload,
+  ApiEnvelope,
+  ApiError,
   ApiErrorPayload,
   BackendRole,
   GstinVerifyResult,
@@ -17,45 +20,55 @@ import type {
   UserProfile,
 } from "@/types/api"
 
-type ApiEnvelope<T> = {
-  success: boolean
-  data: T
-  code?: string
-  message?: string
-}
+// Admin auth is Bearer-token, not refresh-cookie. We funnel every admin
+// call through the same `apiRequest` used by the rest of the app — only
+// difference is `bearerToken: getAdminToken` and the response envelope
+// gets unwrapped to `.data` for ergonomics. There is no auto-refresh on
+// 401: admin tokens are short-lived (1d) and re-login is required.
 
 export type AdminRequestError = Error &
   ApiErrorPayload & {
     status?: number
   }
 
-const parseBody = async <T>(response: Response): Promise<ApiEnvelope<T> | null> => {
+const requestAdmin = async <T>(
+  path: string,
+  options: Omit<Parameters<typeof apiRequest>[1], "bearerToken" | "auth"> = {},
+): Promise<T> => {
   try {
-    return (await response.json()) as ApiEnvelope<T>
-  } catch {
-    return null
-  }
-}
-
-const requestAdmin = async <T>(path: string, options: RequestInit = {}) => {
-  const response = await apiFetch(path, options)
-  const payload = await parseBody<T>(response)
-
-  if (!response.ok || !payload?.success) {
-    const fallback: ApiErrorPayload = {
-      code: payload?.code ?? "INTERNAL_SERVER_ERROR",
-      message: payload?.message ?? "Request failed",
-    }
-    const error = new Error(fallback.message) as AdminRequestError
-    error.code = fallback.code
-    error.status = response.status
+    const envelope = await apiRequest<ApiEnvelope<T>>(path, {
+      ...options,
+      bearerToken: getAdminToken,
+    })
+    return envelope.data
+  } catch (err) {
+    // Re-shape `ApiError` (thrown by apiRequest) into the historical
+    // AdminRequestError shape that admin callers already handle.
+    const apiErr = err as Partial<ApiError> & { payload?: ApiErrorPayload }
+    const code = apiErr?.payload?.code ?? "INTERNAL_SERVER_ERROR"
+    const message = apiErr?.payload?.message ?? (err instanceof Error ? err.message : "Request failed")
+    const error = new Error(message) as AdminRequestError
+    error.code = code
+    error.status = apiErr?.status
     throw error
   }
-
-  return payload.data
 }
 
-export const isAdminAuthFailure = (error: unknown) => {
+// Binary fetch (used for streaming organizer documents). Goes around the
+// JSON-envelope layer entirely; same bearer + base URL as the JSON path.
+export const fetchAdminBlob = async (path: string): Promise<Blob | null> => {
+  const token = getAdminToken()
+  if (!token) return null
+  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? ""
+  const normalized = path.startsWith("/") ? path : `/${path}`
+  const response = await fetch(`${base}/api/v1${normalized}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!response.ok) return null
+  return response.blob()
+}
+
+export const isAdminAuthFailure = (error: unknown): boolean => {
   const requestError = error as Partial<AdminRequestError> | null
   if (!requestError) return false
 
@@ -67,77 +80,68 @@ export const isAdminAuthFailure = (error: unknown) => {
   )
 }
 
-export const adminLogin = (payload: AdminLoginPayload) => {
-  return requestAdmin<{ success: boolean }>("/api/v1/admin/login", {
+export const adminLogin = (payload: AdminLoginPayload) =>
+  requestAdmin<{ success: boolean }>("/admin/login", {
     method: "POST",
     body: JSON.stringify(payload),
   })
-}
 
-export const adminVerifyOtp = (payload: AdminVerifyPayload) => {
-  return requestAdmin<{ token: string }>("/api/v1/admin/verify", {
+export const adminVerifyOtp = (payload: AdminVerifyPayload) =>
+  requestAdmin<{ token: string }>("/admin/verify", {
     method: "POST",
     body: JSON.stringify(payload),
   })
-}
 
-export const getAdminDashboard = () => {
-  return requestAdmin<AdminDashboardResponse>("/api/v1/admin/dashboard")
-}
+export const getAdminDashboard = () =>
+  requestAdmin<AdminDashboardResponse>("/admin/dashboard")
 
 export const listAdminUsers = (params: { page?: number; limit?: number } = {}) => {
   const query = new URLSearchParams({
     page: String(params.page ?? 1),
     limit: String(params.limit ?? 20),
   })
-
-  return requestAdmin<AdminUserListResponse>(`/api/v1/admin/users?${query.toString()}`)
+  return requestAdmin<AdminUserListResponse>(`/admin/users?${query.toString()}`)
 }
 
-export const listPendingOrganizers = () => {
-  return requestAdmin<AdminPendingOrganizerUser[]>("/api/v1/admin/organizers/pending")
-}
+export const listPendingOrganizers = () =>
+  requestAdmin<AdminPendingOrganizerUser[]>("/admin/organizers/pending")
 
-export const getAdminOrganizerDetails = (id: string) => {
-  return requestAdmin<AdminOrganizerDetailsResponse>(`/api/v1/admin/organizers/${id}`)
-}
+export const getAdminOrganizerDetails = (id: string) =>
+  requestAdmin<AdminOrganizerDetailsResponse>(`/admin/organizers/${id}`)
 
-export const approveOrganizer = (id: string) => {
-  return requestAdmin<SafeUser>(`/api/v1/admin/organizers/${id}/approve`, {
+export const approveOrganizer = (id: string) =>
+  requestAdmin<SafeUser>(`/admin/organizers/${id}/approve`, {
     method: "PATCH",
   })
-}
 
-export const updateAdminUserRole = (id: string, role: BackendRole) => {
-  return requestAdmin<SafeUser>(`/api/v1/admin/users/${id}/role`, {
+export const updateAdminUserRole = (id: string, role: BackendRole) =>
+  requestAdmin<SafeUser>(`/admin/users/${id}/role`, {
     method: "PATCH",
     body: JSON.stringify({ role }),
   })
-}
 
-export const deleteAdminUser = (id: string) => {
-  return requestAdmin<SafeUser>(`/api/v1/admin/users/${id}`, {
+export const deleteAdminUser = (id: string) =>
+  requestAdmin<SafeUser>(`/admin/users/${id}`, {
     method: "DELETE",
   })
-}
 
 export const updateAdminUser = (
   id: string,
-  payload: Partial<Pick<SafeUser, "role" | "onboardingStatus" | "organizerApproved">>
+  payload: Partial<Pick<SafeUser, "role" | "onboardingStatus" | "organizerApproved">>,
 ) =>
-  requestAdmin<SafeUser>(`/api/v1/admin/users/${id}`, {
+  requestAdmin<SafeUser>(`/admin/users/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
 
 export const getAdminUserDetails = (id: string) =>
-  requestAdmin<AdminUserDetailsResponse>(`/api/v1/admin/users/${id}`)
+  requestAdmin<AdminUserDetailsResponse>(`/admin/users/${id}`)
 
 export const updateAdminUserProfile = (
   id: string,
-  payload: Partial<Pick<UserProfile, "fullName" | "phone" | "dob" | "location" | "gender" | "profession">>
+  payload: Partial<Pick<UserProfile, "fullName" | "phone" | "dob" | "location" | "gender" | "profession">>,
 ) =>
-  requestAdmin<UserProfile>(`/api/v1/admin/users/${id}/profile`, {
+  requestAdmin<UserProfile>(`/admin/users/${id}/profile`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
@@ -152,21 +156,21 @@ export const updateAdminOrganizerProfile = (
     | "websiteUrl" | "instagramUrl" | "linkedinUrl"
     | "primaryContactName" | "secondaryContactPhone"
     | "description"
-  >>
+  >>,
 ) =>
-  requestAdmin<OrganizerProfile>(`/api/v1/admin/organizers/${id}/profile`, {
+  requestAdmin<OrganizerProfile>(`/admin/organizers/${id}/profile`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
 
 export const verifyAdminOrganizerGstin = (id: string, gstin: string) =>
-  requestAdmin<GstinVerifyResult>(`/api/v1/admin/organizers/${id}/verify/gstin`, {
+  requestAdmin<GstinVerifyResult>(`/admin/organizers/${id}/verify/gstin`, {
     method: "POST",
     body: JSON.stringify({ gstin }),
   })
 
 export const verifyAdminOrganizerPan = (id: string, pan: string) =>
-  requestAdmin<PanVerifyResult>(`/api/v1/admin/organizers/${id}/verify/pan`, {
+  requestAdmin<PanVerifyResult>(`/admin/organizers/${id}/verify/pan`, {
     method: "POST",
     body: JSON.stringify({ pan }),
   })
@@ -178,22 +182,23 @@ const DEFAULT_SITE_CONFIG: SiteConfig = {
   contactEmail: "contact-us@baatasari.com",
 }
 
+// Public site config doesn't require admin auth. Uses the unified client
+// with no bearer token; falls back to defaults on any error so the public
+// pages always have something to render.
 export const fetchPublicSiteConfig = async (): Promise<SiteConfig> => {
   try {
-    const res = await fetch(`${API_URL}/api/v1/admin/site-config`)
-    if (!res.ok) return { ...DEFAULT_SITE_CONFIG }
-    const body = (await res.json()) as ApiEnvelope<SiteConfig>
-    return body.success && body.data ? body.data : { ...DEFAULT_SITE_CONFIG }
+    const envelope = await apiRequest<ApiEnvelope<SiteConfig>>("/admin/site-config")
+    return envelope.data ?? { ...DEFAULT_SITE_CONFIG }
   } catch {
     return { ...DEFAULT_SITE_CONFIG }
   }
 }
 
 export const getAdminSiteConfig = () =>
-  requestAdmin<SiteConfig>("/api/v1/admin/site-config")
+  requestAdmin<SiteConfig>("/admin/site-config")
 
 export const updateAdminSiteConfig = (payload: Partial<SiteConfig>) =>
-  requestAdmin<SiteConfig>("/api/v1/admin/site-config", {
+  requestAdmin<SiteConfig>("/admin/site-config", {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
