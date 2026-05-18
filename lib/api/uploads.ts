@@ -1,6 +1,7 @@
 "use client"
 
 import { apiRequest } from "@/lib/api/client"
+import type { ApiEnvelope } from "@/types/api"
 
 type UploadTarget = "organizerLogo" | "organizerKycPdf"
 
@@ -12,7 +13,7 @@ type PresignedUploadPayload = {
 }
 
 export async function uploadFile(file: File, target: UploadTarget) {
-  const response = await apiRequest<PresignedUploadPayload>("/uploads/sign", {
+  const response = await apiRequest<ApiEnvelope<PresignedUploadPayload>>("/uploads/sign", {
     method: "POST",
     auth: true,
     body: JSON.stringify({
@@ -22,8 +23,10 @@ export async function uploadFile(file: File, target: UploadTarget) {
     }),
   })
 
-  const uploadResponse = await fetch(response.uploadUrl, {
-    method: response.method,
+  const presigned = response.data
+
+  const uploadResponse = await fetch(presigned.uploadUrl, {
+    method: presigned.method,
     headers: {
       "Content-Type": file.type || "application/octet-stream",
     },
@@ -35,23 +38,21 @@ export async function uploadFile(file: File, target: UploadTarget) {
   }
 
   return {
-    secureUrl: response.publicUrl,
-    publicId: response.objectKey,
+    secureUrl: presigned.publicUrl,
+    publicId: presigned.objectKey,
   }
 }
 
-type AvatarUploadResponse = {
-  data: {
-    avatar: {
-      objectKey: string
-      publicUrl: string | null
-      version: number
-    }
+type AvatarUploadPayload = {
+  avatar: {
+    objectKey: string
+    publicUrl: string | null
+    version: number
   }
 }
 
 const uploadAvatarImage = async (path: "/user/avatar" | "/organizer/avatar", file: File) => {
-  const response = await apiRequest<AvatarUploadResponse>(path, {
+  const response = await apiRequest<ApiEnvelope<AvatarUploadPayload>>(path, {
     method: "PUT",
     auth: true,
     headers: {
@@ -67,26 +68,27 @@ export const uploadUserAvatarImage = (file: File) => uploadAvatarImage("/user/av
 
 export const uploadOrganizerAvatarImage = (file: File) => uploadAvatarImage("/organizer/avatar", file)
 
-type EventCoverUploadResponse = {
-  data: {
-    cover: {
-      eventId: string
-      objectKey: string
-      publicUrl: string
-      version: number
-    }
+type EventCoverUploadPayload = {
+  cover: {
+    eventId: string
+    objectKey: string
+    publicUrl: string
+    version: number
   }
 }
 
 export async function uploadEventCoverImage(eventId: string, file: File) {
-  const response = await apiRequest<EventCoverUploadResponse>(`/organizer/events/${eventId}/cover`, {
-    method: "PUT",
-    auth: true,
-    headers: {
-      "Content-Type": file.type || "application/octet-stream",
-    },
-    body: file,
-  })
+  const response = await apiRequest<ApiEnvelope<EventCoverUploadPayload>>(
+    `/organizer/events/${eventId}/cover`,
+    {
+      method: "PUT",
+      auth: true,
+      headers: {
+        "Content-Type": file.type || "application/octet-stream",
+      },
+      body: file,
+    }
+  )
 
   return response.data.cover
 }

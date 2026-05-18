@@ -8,6 +8,7 @@ import { useAuthStore } from "@/lib/auth/store"
 import { ApiError } from "@/types/api"
 import type {
   ActiveRole,
+  ApiEnvelope,
   AuthResponse,
   LegacyProfile,
   OrganizerProfile,
@@ -272,12 +273,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         retryOn401: false,
       })
 
-      const me = await apiRequest<{ user: SafeUser }>("/auth/me", {
+      const me = await apiRequest<ApiEnvelope<{ user: SafeUser }>>("/auth/me", {
         auth: true,
         activeRole: useAuthStore.getState().activeRole,
       })
 
-      await hydrateForUser(me.user)
+      await hydrateForUser(me.data.user)
     } catch (error) {
       // Only clear session on explicit auth rejection — not on transient network errors
       if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
@@ -304,7 +305,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       body: JSON.stringify(payload),
     })
 
-    await hydrateForUser(response.user)
+    await hydrateForUser(response.data.user)
   }
 
   const register = async (payload: { email: string; password: string; role: "USER" | "ORGANIZER" }) => {
@@ -314,7 +315,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     })
 
     setActiveRole(payload.role === "ORGANIZER" ? "ORGANIZER" : "USER")
-    await hydrateForUser(response.user)
+    await hydrateForUser(response.data.user)
   }
 
   const logout = async () => {
@@ -334,8 +335,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({ idToken, role }),
     })
 
-    setActiveRole(response.user.role === "ORGANIZER" ? "ORGANIZER" : "USER")
-    await hydrateForUser(response.user)
+    setActiveRole(response.data.user.role === "ORGANIZER" ? "ORGANIZER" : "USER")
+    await hydrateForUser(response.data.user)
   }
 
   const switchRole = async (role: AppRole) => {

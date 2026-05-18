@@ -2,6 +2,15 @@ export type BackendRole = "USER" | "ORGANIZER" | "ADMIN";
 export type ActiveRole = "USER" | "ORGANIZER";
 export type OnboardingStatus = "PENDING" | "COMPLETED";
 
+// Every successful API response from the Express backend is wrapped in
+// `{ success: true, data: T }` (see Backend/src/utils/response.ts).
+// Error responses are `{ success: false, code, message, ... }` — typed
+// separately as ApiErrorPayload.
+export type ApiEnvelope<T> = {
+  success: true;
+  data: T;
+};
+
 export type SafeUser = {
   id: string;
   email: string;
@@ -14,9 +23,9 @@ export type SafeUser = {
   updatedAt: string;
 };
 
-export type AuthResponse = {
-  user: SafeUser;
-};
+export type AuthResponse = ApiEnvelope<{ user: SafeUser }>;
+
+export type MessageResponse = ApiEnvelope<{ message: string }>;
 
 export type ApiErrorPayload = {
   success?: false;
