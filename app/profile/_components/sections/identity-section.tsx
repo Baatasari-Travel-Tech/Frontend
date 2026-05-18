@@ -162,7 +162,7 @@ export function IdentitySection() {
                         className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm focus:border-(--brand-navy) focus:outline-none focus:ring-4 focus:ring-(--brand-navy)/10"
                       >
                         <span className={field.value ? "text-slate-900" : "text-slate-400"}>
-                          {field.value ? format(new Date(field.value + "T00:00:00"), "PPP") : "Select date of birth"}
+                          {field.value ? format(new Date(field.value + "T00:00:00"), "dd/MM/yyyy") : "Select date of birth"}
                         </span>
                         <CalendarIcon className="h-4 w-4 shrink-0 text-slate-400" />
                       </button>
@@ -178,9 +178,9 @@ export function IdentitySection() {
                           }
                         }}
                         captionLayout="dropdown"
-                        fromYear={new Date().getFullYear() - 100}
-                        toYear={new Date().getFullYear() - USER_MIN_AGE}
-                        initialFocus
+                        startMonth={new Date(new Date().getFullYear() - 100, 0)}
+                        endMonth={new Date(new Date().getFullYear() - USER_MIN_AGE, 11)}
+                        autoFocus
                       />
                     </PopoverContent>
                   </Popover>

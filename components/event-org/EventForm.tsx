@@ -195,7 +195,7 @@ const EventForm: React.FC<EventFormProps> = ({
                         )}
                       >
                         {formData.date && !Number.isNaN(new Date(formData.date).getTime())
-                          ? format(new Date(formData.date), "PPP")
+                          ? format(new Date(formData.date), "dd/MM/yyyy")
                           : <span>Pick a date</span>}
                         <CalendarIcon className="absolute right-4 top-4 w-6 h-6 text-gray-500 opacity-75" />
                       </Button>
@@ -211,10 +211,16 @@ const EventForm: React.FC<EventFormProps> = ({
                             setFormData((prev) => ({ ...prev, date: formatted }))
                           }
                         }}
-                        fromDate={new Date()}
-                        toDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                        initialFocus
+                        startMonth={new Date()}
+                        endMonth={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
+                        disabled={(date) => {
+                          const today = new Date()
+                          today.setHours(0, 0, 0, 0)
+                          const fiveYearsOut = new Date()
+                          fiveYearsOut.setFullYear(today.getFullYear() + 5)
+                          return date < today || date > fiveYearsOut
+                        }}
+                        autoFocus
                       />
                     </PopoverContent>
                   </Popover>

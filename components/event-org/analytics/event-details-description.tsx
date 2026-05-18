@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button"
 import type { EventDetail } from "@/types/api"
 
 const formatDateAndTime = (date: string, startTime: string | null, endTime: string | null) => {
-  const formatted = new Intl.DateTimeFormat("en-IN", {
-    day: "numeric",
-    month: "long",
+  const formatted = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
     year: "numeric",
   }).format(new Date(date))
 

@@ -181,7 +181,7 @@ export function DateReviewsSection({ eventId }: { eventId?: string }) {
                 {mutation.isPending
                   ? "Submitting..."
                   : date
-                  ? `Request ${format(date, "MMM d, yyyy")}`
+                  ? `Request ${format(date, "dd/MM/yyyy")}`
                   : "Select a date to request"}
               </Button>
             )}

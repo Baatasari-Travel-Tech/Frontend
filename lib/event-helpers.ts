@@ -23,13 +23,11 @@ export function computeEventStatus(
 }
 
 export function formatCardDate(date: string): string {
-  return new Intl.DateTimeFormat("en-IN", {
+  return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
-    month: "short",
+    month: "2-digit",
     year: "numeric",
-  })
-    .format(new Date(date))
-    .toUpperCase()
+  }).format(new Date(date))
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

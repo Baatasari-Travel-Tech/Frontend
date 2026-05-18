@@ -18,10 +18,10 @@ const getStatus = (dateStr: string): Status => {
 }
 
 const formatLongDate = (value: string) =>
-  new Intl.DateTimeFormat("en-IN", {
+  new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     day: "2-digit",
-    month: "short",
+    month: "2-digit",
     year: "numeric",
   }).format(new Date(value))
 

@@ -338,7 +338,7 @@ export default function OnboardingPage() {
                         className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10 flex items-center justify-between"
                       >
                         <span className={dob ? "text-slate-900" : "text-slate-400"}>
-                          {dob ? format(new Date(dob + "T00:00:00"), "PPP") : "Select date of birth"}
+                          {dob ? format(new Date(dob + "T00:00:00"), "dd/MM/yyyy") : "Select date of birth"}
                         </span>
                         <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
                       </button>
@@ -354,9 +354,9 @@ export default function OnboardingPage() {
                           }
                         }}
                         captionLayout="dropdown"
-                        fromYear={new Date().getFullYear() - 100}
-                        toYear={new Date().getFullYear() - dobBounds.minAge}
-                        initialFocus
+                        startMonth={new Date(new Date().getFullYear() - 100, 0)}
+                        endMonth={new Date(new Date().getFullYear() - dobBounds.minAge, 11)}
+                        autoFocus
                       />
                     </PopoverContent>
                   </Popover>

@@ -87,17 +87,17 @@ const asBoolean = (value: unknown): boolean => value === true
 const asArray = <T = unknown>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : [])
 
 const formatTableDate = (value: string) =>
-  new Intl.DateTimeFormat("en-IN", {
-    month: "short",
-    day: "numeric",
+  new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
     year: "numeric",
   }).format(new Date(value))
 
 const formatLongDate = (value: string) =>
-  new Intl.DateTimeFormat("en-IN", {
+  new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     day: "2-digit",
-    month: "short",
+    month: "2-digit",
     year: "numeric",
   }).format(new Date(value))
 

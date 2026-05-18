@@ -16,9 +16,9 @@ import {
 
 type SignatureTab = "upload" | "draw"
 
-const todayLabel = new Date().toLocaleDateString("en-IN", {
+const todayLabel = new Date().toLocaleDateString("en-GB", {
   day: "2-digit",
-  month: "long",
+  month: "2-digit",
   year: "numeric",
 })
 

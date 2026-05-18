@@ -34,9 +34,9 @@ export function StatsGrid({ analytics = null, events = [], isLoading = false }: 
         : 0
 
     const nextEventLabel = analytics?.nextEventDate
-      ? new Date(analytics.nextEventDate).toLocaleDateString("en-IN", {
+      ? new Date(analytics.nextEventDate).toLocaleDateString("en-GB", {
           day: "2-digit",
-          month: "short",
+          month: "2-digit",
           year: "numeric",
         })
       : "No upcoming event"

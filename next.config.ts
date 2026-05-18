@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Tree-shake icon barrel imports — lucide-react is used in 58 files,
+    // each typically destructuring 5-15 icons. Without this, the whole
+    // package ships in dev and prod.
+    optimizePackageImports: ["lucide-react"],
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.amazonaws.com" },

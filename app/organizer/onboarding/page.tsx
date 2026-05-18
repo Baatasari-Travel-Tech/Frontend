@@ -946,7 +946,7 @@ export default function OrganizerOnboardingPage() {
                         >
                           <span className={form.watch("dob") ? "text-slate-900" : "text-slate-400"}>
                             {form.watch("dob") && !Number.isNaN(new Date(form.watch("dob") + "T00:00:00").getTime())
-                              ? format(new Date(form.watch("dob") + "T00:00:00"), "PPP")
+                              ? format(new Date(form.watch("dob") + "T00:00:00"), "dd/MM/yyyy")
                               : "Select date of birth"}
                           </span>
                           <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
@@ -967,9 +967,9 @@ export default function OrganizerOnboardingPage() {
                             }
                           }}
                           captionLayout="dropdown"
-                          fromYear={new Date().getFullYear() - 100}
-                          toYear={new Date().getFullYear() - DOB_BOUNDS.minAge}
-                          initialFocus
+                          startMonth={new Date(new Date().getFullYear() - 100, 0)}
+                          endMonth={new Date(new Date().getFullYear() - DOB_BOUNDS.minAge, 11)}
+                          autoFocus
                         />
                       </PopoverContent>
                     </Popover>
