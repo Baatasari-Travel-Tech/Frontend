@@ -96,15 +96,12 @@
   --blue-200: #bfdbfe;
   --blue-500: #3b82f6;
   --blue-600: #2563eb;
-  --blue-800: #1e40af;
   --blue-900: #1e3a8a;
 
   /* Project-specific singletons */
-  --blue-primary: #3b82f6;
   --revenue-color: #2563eb;
   --blue-soft: #3a5f94;
   --blue-soft-light: #6383b1;
-  --promo-warm-bg: #FFEad5;
 
   /* Navy */
   --navy-800: #1a2e4a;
@@ -121,15 +118,10 @@
   /* Purple */
   --purple-soft-bg: #eee9ff;
   --purple-soft-text: #6b5ce7;
-  --purple-light: #e0d9f7;
-
-  /* Danger */
-  --danger-red: #ff0000;
 
   /* =========================
      6) Feature tokens: Events
      ========================= */
-  --events-bg-primary: #3b5f8f;
   --events-white: var(--white);
 
   --events-gray-50: var(--gray-50);
@@ -139,12 +131,8 @@
   --events-gray-400: var(--gray-400);
   --events-gray-500: var(--gray-500);
   --events-gray-700: var(--gray-700);
-  --events-gray-800: var(--gray-800);
-  --events-gray-900: var(--gray-900);
 
   --events-blue-600: #2563eb;
-  --events-blue-800: #1e40af;
-  --events-blue-900: #1e3a8a;
   --events-green-600: #16a34a;
 
   /* =========================
@@ -158,25 +146,16 @@
 
   --upcoming-blue-600: #2563eb;
 
-  --upcoming-gray-900: var(--gray-900);
-  --upcoming-gray-800: var(--gray-800);
   --upcoming-gray-700: var(--gray-700);
   --upcoming-gray-600: var(--gray-600);
   --upcoming-gray-500: var(--gray-500);
   --upcoming-gray-200: var(--gray-200);
-
-  --upcoming-red-700: #b91c1c;
-  --upcoming-red-600: #dc2626;
-  --upcoming-red-200: #fecaca;
-  --upcoming-red-50: #fef2f2;
 
   /* =========================
      8) Feature tokens: Artists
      ========================= */
   --artist-card-bg: #ffffff;
   --artist-card-border: #f3f4f6;
-  --artist-name-color: #0f172a;
-  --artist-role-color: #64748b;
 
   /* =========================
      9) Feature tokens: Stalls
@@ -184,18 +163,8 @@
   --stall-card-bg: #ffffff;
   --stall-card-border: #f3f4f6;
 
-  --stall-title-color: #0f172a;
   --stall-subtitle-color: #6b7280;
   --stall-category-color: #64748b;
-
-  --stall-outline-color: #284878;
-  --stall-outline-hover-bg: #f8fafc;
-
-  --stall-approve-bg: #274e7d;
-  --stall-approve-hover-bg: #1e3d63;
-
-  --stall-approved-bg: #16a34a;
-  --stall-approved-hover-bg: #15803d;
 
   --stall-details-border: #274e7d;
   --stall-details-bg: #f4f4f5;
@@ -203,26 +172,10 @@
   --stall-divider: #e5e7eb;
 
   --stall-close-icon: #9ca3af;
-  --stall-close-hover: #111827;
 
   --stall-item-border: #274e7d;
   --stall-item-text: #274e7d;
   --stall-price-color: #000000;
-
-  --stall-deny-bg: #a3a3a3;
-  --stall-deny-hover-bg: #8f8f8f;
-  --stall-deny-text: #000000;
-
-  --stall-revoke-bg: #dc2626;
-  --stall-revoke-hover-bg: #b91c1c;
-
-  --pref-dark: #0b1729;
-  --pref-active: #2563eb;
-  --pref-muted-text: #475569;
-  --pref-border: #cbd5e1;
-  --pref-label: #8a7ba7;
-  --pref-bg: #f3f5f7;
-  --pref-tag: #64748b;
 
   /* =========================
      Artist Brand Extensions
@@ -230,14 +183,10 @@
 
   --brand-deep-blue: #122848;
 
-  --brand-soft-glow: color-mix(in srgb, var(--blue-soft) 40%, transparent);
-  --brand-deep-glow: color-mix(in srgb, var(--brand-deep-blue) 40%, transparent);
 
   /* Artist Feature Alignment */
   --artist-card-bg: var(--card);
   --artist-card-border: var(--border);
-  --artist-name-color: var(--brand-deep-blue);
-  --artist-role-color: var(--blue-soft);
 
   /* =========================
    Category Filter Tokens
@@ -259,39 +208,6 @@
   --live-dot-soft: var(--green-100);
   --live-dot-solid: var(--green-700);
   --location-text: var(--brand-deep-blue);
-
-  /* =========================
-   Event Card Tokens
-   ========================= */
-
-  --event-card-bg: var(--card);
-  --event-card-shadow: 0 8px 30px color-mix(in srgb, var(--black) 4%, transparent);
-  --event-card-shadow-hover: 0 20px 40px color-mix(in srgb, var(--black) 8%, transparent);
-
-  --event-overlay-gradient: linear-gradient(to top,
-      color-mix(in srgb, var(--black) 40%, transparent),
-      transparent,
-      transparent);
-
-  --event-badge-bg: color-mix(in srgb, var(--white) 90%, transparent);
-  --event-badge-text: var(--black);
-
-  --event-fav-bg: color-mix(in srgb, var(--white) 20%, transparent);
-  --event-fav-bg-hover: var(--white);
-  --event-fav-text: var(--white);
-  --event-fav-hover-text: var(--destructive);
-
-  --event-date-color: var(--blue-soft);
-
-  --event-title-color: var(--black);
-  --event-title-hover: var(--brand-deep-blue);
-
-  --event-divider: var(--gray-50);
-
-  --event-location-text: var(--gray-500);
-  --event-location-icon: var(--gray-400);
-
-  --event-price-color: var(--black);
 
   /* =========================
      10) Feature tokens: Hero
@@ -345,14 +261,6 @@
   --movie-card-border: var(--border);
 
   --movie-card-shadow: 0 1px 2px color-mix(in srgb, var(--black) 6%, transparent);
-  --movie-card-shadow-hover: 0 20px 40px color-mix(in srgb, var(--black) 12%, transparent);
-
-  --movie-image-bg: var(--gray-100);
-
-  --movie-badge-bg: var(--black);
-  --movie-badge-text: var(--white);
-
-  --movie-language-text: var(--gray-500);
 
   /* =========================
      12) Feature tokens: Talent
@@ -363,14 +271,11 @@
 
   --talent-surface: var(--white);
   --talent-surface-soft: color-mix(in srgb, var(--white) 92%, var(--blue-50));
-  --talent-surface-tint: color-mix(in srgb, var(--white) 88%, var(--green-100));
-  --talent-surface-alt: color-mix(in srgb, var(--white) 96%, var(--gray-100));
 
   --talent-title: var(--brand-blue);
   --talent-body: var(--gray-600);
   --talent-muted: var(--gray-500);
   --talent-highlight-start: var(--blue-500);
-  --talent-highlight-end: color-mix(in srgb, var(--blue-100) 90%, var(--white));
 
   --talent-pill-bg: var(--white);
   --talent-pill-border: color-mix(in srgb, var(--slate-200) 85%, transparent);
@@ -387,19 +292,12 @@
   --talent-card-icon-success-bg: color-mix(in srgb, var(--green-100) 45%, var(--white));
   --talent-card-icon-success-fg: var(--green-700);
 
-  --talent-primary-btn-bg: var(--brand-navy);
-  --talent-primary-btn-text: var(--white);
-  --talent-primary-btn-hover: var(--brand-navy-hover);
   --talent-primary-btn-shadow: 0 14px 32px color-mix(in srgb, var(--brand-navy) 18%, transparent);
-
-  --talent-scroll-indicator-bg: color-mix(in srgb, var(--blue-50) 85%, var(--white));
-  --talent-scroll-indicator-fg: var(--royal-blue);
 
   --talent-form-shell-bg: var(--white);
   --talent-form-shell-border: color-mix(in srgb, var(--slate-200) 70%, transparent);
   --talent-form-shell-top: var(--blue-600);
   --talent-form-shadow: 0 34px 90px color-mix(in srgb, var(--brand-navy) 10%, transparent);
-  --talent-form-shadow-soft: 0 16px 48px color-mix(in srgb, var(--brand-navy) 6%, transparent);
 
   --talent-section-title: var(--gray-900);
   --talent-section-subtitle: var(--gray-600);
@@ -425,8 +323,6 @@
 
   --talent-footer-text: var(--gray-500);
   --talent-footer-strong: var(--brand-blue);
-  
-
 }
 
 
