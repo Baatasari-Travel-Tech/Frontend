@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 export default function OnboardingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const nextHref = searchParams.get("next") || "/dashboard"
+  const nextHref = searchParams.get("next") || "/events"
   const { user, profile, completeRoleOnboarding } = useAuth()
 
   const [name, setName] = useState("")
@@ -54,6 +54,7 @@ export default function OnboardingPage() {
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
+  const avatarFileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setEmail(user?.email ?? profile?.email ?? "")
@@ -212,7 +213,7 @@ export default function OnboardingPage() {
     }
 
     if (!isDobWithinBounds(dob.trim(), dobBounds)) {
-      setError(`Date of birth must be between ${dobBounds.min} and ${dobBounds.max}.`)
+      setError(`You must be at least ${dobBounds.minAge} years old to use Baatasari.`)
       setLoading(false)
       return
     }
@@ -253,19 +254,16 @@ export default function OnboardingPage() {
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-900">One-time setup</p>
               <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">Personal details</h2>
-              <p className="text-sm text-slate-500">
-                Your profile image is recommended. A default image will be used if none is uploaded.
-              </p>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-[40%_60%] md:px-1">
-              <div className="flex h-full flex-col items-center justify-between gap-5 rounded-3xl border border-slate-200/80 bg-linear-to-br from-white via-white to-slate-50/80 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
-                <div className="w-full">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Profile image</p>
-                  <p className="mt-2 text-sm text-slate-500">This will be visible on your profile.</p>
-                </div>
-
-                <div className="relative h-52 w-52 overflow-hidden rounded-full border border-slate-200 bg-slate-50 shadow-[0_12px_22px_rgba(15,23,42,0.08)]">
+              <div className="flex h-full flex-col items-center justify-center gap-4 rounded-3xl border border-slate-200/80 bg-linear-to-br from-white via-white to-slate-50/80 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+                <button
+                  type="button"
+                  onClick={() => avatarFileInputRef.current?.click()}
+                  aria-label="Upload profile image"
+                  className="group relative h-52 w-52 overflow-hidden rounded-full border border-slate-200 bg-slate-50 shadow-[0_12px_22px_rgba(15,23,42,0.08)] transition hover:ring-4 hover:ring-brand-900/15"
+                >
                   <img
                     src={avatarPreview || DEFAULT_AVATAR_IMAGE}
                     alt="Profile preview"
@@ -275,18 +273,23 @@ export default function OnboardingPage() {
                       event.currentTarget.src = DEFAULT_AVATAR_IMAGE
                     }}
                   />
-                </div>
+                  <span className="pointer-events-none absolute inset-x-0 bottom-0 flex h-14 items-center justify-center bg-linear-to-t from-black/65 to-transparent pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white">
+                    Upload photo
+                  </span>
+                </button>
 
-                <label className="w-full text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Upload image
-                  <input
-                    className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-900/10 file:px-3 file:py-1.5 file:text-[10px] file:font-semibold file:text-brand-800 hover:file:bg-brand-900/20"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    onChange={(event) => handleAvatarChange(event.target.files?.[0] ?? null)}
-                  />
-                </label>
-                <p className="text-center text-xs text-slate-400">PNG, JPG, GIF, or WEBP up to 5MB (optional)</p>
+                <input
+                  ref={avatarFileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={(event) => {
+                    handleAvatarChange(event.target.files?.[0] ?? null)
+                    event.target.value = ""
+                  }}
+                  className="hidden"
+                />
+
+                <p className="text-center text-xs text-slate-400">PNG, JPG, GIF, or WEBP up to 5MB</p>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2 md:pr-1">
@@ -352,11 +355,14 @@ export default function OnboardingPage() {
                         }}
                         captionLayout="dropdown"
                         fromYear={new Date().getFullYear() - 100}
-                        toYear={new Date().getFullYear() - 18}
+                        toYear={new Date().getFullYear() - dobBounds.minAge}
                         initialFocus
                       />
                     </PopoverContent>
                   </Popover>
+                  <p className="mt-1.5 text-[11px] font-normal text-slate-500">
+                    You must be at least {dobBounds.minAge}+ to use Baatasari.
+                  </p>
                 </div>
 
                 <label className="block text-sm font-semibold text-slate-700 md:col-span-2">

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, Tag, Users } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import type { EventStatus } from "@/lib/events-data"
 
 interface HandpickedEventCardProps {
     id: string
@@ -22,6 +23,8 @@ interface HandpickedEventCardProps {
     eventTime?: string
     highlights?: string[]
     gridMode?: boolean
+    compact?: boolean
+    status?: EventStatus
 }
 
 export function HandpickedEventCard({
@@ -33,6 +36,8 @@ export function HandpickedEventCard({
     date,
     bookedCount = 0,
     gridMode = false,
+    compact = false,
+    status,
 }: HandpickedEventCardProps) {
     const [imageSrc, setImageSrc] = useState(image)
 
@@ -41,45 +46,92 @@ export function HandpickedEventCard({
     }, [image])
 
     return (
-        <div className={gridMode ? "w-full" : "flex flex-col md:flex-row items-center h-full mr-4 mb-4"}>
-            <Link href={`/events/${id}`} className="block relative z-20 w-full">
-                <Card className={`${gridMode ? "w-full" : "w-75 md:w-85 shrink-0"} border-0 shadow-sm transition-all duration-300 rounded-[24px] overflow-hidden bg-(--white)`}>
-                    <CardContent className="p-4">
-                        <div className="relative aspect-square w-full mb-4 overflow-hidden rounded-4xl">
+        <div className={gridMode ? "h-full w-full" : "flex flex-col md:flex-row items-center h-full mr-4 mb-4"}>
+            <Link href={`/events/${id}`} className="block relative z-20 h-full w-full">
+                <Card
+                    className={`${gridMode ? "h-full w-full flex flex-col" : "w-75 md:w-85 shrink-0"} border-0 shadow-sm transition-all duration-300 ${
+                        compact ? "rounded-2xl" : "rounded-[24px]"
+                    } overflow-hidden bg-(--white) hover:shadow-md`}
+                >
+                    <CardContent className={`flex h-full flex-col ${compact ? "p-2.5" : "p-4"}`}>
+                        <div
+                            className={`relative w-full shrink-0 overflow-hidden ${
+                                compact
+                                    ? "aspect-[4/3] mb-3 rounded-xl"
+                                    : "aspect-square mb-4 rounded-4xl"
+                            }`}
+                        >
                             <Image
                                 src={imageSrc}
                                 alt={title}
                                 fill
                                 unoptimized
-                                className="object-cover"
+                                sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
+                                className="object-cover transition-transform duration-500 hover:scale-105"
                                 onError={() => setImageSrc("/e1.png")}
                             />
+
+                            {status === "live" || status === "upcoming" ? (
+                                <div
+                                    className={`absolute right-2 top-2 z-10 flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 font-poppins font-bold uppercase tracking-wider text-white backdrop-blur-md ${
+                                        compact ? "text-[9px]" : "text-[10px]"
+                                    }`}
+                                >
+                                    <span className="relative flex h-2 w-2">
+                                        {status === "live" ? (
+                                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                        ) : null}
+                                        <span
+                                            className={`relative inline-flex h-2 w-2 rounded-full ${
+                                                status === "live" ? "bg-emerald-500" : "bg-orange-500"
+                                            }`}
+                                        />
+                                    </span>
+                                    {status === "live" ? "Live" : "Upcoming"}
+                                </div>
+                            ) : null}
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between gap-3 text-(--upcoming-primary-800) font-poppins font-semibold text-[14px] uppercase tracking-wider">
-                                <div className="flex min-w-0 items-center gap-2">
-                                    <Calendar className="h-4 w-4 shrink-0" />
+                        <div className={`flex flex-1 flex-col ${compact ? "space-y-2" : "space-y-4"}`}>
+                            <div
+                                className={`flex items-center justify-between gap-3 text-(--upcoming-primary-800) font-poppins font-semibold uppercase tracking-wider ${
+                                    compact ? "text-[11px]" : "text-[14px]"
+                                }`}
+                            >
+                                <div className="flex min-w-0 items-center gap-1.5">
+                                    <Calendar className={compact ? "h-3 w-3 shrink-0" : "h-4 w-4 shrink-0"} />
                                     <span className="truncate">{date}</span>
                                 </div>
-                                <div className="flex shrink-0 items-center gap-1.5 text-(--upcoming-primary-700)">
-                                    <Users className="h-4 w-4" />
+                                <div className="flex shrink-0 items-center gap-1 text-(--upcoming-primary-700)">
+                                    <Users className={compact ? "h-3 w-3" : "h-4 w-4"} />
                                     <span>{bookedCount}</span>
                                 </div>
                             </div>
 
-                            <h3 className="font-poppins font-bold text-[24px] leading-tight text-(--upcoming-primary-800) line-clamp-2">
+                            <h3
+                                className={`font-poppins font-bold leading-tight text-(--upcoming-primary-800) line-clamp-2 ${
+                                    compact ? "min-h-[2.6em] text-[15px]" : "min-h-[2.4em] text-[24px]"
+                                }`}
+                            >
                                 {title}
                             </h3>
 
-                            <div className="h-px w-full bg-gray-100" />
+                            <div className="mt-auto h-px w-full bg-gray-100" />
 
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 text-gray-500 font-poppins font-medium text-[16px]">
-                                    <Tag className="h-4 w-4 shrink-0" />
-                                    <span className="truncate max-w-37.5">{category}</span>
+                                <div
+                                    className={`flex items-center gap-1.5 text-gray-500 font-poppins font-medium ${
+                                        compact ? "text-[12px]" : "text-[16px]"
+                                    }`}
+                                >
+                                    <Tag className={compact ? "h-3 w-3 shrink-0" : "h-4 w-4 shrink-0"} />
+                                    <span className={`truncate ${compact ? "max-w-24" : "max-w-37.5"}`}>{category}</span>
                                 </div>
-                                <div className="font-poppins font-bold text-[22px] text-(--upcoming-primary-800)">
+                                <div
+                                    className={`font-poppins font-bold text-(--upcoming-primary-800) ${
+                                        compact ? "text-[14px]" : "text-[22px]"
+                                    }`}
+                                >
                                     {price.replace('₹', 'Rs')}
                                 </div>
                             </div>

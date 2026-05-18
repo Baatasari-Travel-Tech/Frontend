@@ -18,6 +18,7 @@ import {
   getDobDateBounds,
   isDobWithinBounds,
   isPredefinedProfession,
+  ORGANIZER_MIN_AGE,
   OTHER_PROFESSION_VALUE,
   PROFESSION_OPTIONS,
 } from "@/lib/profile-validation"
@@ -25,7 +26,7 @@ import {
 const DRAFT_STORAGE_KEY = "organizer-onboarding-draft-v2"
 const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
-const DOB_BOUNDS = getDobDateBounds()
+const DOB_BOUNDS = getDobDateBounds(new Date(), ORGANIZER_MIN_AGE)
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const TEN_DIGIT_PHONE_PATTERN = /^\d{10}$/
 const PINCODE_PATTERN = /^\d{6}$/
@@ -118,7 +119,7 @@ const schema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["dob"],
-        message: `Date of birth must be between ${DOB_BOUNDS.min} and ${DOB_BOUNDS.max}.`,
+        message: `Event organizers must be at least ${DOB_BOUNDS.minAge} years old.`,
       })
     }
 
@@ -967,7 +968,7 @@ export default function OrganizerOnboardingPage() {
                           }}
                           captionLayout="dropdown"
                           fromYear={new Date().getFullYear() - 100}
-                          toYear={new Date().getFullYear() - 18}
+                          toYear={new Date().getFullYear() - DOB_BOUNDS.minAge}
                           initialFocus
                         />
                       </PopoverContent>

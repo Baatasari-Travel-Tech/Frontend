@@ -149,6 +149,7 @@ export type EventSummary = {
   updatedAt: string;
   startingPrice?: number;
   bookedCount?: number;
+  ticketTierCount?: number;
 };
 
 export type EventDetail = EventSummary & {

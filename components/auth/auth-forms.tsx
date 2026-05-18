@@ -9,6 +9,7 @@ import { useAuthModal } from './auth-modal-context'
 import InlineSpinner from '@/components/ui/inline-spinner'
 import { User, CalendarPlus, Eye, EyeOff } from 'lucide-react'
 import { logAuth, logAuthError } from '@/lib/auth-log'
+import { TermsDialog } from '@/components/common/terms-dialog'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -217,9 +218,11 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
 
         <p className="text-xs">
           By continuing, you agree to our{' '}
-          <a href="/terms&conditions" className="font-semibold text-brand-800">
-            Terms
-          </a>{' '}
+          <TermsDialog>
+            <button type="button" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
+              Terms
+            </button>
+          </TermsDialog>{' '}
           and{' '}
           <a href="/privacy-policy" className="font-semibold text-brand-800">
             Privacy Policy
@@ -479,9 +482,11 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
         <p className="text-xs">
           By continuing, you agree to our{' '}
-          <a href="/terms&conditions" className="font-semibold text-brand-800">
-            Terms
-          </a>{' '}
+          <TermsDialog>
+            <button type="button" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
+              Terms
+            </button>
+          </TermsDialog>{' '}
           and{' '}
           <a href="/privacy-policy" className="font-semibold text-brand-800">
             Privacy Policy

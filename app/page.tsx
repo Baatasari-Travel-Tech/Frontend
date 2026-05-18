@@ -33,7 +33,7 @@ export default function AboutPage() {
         }
 
         if (activeRole === 'USER') {
-            return userRoleRecord?.onboarding_completed ? '/dashboard' : '/onboarding'
+            return userRoleRecord?.onboarding_completed ? '/events' : '/onboarding'
         }
 
         return activeRoleRecord?.onboarding_completed
@@ -64,7 +64,7 @@ export default function AboutPage() {
             <RestaurantOwner />
             <Performers />
             <footer className="text-white border-t border-slate-200 bg-slate-900">
-              <div className="page-x py-10 w-full">
+              <div className="mx-auto w-full max-w-screen-2xl px-4 py-10 sm:px-6 md:px-10 lg:px-16">
                 <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-x-6 gap-y-8">
 
                   {/* Row 1: Logo */}
@@ -74,7 +74,7 @@ export default function AboutPage() {
                       alt="Baatasari"
                       width={100}
                       height={40}
-                      style={{ height: 'auto' }}
+                      style={{ width: 'auto', height: 'auto' }}
                       unoptimized
                     />
                   </div>

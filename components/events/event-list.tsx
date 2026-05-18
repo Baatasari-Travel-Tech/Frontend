@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { HandpickedEventCard } from "@/components/events/handpicked-card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -38,12 +39,26 @@ function EventRow({ title, events }: EventRowProps) {
     const hasEvents = events.length > 0;
 
     return (
-        <div className="mb-12 last:mb-0">
+        <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-12 last:mb-0"
+        >
             <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold text-(--brand-blue) font-bricolage">{title}</h2>
+                <motion.h2
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                    className="text-3xl font-bold text-(--brand-blue) font-bricolage"
+                >
+                    {title}
+                </motion.h2>
                 {hasEvents && (
                     <Link
-                        href="/events/all"
+                        href="/events"
                         className="bg-(--white) text-(--blue-600) hover:bg-(--white)/80 rounded-full px-4 py-1 font-poppins font-medium text-sm md:text-base transition-colors"
                     >
                         View All
@@ -58,9 +73,21 @@ function EventRow({ title, events }: EventRowProps) {
                         className="flex gap-8 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] snap-x snap-mandatory scroll-smooth"
                     >
                         {events.map((event, index) => (
-                            <div key={index} className="snap-start shrink-0">
+                            <motion.div
+                                key={index}
+                                initial={{ opacity: 0, y: 24 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-40px" }}
+                                transition={{
+                                    duration: 0.5,
+                                    delay: Math.min(index * 0.08, 0.6),
+                                    ease: [0.22, 1, 0.36, 1],
+                                }}
+                                whileHover={{ y: -6 }}
+                                className="snap-start shrink-0"
+                            >
                                 <HandpickedEventCard {...event} />
-                            </div>
+                            </motion.div>
                         ))}
                     </div>
 
@@ -95,7 +122,7 @@ function EventRow({ title, events }: EventRowProps) {
                     <p className="mt-2 text-sm">Check back later or explore other categories</p>
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 }
 

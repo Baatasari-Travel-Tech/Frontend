@@ -13,6 +13,7 @@ import { PageShell, SectionCard } from "@/components/platform/page-shell"
 import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
 import { uploadFile, uploadOrganizerAvatarImage } from "@/lib/api/uploads"
+import { ORGANIZER_MIN_AGE } from "@/lib/profile-validation"
 
 const schema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -314,7 +315,7 @@ export default function OrganizerProfilePage() {
                       }}
                       captionLayout="dropdown"
                       fromYear={new Date().getFullYear() - 100}
-                      toYear={new Date().getFullYear() - 18}
+                      toYear={new Date().getFullYear() - ORGANIZER_MIN_AGE}
                       initialFocus
                     />
                   </PopoverContent>

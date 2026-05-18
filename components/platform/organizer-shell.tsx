@@ -41,7 +41,7 @@ export function OrganizerShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <Link
-          href="/dashboard"
+          href="/events"
           className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
         >
           <PanelRightClose className="h-4 w-4" />

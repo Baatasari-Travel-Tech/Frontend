@@ -1,3 +1,5 @@
+export type EventStatus = "live" | "upcoming" | "past";
+
 export interface EventData {
     title: string;
     price: string;
@@ -13,6 +15,7 @@ export interface EventData {
     sponsors?: string;
     eventTime?: string;
     highlights?: string[];
+    status?: EventStatus;
 }
 
 export const HANDPICKED_DATA: EventData[] = [

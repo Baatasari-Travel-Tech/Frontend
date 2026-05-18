@@ -67,6 +67,15 @@ const AuthContext = createContext<AuthCtx | undefined>(undefined)
 
 const queryClient = new QueryClient()
 
+const absolutizeMediaUrl = (url: string | null | undefined): string | null => {
+  if (!url) return null
+  if (/^https?:\/\//i.test(url)) return url
+  // Relative path returned by Django (e.g. "/media/avatars/...") — resolve against the API origin.
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "")
+  if (!apiBase) return url
+  return `${apiBase}${url.startsWith("/") ? "" : "/"}${url}`
+}
+
 const normalizeLegacyProfile = (user: SafeUser | null, profile: UserProfile | null): LegacyProfile | null => {
   if (!user && !profile) return null
 
@@ -74,7 +83,7 @@ const normalizeLegacyProfile = (user: SafeUser | null, profile: UserProfile | nu
     email: user?.email ?? null,
     full_name: profile?.fullName ?? null,
     phone: profile?.phone ?? null,
-    avatar_url: profile?.avatarUrl ?? null,
+    avatar_url: absolutizeMediaUrl(profile?.avatarUrl ?? null),
     dob: profile?.dob ?? null,
     location: profile?.location ?? null,
     gender: profile?.gender ?? null,

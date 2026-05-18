@@ -15,7 +15,7 @@ export default function OrganizerPendingPage() {
   const handleSwitchToUser = () => {
     if (switching) return
     setSwitching(true)
-    router.push("/dashboard")
+    router.push("/events")
     void switchRole("USER")
   }
 

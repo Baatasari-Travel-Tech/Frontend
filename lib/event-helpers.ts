@@ -1,7 +1,26 @@
 import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { formatCurrency } from "@/lib/format"
-import type { EventData } from "@/lib/events-data"
+import type { EventData, EventStatus } from "@/lib/events-data"
 import type { EventSummary } from "@/types/api"
+
+const startOfDay = (iso: string): number => {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return NaN
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+export function computeEventStatus(
+  event: Pick<EventSummary, "date" | "endDate" | "ticketTierCount">
+): EventStatus {
+  const today = startOfDay(new Date().toISOString())
+  const start = startOfDay(event.date)
+  if (!Number.isNaN(start)) {
+    const end = event.endDate ? startOfDay(event.endDate) : start
+    if (today > end) return "past"
+  }
+  return (event.ticketTierCount ?? 0) > 0 ? "live" : "upcoming"
+}
 
 export function formatCardDate(date: string): string {
   return new Intl.DateTimeFormat("en-IN", {
@@ -65,6 +84,7 @@ export function toEventCardData(event: EventSummary): EventData {
     chiefGuest: event.artists?.[0]?.name || undefined,
     sponsors: sponsorNames[0] || undefined,
     eventTime: "All ages welcome",
+    status: computeEventStatus(event),
     highlights:
       highlights.length > 0
         ? highlights

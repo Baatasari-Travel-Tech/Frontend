@@ -5,7 +5,18 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { useAuth } from '@/app/providers'
-import { ArrowLeftRight, Bell, Menu, Plus, X } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  Bell,
+  Home,
+  LogOut,
+  Menu,
+  Plus,
+  Sparkles,
+  Ticket,
+  UserRound,
+  X,
+} from 'lucide-react'
 import LoadingScreen from '@/components/loading-screen'
 import { isAdminRoutePath } from '@/lib/admin/routes'
 import { DEFAULT_AVATAR_IMAGE } from '@/lib/avatar'
@@ -124,34 +135,61 @@ function UserMenu({
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-          <div className="grid gap-1">
+        <div className="absolute right-0 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_25px_60px_-15px_rgba(15,23,42,0.25)]">
+          {/* Header: avatar + name + email */}
+          <div className="flex items-center gap-3 border-b border-slate-100 bg-linear-to-br from-slate-50 to-white p-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 ring-2 ring-white">
+              {showAvatar ? (
+                <Image
+                  src={displayAvatarUrl}
+                  alt="User avatar"
+                  width={48}
+                  height={48}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <span className="text-sm font-semibold text-slate-500">{initials}</span>
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-900">
+                {profile?.full_name || 'Welcome back'}
+              </p>
+              <p className="truncate text-xs text-slate-500">{profile?.email ?? user?.email ?? ''}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-1 p-2">
             <Link
               href={profileHref}
-              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               onClick={() => setOpen(false)}
             >
-              Profile
+              <UserRound className="h-4 w-4 text-slate-500" />
+              My profile
             </Link>
             {showActivityLink && (
               <Link
                 href="/history"
-                className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 onClick={() => setOpen(false)}
               >
-                Your Activity
+                <Ticket className="h-4 w-4 text-slate-500" />
+                My tickets
               </Link>
             )}
             {canSwitchRoles && (
               <>
+                <div className="my-1 h-px bg-slate-100" />
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() => setShowRoles(s => !s)}
                   disabled={isOrganizerEmailUnverified}
                 >
-                  <span>Switch to</span>
                   <ArrowLeftRight className="h-4 w-4 text-slate-500" />
+                  <span className="flex-1">Switch to</span>
                 </button>
                 {isOrganizerEmailUnverified && (
                   <p className="px-3 pt-1 text-xs text-slate-500">
@@ -194,15 +232,31 @@ function UserMenu({
                 )}
               </>
             )}
+
+            <div className="my-1 h-px bg-slate-100" />
+
+            <Link
+              href="/talent"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              onClick={() => setOpen(false)}
+            >
+              <Sparkles className="h-4 w-4 text-slate-500" />
+              Talent
+            </Link>
+
             {showLogout && onLogout ? (
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-xl bg-red-50/60 px-3 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                onClick={() => void handleMenuLogout()}
-                disabled={busy}
-              >
-                Logout
-              </button>
+              <>
+                <div className="my-1 h-px bg-slate-100" />
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-xl bg-red-50/60 px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                  onClick={() => void handleMenuLogout()}
+                  disabled={busy}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log out
+                </button>
+              </>
             ) : null}
           </div>
         </div>
@@ -215,13 +269,14 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   const [booting, setBooting] = useState(true)
   const [hideLoader, setHideLoader] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { session, activeRole, userRoles, organizerVerificationStatus, logout } = useAuth()
+  const { session, activeRole, userRoles, organizerVerificationStatus, profile, logout } = useAuth()
   const [logoutKey, setLogoutKey] = useState(0)
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { open, openModal } = useAuthModal()
   const isAdminRoute = isAdminRoutePath(pathname)
+  const isOrderConfirmed = pathname?.startsWith('/order-confirmed') ?? false
 
   useEffect(() => {
     const t1 = setTimeout(() => setBooting(false), 550)
@@ -267,6 +322,14 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   }
 
   const isActive = (path: string) => pathname === path
+
+  const greetingName = (() => {
+    const full = profile?.full_name?.trim()
+    if (full) return full.split(/\s+/)[0]
+    const email = session?.user?.email ?? ''
+    return email.split('@')[0] || 'there'
+  })()
+  const isLoggedIn = Boolean(session?.user)
   const showTalents = Boolean(session?.user) && activeRole === 'USER'
   const isOrganizerActive = Boolean(session?.user) && activeRole === 'EVENT_ORGANIZER'
   const activeRoleRecord = userRoles.find((record) => record.role === activeRole)
@@ -287,7 +350,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     }
 
     if (activeRole === 'USER') {
-      return userRoleRecord?.onboarding_completed ? '/dashboard' : '/onboarding'
+      return userRoleRecord?.onboarding_completed ? '/events' : '/onboarding'
     }
 
     return activeRoleRecord?.onboarding_completed
@@ -297,12 +360,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
 
   const homeHref = resolveHomeHref()
   const navLinks = session?.user
-    ? [
-      { label: 'Home', href: homeHref },
-      { label: 'Events', href: '/events' },
-      { label: 'About Us', href: '/about' },
-      ...(showTalents ? [{ label: 'Talents', href: '/talent' }] : []),
-    ]
+    ? []
     : [
       { label: 'Home', href: homeHref },
       { label: 'Events', href: '/events' },
@@ -311,6 +369,10 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
 
   if (isAdminRoute) {
     return <main className="min-h-dvh bg-slate-100">{children}</main>
+  }
+
+  if (isOrderConfirmed) {
+    return <main className="min-h-dvh bg-white">{children}</main>
   }
 
   return (
@@ -326,7 +388,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-lg">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 text-slate-900 backdrop-blur-lg">
         <div className="flex w-full items-center justify-between gap-8 py-4 px-2 md:px-6 lg:px-8">
           <Link href={homeHref} className="flex items-center gap-2">
             <Image
@@ -342,17 +404,20 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
           </Link>
           {!isOrganizerActive && (
             <nav className="hidden flex-1 items-center justify-center gap-8 text-sm font-medium text-slate-700 md:flex">
-              {navLinks.map(link => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`pb-1 transition hover:text-slate-900 ${
-                    isActive(link.href) ? 'text-slate-900 font-semibold border-b-2 border-slate-900' : ''
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map(link => {
+                const active = isActive(link.href)
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`pb-1 transition hover:text-slate-900 ${
+                      active ? 'text-slate-900 font-semibold border-b-2 border-slate-900' : ''
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                )
+              })}
             </nav>
           )}
           <div className="flex items-center gap-2 md:gap-3" key={logoutKey}>
@@ -381,12 +446,17 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                 </>
               ) : (
                 <>
-                  <div className="md:hidden">
-                    <UserMenu showLogout onLogout={handleLogout} />
-                  </div>
-                  <div className="hidden md:block">
-                    <UserMenu />
-                  </div>
+                  <span className="hidden text-sm font-medium text-slate-700 lg:inline-flex">
+                    Hi, <span className="ml-1 font-semibold text-slate-900">{greetingName}</span>
+                  </span>
+                  <Link
+                    href="/"
+                    aria-label="Home"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-transparent bg-(--brand-navy) text-white shadow-sm transition hover:bg-(--brand-navy)/90"
+                  >
+                    <Home className="h-4 w-4" />
+                  </Link>
+                  <UserMenu showLogout onLogout={handleLogout} />
                   <button
                     type="button"
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 md:hidden"
@@ -396,19 +466,20 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                   >
                     {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                   </button>
-                  <button
-                    className="hidden items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 md:inline-flex"
-                    onClick={() => void handleLogout()}
-                  >
-                    Logout
-                  </button>
                 </>
               )
             ) : (
               <>
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
+                  className="hidden items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 md:inline-flex"
+                  onClick={() => openModal('login')}
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-full bg-(--brand-navy) px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-(--brand-navy)/90"
                   onClick={() => openModal('register')}
                 >
                   Get started
@@ -427,7 +498,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {!isOrganizerActive && mobileMenuOpen && (
-          <nav className="absolute top-full left-0 right-0 z-50 shadow-lg bg-white rounded-b-2xl px-4 py-3 md:hidden">
+          <nav className="absolute top-full left-0 right-0 z-50 rounded-b-2xl bg-white px-4 py-3 shadow-lg md:hidden">
             <div className="grid gap-2">
               {navLinks.map((link) => (
                 <Link
@@ -443,6 +514,18 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                   {link.label}
                 </Link>
               ))}
+              {!isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    openModal('login')
+                  }}
+                  className="mt-1 rounded-xl border border-slate-200 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Login
+                </button>
+              )}
             </div>
           </nav>
         )}

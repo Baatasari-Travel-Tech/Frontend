@@ -29,15 +29,35 @@ const pad = (value: number) => value.toString().padStart(2, "0")
 const formatDateInputValue = (date: Date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 
-export const getDobDateBounds = (today: Date = new Date()) => {
+/** Minimum age required to use the user experience (attend events). */
+export const USER_MIN_AGE = 13
+/** Minimum age required to register / operate as an event organizer. */
+export const ORGANIZER_MIN_AGE = 18
+
+/**
+ * DOB bounds for date pickers.
+ *   - `min` = today - 100 years (oldest reasonable DOB)
+ *   - `max` = today - minAge years (newest DOB satisfying the age floor)
+ * Default `minAge` is the user floor (13). Pass `ORGANIZER_MIN_AGE` for organizers.
+ */
+export const getDobDateBounds = (
+  today: Date = new Date(),
+  minAge: number = USER_MIN_AGE,
+) => {
   const minDate = new Date(today)
   minDate.setFullYear(minDate.getFullYear() - 100)
 
+  const maxDate = new Date(today)
+  maxDate.setFullYear(maxDate.getFullYear() - minAge)
+
   return {
     min: formatDateInputValue(minDate),
-    max: formatDateInputValue(today),
+    max: formatDateInputValue(maxDate),
+    minAge,
   }
 }
 
-export const isDobWithinBounds = (dob: string, bounds: { min: string; max: string }) =>
-  dob >= bounds.min && dob <= bounds.max
+export const isDobWithinBounds = (
+  dob: string,
+  bounds: { min: string; max: string },
+) => dob >= bounds.min && dob <= bounds.max

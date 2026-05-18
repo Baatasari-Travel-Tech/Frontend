@@ -22,7 +22,7 @@ export const getRoleDashboard = (role: AppRole): string => {
   switch (role) {
     case 'EVENT_ORGANIZER': return '/organizer/dashboard'
     case 'TALENT':          return '/talent/dashboard'
-    default:                return '/dashboard'
+    default:                return '/events'
   }
 }
 

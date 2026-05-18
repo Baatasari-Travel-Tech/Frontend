@@ -21,7 +21,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={sora.variable}>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>
           <SiteShell>{children}</SiteShell>
           <Analytics />

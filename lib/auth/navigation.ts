@@ -48,5 +48,5 @@ export function resolveUserHome(params: {
     return "/onboarding"
   }
 
-  return "/dashboard"
+  return "/events"
 }
