@@ -1,16 +1,19 @@
+"use client"
+
 import Link from "next/link"
 import { KeyRound, Mail, Shield, ShieldCheck, Smartphone } from "lucide-react"
+import { useAuth } from "@/app/providers"
 import { DangerZone, InfoCard, SectionHeader } from "../field-primitives"
 
-export function SecuritySection({
-  email,
-  phone,
-  emailVerified,
-}: {
-  email: string
-  phone: string
-  emailVerified: boolean
-}) {
+export function SecuritySection() {
+  const { profile, session, user } = useAuth()
+  const email = session?.user?.email ?? profile?.email ?? ""
+  // Display the saved phone (with the +91 stripped for readability) rather
+  // than the in-progress form value — Security panel describes the account,
+  // not the unsaved edit.
+  const phone = (profile?.phone ?? "").replace(/^\+91/, "")
+  const emailVerified = !!user?.emailVerified
+
   return (
     <div className="space-y-5">
       <SectionHeader icon={Shield} title="Security" subtitle="Protect your account." />

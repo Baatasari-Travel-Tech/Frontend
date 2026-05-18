@@ -1,6 +1,7 @@
 "use client"
 
 import { AnimatePresence, motion } from "framer-motion"
+import { useFormContext, useWatch } from "react-hook-form"
 import {
   Briefcase,
   CheckCircle2,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import { DEFAULT_AVATAR_IMAGE } from "@/lib/avatar"
+import type { ProfileFormValues } from "./profile-schema"
 
 export type AccountSection = "profile" | "preferences" | "security" | "help"
 
@@ -27,10 +29,6 @@ const SECTION_NAV: { id: AccountSection; label: string; icon: typeof UserIcon }[
 export { SECTION_NAV }
 
 export function ProfileSidebar({
-  name,
-  email,
-  profession,
-  location,
   avatarPreview,
   avatarUploading,
   onAvatarClick,
@@ -42,10 +40,6 @@ export function ProfileSidebar({
   onMobileBackToMenu,
   mobileSectionContent,
 }: {
-  name: string
-  email: string
-  profession: string
-  location: string
   avatarPreview: string | null
   avatarUploading: boolean
   onAvatarClick: () => void
@@ -57,7 +51,16 @@ export function ProfileSidebar({
   onMobileBackToMenu: () => void
   mobileSectionContent: React.ReactNode
 }) {
-  const { user, profile, logout } = useAuth()
+  const { user, profile, session, logout } = useAuth()
+  const { control } = useFormContext<ProfileFormValues>()
+  const formValues = useWatch({ control }) as Partial<ProfileFormValues>
+  // Real-time preview: as the user types in IdentitySection, the identity
+  // strip updates with the in-progress values. The chip strip shows the
+  // CURRENT form values rather than just the saved profile.
+  const name = formValues.name ?? ""
+  const profession = formValues.profession ?? ""
+  const location = formValues.location ?? ""
+  const email = session?.user?.email ?? profile?.email ?? ""
 
   const menuListContent = (
     <>
