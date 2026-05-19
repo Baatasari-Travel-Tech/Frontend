@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "*.amazonaws.com" },
       { protocol: "https", hostname: "res.cloudinary.com" },
+      // Google account profile pictures (seeded as avatar on OAuth signup).
+      // Google rotates between lh3, lh4, lh5, lh6, ... subdomains so we
+      // wildcard the whole eTLD+1.
+      { protocol: "https", hostname: "*.googleusercontent.com" },
     ],
   },
   async headers() {

@@ -153,10 +153,14 @@ export function DangerZone({
   title,
   description,
   actionLabel,
+  onAction,
+  disabled,
 }: {
   title: string
   description: string
   actionLabel: string
+  onAction?: () => void
+  disabled?: boolean
 }) {
   return (
     <div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-6">
@@ -169,7 +173,9 @@ export function DangerZone({
           <p className="mt-1 text-xs text-rose-600/90">{description}</p>
           <button
             type="button"
-            className="mt-3 inline-flex items-center rounded-full border border-rose-300 bg-white px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+            onClick={onAction}
+            disabled={disabled || !onAction}
+            className="mt-3 inline-flex items-center rounded-full border border-rose-300 bg-white px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {actionLabel}
           </button>
