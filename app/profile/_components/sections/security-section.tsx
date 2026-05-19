@@ -36,14 +36,12 @@ export function SecuritySection() {
 
   const [step, setStep] = useState<DeleteStep>("idle")
   const [otp, setOtp] = useState("")
-  const [confirmation, setConfirmation] = useState("")
   const [busy, setBusy] = useState(false)
   const dialogOpen = step !== "idle"
 
   const resetDialog = () => {
     setStep("idle")
     setOtp("")
-    setConfirmation("")
     setBusy(false)
   }
 
@@ -82,7 +80,7 @@ export function SecuritySection() {
       await apiRequest("/user/me/delete/confirm", {
         method: "POST",
         auth: true,
-        body: JSON.stringify({ otp, confirmation }),
+        body: JSON.stringify({ otp }),
       })
       // Backend already cleared cookies. Tear down local state on this
       // tab + sibling tabs, then bounce home so the now-deleted user
@@ -107,7 +105,7 @@ export function SecuritySection() {
     }
   }
 
-  const canConfirm = /^\d{4}$/.test(otp) && confirmation === "DELETE" && !busy
+  const canConfirm = /^\d{4}$/.test(otp) && !busy
 
   return (
     <div className="space-y-5">
@@ -182,8 +180,8 @@ export function SecuritySection() {
                 <DialogDescription>
                   We&apos;ll email a 4-digit confirmation code to{" "}
                   <span className="font-medium text-slate-900">{email}</span>.
-                  After you enter the code and type DELETE, your account is
-                  scheduled for permanent removal in 24 hours.
+                  After you enter the code, your account is scheduled for
+                  permanent removal in 24 hours.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
@@ -202,15 +200,12 @@ export function SecuritySection() {
               <DialogHeader>
                 <DialogTitle>Enter confirmation code</DialogTitle>
                 <DialogDescription>
-                  Check your inbox for the 4-digit code. Then type{" "}
-                  <span className="font-mono font-semibold text-rose-600">
-                    DELETE
-                  </span>{" "}
-                  below to confirm.
+                  Check your inbox for the 4-digit code we just sent to{" "}
+                  <span className="font-medium text-slate-900">{email}</span>.
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-3 py-2">
+              <div className="py-2">
                 <label className="block">
                   <span className="text-xs font-medium text-slate-700">
                     4-digit code
@@ -226,19 +221,6 @@ export function SecuritySection() {
                     }
                     placeholder="0000"
                     className="mt-1 text-center text-lg tracking-[0.4em]"
-                    disabled={busy}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-xs font-medium text-slate-700">
-                    Type <span className="font-mono">DELETE</span> to confirm
-                  </span>
-                  <Input
-                    value={confirmation}
-                    onChange={(e) => setConfirmation(e.target.value)}
-                    placeholder="DELETE"
-                    className="mt-1"
                     disabled={busy}
                   />
                 </label>
