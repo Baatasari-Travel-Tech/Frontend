@@ -10,6 +10,32 @@ import InlineSpinner from '@/components/ui/inline-spinner'
 import { User, CalendarPlus, Eye, EyeOff } from 'lucide-react'
 import { logAuth, logAuthError } from '@/lib/auth-log'
 import { TermsDialog } from '@/components/common/terms-dialog'
+import { ApiError } from '@/types/api'
+import { supportMailto } from '@/lib/support-mailto'
+
+const PENDING_DELETION_CODE = 'ACCOUNT_PENDING_DELETION'
+// Same code, lowercased — matches what the OAuth callback redirects with.
+const PENDING_DELETION_URL_CODE = PENDING_DELETION_CODE.toLowerCase()
+
+const isPendingDeletionError = (err: unknown): boolean =>
+  err instanceof ApiError && err.code === PENDING_DELETION_CODE
+
+// Shared banner for the pending-deletion case. Embeds a click-through
+// to the retrieve-account mailto template so the user can immediately
+// reach support without typing anything.
+function PendingDeletionBanner({ message }: { message: string }) {
+  return (
+    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+      <p>{message}</p>
+      <a
+        href={supportMailto.retrieveAccount()}
+        className="mt-2 inline-flex items-center font-semibold text-rose-700 underline underline-offset-2 hover:text-rose-900"
+      >
+        Contact support to retrieve →
+      </a>
+    </div>
+  )
+}
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -68,21 +94,28 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingDeletion, setPendingDeletion] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
+  const authErrorFromUrl = searchParams.get('authError')
+  const authErrorDescription = searchParams.get('authErrorDescription') ?? ''
+  const isPendingDeletionFromUrl = authErrorFromUrl === PENDING_DELETION_URL_CODE
+
   const authErrorMessage = (() => {
-    const authError = searchParams.get('authError')
-    if (!authError) return null
-    const description = searchParams.get('authErrorDescription') ?? ''
+    if (!authErrorFromUrl) return null
+    if (isPendingDeletionFromUrl) {
+      return authErrorDescription || 'This account is pending deletion. To retrieve it, contact support.'
+    }
     let message = 'Sign in failed. Please try again.'
-    if (description.toLowerCase().includes('already') || description.toLowerCase().includes('exists')) {
+    if (authErrorDescription.toLowerCase().includes('already') || authErrorDescription.toLowerCase().includes('exists')) {
       message = 'This email already has an account. Please sign in with email/password.'
     }
     return message
   })()
 
   const errorToShow = error ?? authErrorMessage
+  const showPendingDeletionBanner = pendingDeletion || isPendingDeletionFromUrl
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -103,6 +136,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
       const message = authError instanceof Error ? authError.message : 'Invalid email or password.'
       logAuthError('login:error', { message })
       setError(message)
+      setPendingDeletion(isPendingDeletionError(authError))
     } finally {
       setLoading(false)
       setIsAuthenticating(false)
@@ -174,9 +208,13 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
       </div>
 
       {errorToShow && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
-          {errorToShow}
-        </p>
+        showPendingDeletionBanner ? (
+          <PendingDeletionBanner message={errorToShow} />
+        ) : (
+          <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
+            {errorToShow}
+          </p>
+        )
       )}
 
       <div className="space-y-4">
@@ -247,6 +285,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   const initialRole: 'user' | 'organizer' = roleParam === 'organizer' ? 'organizer' : 'user'
   const [role, setRole] = useState<'user' | 'organizer'>(initialRole)
   const [error, setError] = useState<string | null>(null)
+  const [pendingDeletion, setPendingDeletion] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
@@ -287,6 +326,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       const message = authError instanceof Error ? authError.message : 'Unable to create account.'
       logAuthError('register:error', { message, role: selectedRole })
       setError(message)
+      setPendingDeletion(isPendingDeletionError(authError))
     } finally {
       setLoading(false)
       setIsAuthenticating(false)
@@ -440,9 +480,13 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       </div>
 
       {error && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
-          {error}
-        </p>
+        pendingDeletion ? (
+          <PendingDeletionBanner message={error} />
+        ) : (
+          <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
+            {error}
+          </p>
+        )
       )}
 
       <button
