@@ -125,6 +125,28 @@ export const deleteAdminUser = (id: string) =>
     method: "DELETE",
   })
 
+// Bulk soft-delete from the "select rows → delete selected" admin UI.
+// Backend caps the batch at 100 IDs. Response shape:
+//   { deleted: string[], failed: { id, reason }[] }
+// so the UI can surface partial failures (a row that was already
+// soft-deleted, an org with constraints, etc.) without rolling back the
+// whole batch.
+export const bulkDeleteAdminUsers = (userIds: string[]) =>
+  requestAdmin<{ deleted: string[]; failed: { id: string; reason: string }[] }>(
+    `/admin/users/delete-bulk`,
+    {
+      method: "POST",
+      body: JSON.stringify({ userIds }),
+    },
+  )
+
+// Revive a soft-deleted user within the 24-hour grace window. Returns
+// 400 with "grace window has expired" once the cron has hard-deleted.
+export const reviveAdminUser = (id: string) =>
+  requestAdmin<SafeUser>(`/admin/users/${id}/revive`, {
+    method: "POST",
+  })
+
 export const updateAdminUser = (
   id: string,
   payload: Partial<Pick<SafeUser, "role" | "onboardingStatus" | "organizerApproved">>,

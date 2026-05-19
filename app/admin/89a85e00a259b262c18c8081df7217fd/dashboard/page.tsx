@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { CheckCircle, Pencil, RefreshCw, X, XCircle } from "lucide-react"
 import {
+  bulkDeleteAdminUsers,
   deleteAdminUser,
   fetchPublicSiteConfig,
   getAdminDashboard,
@@ -201,6 +202,13 @@ export default function AdminDashboardPage() {
   const [organizerSearch, setOrganizerSearch] = useState("")
   const [refreshing, setRefreshing] = useState(false)
 
+  // Multi-select for bulk soft-delete. Two independent sets so a USERS
+  // selection isn't lost when the admin flips to the ORGANIZERS tab to
+  // queue up a separate batch. Both clear on every refresh below to
+  // avoid stale IDs lingering after rows disappear.
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
+  const [selectedOrganizerIds, setSelectedOrganizerIds] = useState<Set<string>>(new Set())
+
   const [drawer, setDrawer] = useState<EditDrawerState>({ status: "closed" })
   const [saveBusy, setSaveBusy] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -300,6 +308,66 @@ export default function AdminDashboardPage() {
       await refresh(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete user")
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
+  // Toggle one row's checkbox. Wrapped in a small helper so the user
+  // and organizer tables share identical behaviour without repeating the
+  // immutable-Set dance inline.
+  const toggleSelectionId = (set: Set<string>, id: string): Set<string> => {
+    const next = new Set(set)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  }
+
+  // "Select all" header checkbox — switches every visible (filtered) row.
+  // We deliberately operate on the filtered list, not the underlying
+  // users[]; selecting "all" after a search filter should only target
+  // what the admin can actually see.
+  const setSelectionForVisible = (
+    visibleIds: string[],
+    current: Set<string>,
+  ): Set<string> => {
+    const allSelected = visibleIds.every((id) => current.has(id))
+    if (allSelected) {
+      const next = new Set(current)
+      visibleIds.forEach((id) => next.delete(id))
+      return next
+    }
+    const next = new Set(current)
+    visibleIds.forEach((id) => next.add(id))
+    return next
+  }
+
+  const handleBulkDelete = async (scope: AdminListTab) => {
+    const ids = scope === "USERS" ? Array.from(selectedUserIds) : Array.from(selectedOrganizerIds)
+    if (ids.length === 0) return
+    if (
+      !window.confirm(
+        `Delete ${ids.length} ${scope === "USERS" ? "user" : "organizer"}${ids.length === 1 ? "" : "s"}? They'll be revivable for 24 hours, then permanently removed.`,
+      )
+    )
+      return
+
+    setBusyKey(`bulk:${scope}`)
+    try {
+      const result = await bulkDeleteAdminUsers(ids)
+      if (result.failed.length > 0) {
+        setError(
+          `Deleted ${result.deleted.length}, failed ${result.failed.length}: ${result.failed
+            .map((f) => `${f.id} (${f.reason})`)
+            .join(", ")}`,
+        )
+      }
+      // Clear the selection set we just acted on.
+      if (scope === "USERS") setSelectedUserIds(new Set())
+      else setSelectedOrganizerIds(new Set())
+      await refresh(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bulk delete failed")
     } finally {
       setBusyKey(null)
     }
@@ -623,9 +691,50 @@ export default function AdminDashboardPage() {
 
           {tab === "USERS" ? (
             <div className="max-h-128 overflow-auto">
+              {selectedUserIds.size > 0 && (
+                <div className="sticky top-0 z-10 -mx-3 mb-2 flex items-center justify-between gap-3 border-b border-slate-200 bg-rose-50 px-3 py-2 text-sm">
+                  <span className="font-medium text-rose-700">
+                    {selectedUserIds.size} selected
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserIds(new Set())}
+                      className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleBulkDelete("USERS")}
+                      disabled={busyKey === "bulk:USERS"}
+                      className="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-70"
+                    >
+                      {busyKey === "bulk:USERS"
+                        ? "Deleting..."
+                        : `Delete selected (${selectedUserIds.size})`}
+                    </button>
+                  </div>
+                </div>
+              )}
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="px-3 py-2 w-8">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all visible users"
+                        checked={
+                          filteredUsers.length > 0 &&
+                          filteredUsers.every((u) => selectedUserIds.has(u.id))
+                        }
+                        onChange={() =>
+                          setSelectedUserIds((prev) =>
+                            setSelectionForVisible(filteredUsers.map((u) => u.id), prev),
+                          )
+                        }
+                      />
+                    </th>
                     <th className="px-3 py-2 font-medium">Email</th>
                     <th className="px-3 py-2 font-medium">User ID</th>
                     <th className="px-3 py-2 font-medium">Onboarding</th>
@@ -636,6 +745,16 @@ export default function AdminDashboardPage() {
                 <tbody>
                   {filteredUsers.map((user) => (
                     <tr key={user.id} className="border-b border-slate-100 text-slate-700">
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${user.email}`}
+                          checked={selectedUserIds.has(user.id)}
+                          onChange={() =>
+                            setSelectedUserIds((prev) => toggleSelectionId(prev, user.id))
+                          }
+                        />
+                      </td>
                       <td className="px-3 py-3">{user.email}</td>
                       <td className="px-3 py-3 text-xs font-mono text-slate-500">{user.id}</td>
                       <td className="px-3 py-3">{user.onboardingStatus}</td>
@@ -663,16 +782,57 @@ export default function AdminDashboardPage() {
                     </tr>
                   ))}
                   {filteredUsers.length === 0 && (
-                    <tr><td className="px-3 py-6 text-center text-slate-500" colSpan={5}>No users found.</td></tr>
+                    <tr><td className="px-3 py-6 text-center text-slate-500" colSpan={6}>No users found.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
           ) : (
             <div className="max-h-128 overflow-auto">
+              {selectedOrganizerIds.size > 0 && (
+                <div className="sticky top-0 z-10 -mx-3 mb-2 flex items-center justify-between gap-3 border-b border-slate-200 bg-rose-50 px-3 py-2 text-sm">
+                  <span className="font-medium text-rose-700">
+                    {selectedOrganizerIds.size} selected
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrganizerIds(new Set())}
+                      className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleBulkDelete("ORGANIZERS")}
+                      disabled={busyKey === "bulk:ORGANIZERS"}
+                      className="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-70"
+                    >
+                      {busyKey === "bulk:ORGANIZERS"
+                        ? "Deleting..."
+                        : `Delete selected (${selectedOrganizerIds.size})`}
+                    </button>
+                  </div>
+                </div>
+              )}
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="px-3 py-2 w-8">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all visible organizers"
+                        checked={
+                          filteredOrganizers.length > 0 &&
+                          filteredOrganizers.every((o) => selectedOrganizerIds.has(o.id))
+                        }
+                        onChange={() =>
+                          setSelectedOrganizerIds((prev) =>
+                            setSelectionForVisible(filteredOrganizers.map((o) => o.id), prev),
+                          )
+                        }
+                      />
+                    </th>
                     <th className="px-3 py-2 font-medium">Organization</th>
                     <th className="px-3 py-2 font-medium">Email</th>
                     <th className="px-3 py-2 font-medium">User ID</th>
@@ -685,6 +845,16 @@ export default function AdminDashboardPage() {
                 <tbody>
                   {filteredOrganizers.map((organizer) => (
                     <tr key={organizer.id} className="border-b border-slate-100 text-slate-700">
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${organizer.email}`}
+                          checked={selectedOrganizerIds.has(organizer.id)}
+                          onChange={() =>
+                            setSelectedOrganizerIds((prev) => toggleSelectionId(prev, organizer.id))
+                          }
+                        />
+                      </td>
                       <td className="px-3 py-3 font-semibold text-slate-900">
                         {organizer.organizationName?.trim() || getPendingOrganizationName(pendingById.get(organizer.id))}
                       </td>
@@ -716,7 +886,7 @@ export default function AdminDashboardPage() {
                     </tr>
                   ))}
                   {filteredOrganizers.length === 0 && (
-                    <tr><td className="px-3 py-6 text-center text-slate-500" colSpan={7}>No organizers found.</td></tr>
+                    <tr><td className="px-3 py-6 text-center text-slate-500" colSpan={8}>No organizers found.</td></tr>
                   )}
                 </tbody>
               </table>
