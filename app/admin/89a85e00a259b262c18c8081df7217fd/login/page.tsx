@@ -33,10 +33,20 @@ export default function AdminLoginPage() {
         <h1 className="mb-2 text-center text-2xl font-bold text-slate-900">Admin Sign In</h1>
         <p className="mb-6 text-center text-sm text-slate-500">Enter your admin credentials.</p>
 
-        <div className="space-y-4">
+        {/* Wrapping in a <form> + type="submit" gives Enter-to-submit
+            for free from any field — no manual onKeyDown handlers. */}
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (loading || !form.username || !form.password) return
+            void handleSubmit()
+          }}
+        >
           <input
             value={form.username}
             placeholder="Username"
+            autoComplete="username"
             className="w-full rounded-lg border border-slate-300 p-3 outline-none transition focus:border-slate-600"
             onChange={(event) => setForm({ ...form, username: event.target.value })}
           />
@@ -44,18 +54,19 @@ export default function AdminLoginPage() {
             type="password"
             value={form.password}
             placeholder="Password"
+            autoComplete="current-password"
             className="w-full rounded-lg border border-slate-300 p-3 outline-none transition focus:border-slate-600"
             onChange={(event) => setForm({ ...form, password: event.target.value })}
           />
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           <button
-            onClick={() => void handleSubmit()}
+            type="submit"
             disabled={loading || !form.username || !form.password}
             className="w-full rounded-lg bg-slate-900 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {loading ? "Authenticating..." : "Continue to OTP"}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   )
