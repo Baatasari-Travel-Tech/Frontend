@@ -15,6 +15,7 @@ import {
   isAdminAuthFailure,
   listAdminUsers,
   listPendingOrganizers,
+  reviveAdminUser,
   updateAdminOrganizerProfile,
   updateAdminSiteConfig,
   updateAdminUser,
@@ -301,13 +302,35 @@ export default function AdminDashboardPage() {
   }, [dashboard, pendingOrganizersEligibleForApproval.length])
 
   const handleDeleteUser = async (id: string, email: string) => {
-    if (!window.confirm(`Delete user ${email}? This cannot be undone.`)) return
+    if (
+      !window.confirm(
+        `Delete user ${email}? They'll be revivable for 24 hours, then permanently removed.`,
+      )
+    )
+      return
     setBusyKey(`delete:${id}`)
     try {
       await deleteAdminUser(id)
       await refresh(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete user")
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
+  const handleReviveUser = async (id: string, email: string) => {
+    if (!window.confirm(`Revive ${email}? This restores the account and all its data.`))
+      return
+    setBusyKey(`revive:${id}`)
+    try {
+      await reviveAdminUser(id)
+      await refresh(false)
+    } catch (e) {
+      // Most likely reason for failure: the 24h grace window has passed
+      // and the cron has already (or is about to) hard-delete. The
+      // backend returns a 400 with that exact reason.
+      setError(e instanceof Error ? e.message : "Failed to revive user")
     } finally {
       setBusyKey(null)
     }
@@ -721,19 +744,29 @@ export default function AdminDashboardPage() {
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-500">
                     <th className="px-3 py-2 w-8">
-                      <input
-                        type="checkbox"
-                        aria-label="Select all visible users"
-                        checked={
-                          filteredUsers.length > 0 &&
-                          filteredUsers.every((u) => selectedUserIds.has(u.id))
-                        }
-                        onChange={() =>
-                          setSelectedUserIds((prev) =>
-                            setSelectionForVisible(filteredUsers.map((u) => u.id), prev),
-                          )
-                        }
-                      />
+                      {(() => {
+                        // Only non-deleted rows participate in bulk delete.
+                        // A deleted row's checkbox is already disabled, so
+                        // "select all" must mirror that or the header tick
+                        // would never go fully-checked.
+                        const eligible = filteredUsers.filter((u) => !u.deletedAt).map((u) => u.id)
+                        return (
+                          <input
+                            type="checkbox"
+                            aria-label="Select all visible users"
+                            disabled={eligible.length === 0}
+                            checked={
+                              eligible.length > 0 &&
+                              eligible.every((id) => selectedUserIds.has(id))
+                            }
+                            onChange={() =>
+                              setSelectedUserIds((prev) =>
+                                setSelectionForVisible(eligible, prev),
+                              )
+                            }
+                          />
+                        )
+                      })()}
                     </th>
                     <th className="px-3 py-2 font-medium">Email</th>
                     <th className="px-3 py-2 font-medium">User ID</th>
@@ -743,19 +776,34 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-b border-slate-100 text-slate-700">
+                  {filteredUsers.map((user) => {
+                    const isDeleted = user.deletedAt !== null
+                    return (
+                    <tr
+                      key={user.id}
+                      className={`border-b border-slate-100 ${
+                        isDeleted ? "bg-rose-50/40 text-slate-500" : "text-slate-700"
+                      }`}
+                    >
                       <td className="px-3 py-3">
                         <input
                           type="checkbox"
                           aria-label={`Select ${user.email}`}
-                          checked={selectedUserIds.has(user.id)}
+                          checked={!isDeleted && selectedUserIds.has(user.id)}
+                          disabled={isDeleted}
                           onChange={() =>
                             setSelectedUserIds((prev) => toggleSelectionId(prev, user.id))
                           }
                         />
                       </td>
-                      <td className="px-3 py-3">{user.email}</td>
+                      <td className="px-3 py-3">
+                        <span className={isDeleted ? "line-through" : ""}>{user.email}</span>
+                        {isDeleted && (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">
+                            Pending deletion
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-3 text-xs font-mono text-slate-500">{user.id}</td>
                       <td className="px-3 py-3">{user.onboardingStatus}</td>
                       <td className="px-3 py-3">{formatDate(user.createdAt)}</td>
@@ -770,17 +818,28 @@ export default function AdminDashboardPage() {
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
-                          <button
-                            onClick={() => void handleDeleteUser(user.id, user.email)}
-                            disabled={busyKey === `delete:${user.id}`}
-                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-70"
-                          >
-                            {busyKey === `delete:${user.id}` ? "Deleting..." : "Delete"}
-                          </button>
+                          {isDeleted ? (
+                            <button
+                              onClick={() => void handleReviveUser(user.id, user.email)}
+                              disabled={busyKey === `revive:${user.id}`}
+                              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-70"
+                            >
+                              {busyKey === `revive:${user.id}` ? "Reviving..." : "Revive"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => void handleDeleteUser(user.id, user.email)}
+                              disabled={busyKey === `delete:${user.id}`}
+                              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-70"
+                            >
+                              {busyKey === `delete:${user.id}` ? "Deleting..." : "Delete"}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                   {filteredUsers.length === 0 && (
                     <tr><td className="px-3 py-6 text-center text-slate-500" colSpan={6}>No users found.</td></tr>
                   )}
@@ -819,19 +878,27 @@ export default function AdminDashboardPage() {
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-500">
                     <th className="px-3 py-2 w-8">
-                      <input
-                        type="checkbox"
-                        aria-label="Select all visible organizers"
-                        checked={
-                          filteredOrganizers.length > 0 &&
-                          filteredOrganizers.every((o) => selectedOrganizerIds.has(o.id))
-                        }
-                        onChange={() =>
-                          setSelectedOrganizerIds((prev) =>
-                            setSelectionForVisible(filteredOrganizers.map((o) => o.id), prev),
-                          )
-                        }
-                      />
+                      {(() => {
+                        const eligible = filteredOrganizers
+                          .filter((o) => !o.deletedAt)
+                          .map((o) => o.id)
+                        return (
+                          <input
+                            type="checkbox"
+                            aria-label="Select all visible organizers"
+                            disabled={eligible.length === 0}
+                            checked={
+                              eligible.length > 0 &&
+                              eligible.every((id) => selectedOrganizerIds.has(id))
+                            }
+                            onChange={() =>
+                              setSelectedOrganizerIds((prev) =>
+                                setSelectionForVisible(eligible, prev),
+                              )
+                            }
+                          />
+                        )
+                      })()}
                     </th>
                     <th className="px-3 py-2 font-medium">Organization</th>
                     <th className="px-3 py-2 font-medium">Email</th>
@@ -843,20 +910,35 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrganizers.map((organizer) => (
-                    <tr key={organizer.id} className="border-b border-slate-100 text-slate-700">
+                  {filteredOrganizers.map((organizer) => {
+                    const isDeleted = organizer.deletedAt !== null
+                    return (
+                    <tr
+                      key={organizer.id}
+                      className={`border-b border-slate-100 ${
+                        isDeleted ? "bg-rose-50/40 text-slate-500" : "text-slate-700"
+                      }`}
+                    >
                       <td className="px-3 py-3">
                         <input
                           type="checkbox"
                           aria-label={`Select ${organizer.email}`}
-                          checked={selectedOrganizerIds.has(organizer.id)}
+                          checked={!isDeleted && selectedOrganizerIds.has(organizer.id)}
+                          disabled={isDeleted}
                           onChange={() =>
                             setSelectedOrganizerIds((prev) => toggleSelectionId(prev, organizer.id))
                           }
                         />
                       </td>
-                      <td className="px-3 py-3 font-semibold text-slate-900">
-                        {organizer.organizationName?.trim() || getPendingOrganizationName(pendingById.get(organizer.id))}
+                      <td className={`px-3 py-3 font-semibold ${isDeleted ? "" : "text-slate-900"}`}>
+                        <span className={isDeleted ? "line-through" : ""}>
+                          {organizer.organizationName?.trim() || getPendingOrganizationName(pendingById.get(organizer.id))}
+                        </span>
+                        {isDeleted && (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">
+                            Pending deletion
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-3">{organizer.email}</td>
                       <td className="px-3 py-3 text-xs font-mono text-slate-500">{organizer.id}</td>
@@ -874,17 +956,28 @@ export default function AdminDashboardPage() {
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
-                          <button
-                            onClick={() => void handleDeleteUser(organizer.id, organizer.email)}
-                            disabled={busyKey === `delete:${organizer.id}`}
-                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-70"
-                          >
-                            {busyKey === `delete:${organizer.id}` ? "Deleting..." : "Delete"}
-                          </button>
+                          {isDeleted ? (
+                            <button
+                              onClick={() => void handleReviveUser(organizer.id, organizer.email)}
+                              disabled={busyKey === `revive:${organizer.id}`}
+                              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-70"
+                            >
+                              {busyKey === `revive:${organizer.id}` ? "Reviving..." : "Revive"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => void handleDeleteUser(organizer.id, organizer.email)}
+                              disabled={busyKey === `delete:${organizer.id}`}
+                              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-70"
+                            >
+                              {busyKey === `delete:${organizer.id}` ? "Deleting..." : "Delete"}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                   {filteredOrganizers.length === 0 && (
                     <tr><td className="px-3 py-6 text-center text-slate-500" colSpan={8}>No organizers found.</td></tr>
                   )}

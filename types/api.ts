@@ -21,6 +21,11 @@ export type SafeUser = {
   organizerApproved: boolean;
   createdAt: string;
   updatedAt: string;
+  // Set to an ISO timestamp when the user is soft-deleted. Admin UI uses
+  // this to render the row as "deleted" with a Revive action instead of
+  // Delete. End-user-facing endpoints filter these out server-side, so
+  // SafeUser instances coming from /auth/me will always have null here.
+  deletedAt: string | null;
 };
 
 export type AuthResponse = ApiEnvelope<{ user: SafeUser }>;

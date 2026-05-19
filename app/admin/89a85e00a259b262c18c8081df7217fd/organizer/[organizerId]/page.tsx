@@ -186,6 +186,7 @@ export default function OrganizerProfilePage() {
                 organizerApproved: matchedOrganizer.organizerApproved,
                 createdAt: matchedOrganizer.createdAt,
                 updatedAt: matchedOrganizer.updatedAt,
+                deletedAt: matchedOrganizer.deletedAt ?? null,
               }
               setDetails({
                 user: safeUser,
