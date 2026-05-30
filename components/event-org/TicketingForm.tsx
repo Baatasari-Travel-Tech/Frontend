@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useRef, useState } from "react"
+import React, { useCallback, useRef } from "react"
 import { ChevronDownIcon, PlusIcon, TrashIcon } from "lucide-react"
 import {
   EventFormData,
@@ -106,12 +106,12 @@ function PriceSummaryTable({ price, gatewayBearer, onGatewayBearerToggle }: {
   onGatewayBearerToggle: () => void
 }) {
   const PLATFORM_FEE = 10
-  const gatewayRate = 0.02
-  const gstOnGateway = 0.18
-  const gatewayFee = price > 0 ? Number((price * gatewayRate * (1 + gstOnGateway)).toFixed(2)) : 0
+  const RAZORPAY_RATE = 0.02 * 1.18
+  const net = price + PLATFORM_FEE
+  const gatewayFee = price > 0 ? Number((net * RAZORPAY_RATE / (1 - RAZORPAY_RATE)).toFixed(2)) : 0
 
-  const customerPays = price + (gatewayBearer === "customer" ? gatewayFee : 0)
-  const organizerGets = price - PLATFORM_FEE - (gatewayBearer === "organizer" ? gatewayFee : 0)
+  const customerPays = net + (gatewayBearer === "customer" ? gatewayFee : 0)
+  const organizerGets = price - (gatewayBearer === "organizer" ? Number((net * RAZORPAY_RATE).toFixed(2)) : 0)
   const totalCharges = PLATFORM_FEE + gatewayFee
 
   return (
@@ -184,7 +184,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
   formErrors,
 }) => {
   const audienceCategory = formData.audienceCategory || []
-  const [gatewayBearer, setGatewayBearer] = useState<"customer" | "organizer">("customer")
+  const gatewayBearer = formData.gatewayBearer ?? "customer"
 
   const handleAudienceSelection = useCallback(
     (audience: string) => {
@@ -368,7 +368,12 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                     <PriceSummaryTable
                       price={Number(tier.price) || 0}
                       gatewayBearer={gatewayBearer}
-                      onGatewayBearerToggle={() => setGatewayBearer((prev) => prev === "customer" ? "organizer" : "customer")}
+                      onGatewayBearerToggle={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          gatewayBearer: prev.gatewayBearer === "customer" ? "organizer" : "customer",
+                        }))
+                      }
                     />
                   )}
 

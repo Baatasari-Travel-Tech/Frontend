@@ -196,14 +196,17 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
   const isFreeEvent = tierPrice === 0
   const subtotal = useMemo(() => Number((tierPrice * quantity).toFixed(2)), [quantity, tierPrice])
   const PLATFORM_FEE_PER_TICKET = 10
+  const RAZORPAY_RATE = 0.02 * 1.18 // 2% + 18% GST
+  const gatewayBearer = (event.addOns as Record<string, unknown>)?.gatewayBearer ?? "customer"
   const platformFee = useMemo(
     () => (isFreeEvent ? 0 : PLATFORM_FEE_PER_TICKET * quantity),
     [isFreeEvent, quantity]
   )
-  const gatewayFee = useMemo(
-    () => (isFreeEvent ? 0 : Number((subtotal * 0.02 * 1.18).toFixed(2))),
-    [isFreeEvent, subtotal]
-  )
+  const gatewayFee = useMemo(() => {
+    if (isFreeEvent || gatewayBearer === "organizer") return 0
+    const net = subtotal + platformFee
+    return Number((net * RAZORPAY_RATE / (1 - RAZORPAY_RATE)).toFixed(2))
+  }, [isFreeEvent, gatewayBearer, subtotal, platformFee])
   const totalAmount = useMemo(
     () => Number((subtotal + platformFee + gatewayFee).toFixed(2)),
     [gatewayFee, platformFee, subtotal]
@@ -702,10 +705,12 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                             <span className="text-(--gray-600)">Platform Fee (₹10 × {quantity})</span>
                             <span className="font-medium text-(--gray-800)">+ {formatCurrency(platformFee)}</span>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-(--gray-600)">Payment Gateway (2% + GST)</span>
-                            <span className="font-medium text-(--gray-800)">+ {formatCurrency(gatewayFee)}</span>
-                          </div>
+                          {gatewayBearer === "customer" ? (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-(--gray-600)">Payment Gateway (2% + GST)</span>
+                              <span className="font-medium text-(--gray-800)">+ {formatCurrency(gatewayFee)}</span>
+                            </div>
+                          ) : null}
                           <div className="my-3 border-t-2 border-dashed border-(--gray-300)" />
                           <div className="flex items-center justify-between">
                             <span className="text-lg font-semibold text-(--brand-navy)">Total Amount</span>

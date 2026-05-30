@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { CalendarIcon, ChevronDownIcon, ChevronUpIcon, ClockIcon, PlusIcon, Trash2, Upload } from "lucide-react"
+import { CalendarIcon, ChevronDownIcon, ChevronUpIcon, ClockIcon, PlusIcon, Trash2, X, Upload } from "lucide-react"
 import Image from "next/image"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -22,12 +22,6 @@ interface EventFormProps {
   setPhotoPreview: (preview: string | null) => void
   photoError: string
   setPhotoError: (error: string) => void
-  additionalPhotos: File[]
-  setAdditionalPhotos: (photos: File[]) => void
-  additionalPhotoPreviews: string[]
-  setAdditionalPhotoPreviews: (previews: string[]) => void
-  additionalPhotosError: string
-  setAdditionalPhotosError: (error: string) => void
   addArrayItem: (arrayName: string) => void
   updateArrayField: (arrayName: string, index: number, field: string, value: unknown) => void
   removeArrayItem?: (arrayName: string, index: number) => void
@@ -51,6 +45,7 @@ const EventForm: React.FC<EventFormProps> = ({
 }) => {
   const [showStartTimePicker, setShowStartTimePicker] = useState(false)
   const [showEndTimePicker, setShowEndTimePicker] = useState(false)
+  const [activeSlotPicker, setActiveSlotPicker] = useState<{ index: number; field: "startTime" | "endTime" } | null>(null)
 
   return (
     <div className="flex flex-col items-start gap-8 w-full">
@@ -321,6 +316,89 @@ const EventForm: React.FC<EventFormProps> = ({
                   />
                   <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Entry Side (Optional)</span>
                 </div>
+              </div>
+
+              {/* Time Slots / Schedule */}
+              <div className="border-t border-ring pt-5 mt-2">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-upcoming-primary-700">Event Schedule (Optional)</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Break the event into named time slots (e.g. 7 AM–12 PM: Dance)</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => addArrayItem("timeSlots")}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-upcoming-primary-700 border border-upcoming-primary-700 rounded-full px-3 py-1 hover:bg-upcoming-primary-50 transition-colors"
+                  >
+                    <PlusIcon size={14} /> Add Slot
+                  </button>
+                </div>
+
+                {(formData.timeSlots ?? []).length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">No slots added yet.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {(formData.timeSlots ?? []).map((slot, index) => (
+                      <div key={index} className="flex flex-wrap items-start gap-3 p-3 rounded-xl border border-ring bg-background">
+                        <div className="relative flex-[2_1_160px] min-w-36">
+                          <input
+                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-background box-border h-10"
+                            placeholder="Slot name (e.g. Dance)"
+                            value={slot.name}
+                            onChange={(e) => updateArrayField("timeSlots", index, "name", e.target.value)}
+                          />
+                          <span className="absolute -top-2.5 left-2 px-1 bg-background text-muted-foreground text-xs">Name</span>
+                        </div>
+                        <div className="relative flex-[1_1_120px] min-w-28">
+                          <input
+                            type="text"
+                            readOnly
+                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-background box-border h-10 cursor-pointer pr-8"
+                            value={slot.startTime || ""}
+                            onClick={() => setActiveSlotPicker({ index, field: "startTime" })}
+                            placeholder="Start time"
+                          />
+                          <span className="absolute -top-2.5 left-2 px-1 bg-background text-muted-foreground text-xs">From</span>
+                          <ClockIcon className="absolute right-2 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                          {activeSlotPicker?.index === index && activeSlotPicker.field === "startTime" ? (
+                            <TimePicker
+                              initialTime={slot.startTime}
+                              onTimeChange={(val) => updateArrayField("timeSlots", index, "startTime", val)}
+                              onClose={() => setActiveSlotPicker(null)}
+                            />
+                          ) : null}
+                        </div>
+                        <div className="relative flex-[1_1_120px] min-w-28">
+                          <input
+                            type="text"
+                            readOnly
+                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-background box-border h-10 cursor-pointer pr-8"
+                            value={slot.endTime || ""}
+                            onClick={() => setActiveSlotPicker({ index, field: "endTime" })}
+                            placeholder="End time"
+                          />
+                          <span className="absolute -top-2.5 left-2 px-1 bg-background text-muted-foreground text-xs">To</span>
+                          <ClockIcon className="absolute right-2 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                          {activeSlotPicker?.index === index && activeSlotPicker.field === "endTime" ? (
+                            <TimePicker
+                              initialTime={slot.endTime}
+                              onTimeChange={(val) => updateArrayField("timeSlots", index, "endTime", val)}
+                              onClose={() => setActiveSlotPicker(null)}
+                            />
+                          ) : null}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeArrayItem?.("timeSlots", index)}
+                          className="mt-0.5 p-2 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-100 h-10 w-10 flex items-center justify-center"
+                          aria-label={`Remove slot ${index + 1}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

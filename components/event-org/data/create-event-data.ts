@@ -10,11 +10,13 @@ export interface EventFormData {
   time: string
   endDate: string
   endTime: string
+  timeSlots: { name: string; startTime: string; endTime: string }[]
   venue: string
   googleMapsUrl: string
   transportToEvent: string
   entrySide: string
   ticketType: "paid" | "free"
+  gatewayBearer: "customer" | "organizer"
   audienceCategory: {
     category: string
     numberOfTickets: string
@@ -70,6 +72,7 @@ export const INITIAL_EVENT_FORM_DATA: EventFormData = {
   endDate: "",
   time: "",
   endTime: "",
+  timeSlots: [],
   venue: "",
   googleMapsUrl: "",
   transportToEvent: "",
@@ -77,6 +80,7 @@ export const INITIAL_EVENT_FORM_DATA: EventFormData = {
   guidelines: "",
   ticketName: "",
   ticketPrice: "",
+  gatewayBearer: "customer",
   ticketType: "paid",
   ticketQuantity: "",
   audienceCategory: [
@@ -130,7 +134,7 @@ export const STEP_FIELDS = [
     "venue",
     "googleMapsUrl",
   ],
-  ["ticketType", "audienceCategory"],
+  ["ticketType", "audienceCategory", "addOns.giftHampersDescription", "addOns.addOtherDescription"],
   ["sponsors"],
   ["contactInfo.mobile", "contactInfo.email", "postEventFollowUp.thankYouNote"],
 ]

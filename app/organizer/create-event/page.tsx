@@ -182,6 +182,7 @@ const buildCreateEventPayload = (
       highlights: (formData.artists || [])
         .map((artist) => artist.name?.trim() || "")
         .filter(Boolean),
+      timeSlots: (formData.timeSlots || []).filter((s) => s.name.trim() && s.startTime && s.endTime),
     },
     postEventFollowUp: formData.postEventFollowUp || {},
     contactInfo: {
@@ -192,7 +193,7 @@ const buildCreateEventPayload = (
     },
     audienceRange: formData.audienceRange || { min: 0, max: 100 },
     targetAudience: formData.targetAudience || {},
-    addOns: formData.addOns || {},
+    addOns: { ...(formData.addOns || {}), gatewayBearer: formData.gatewayBearer ?? "customer" },
     guidelines: {
       text: formData.guidelines || "",
     },
@@ -217,10 +218,8 @@ function CreateEventContent() {
   const searchParams = useSearchParams()
   const { user, profile, organizerProfile } = useAuth()
 
-  const mode = searchParams.get("mode")
   const eventId = searchParams.get("eventId")
   const action = searchParams.get("action")?.toLowerCase() ?? null
-  const startDirectly = mode === "create" || searchParams.get("startDirectly") === "true"
   const isUpdateFlow = Boolean(eventId) && (action === "edit" || action === "reschedule")
   const [isHydratingEvent, setIsHydratingEvent] = useState(() => Boolean(eventId))
   const [prefillError, setPrefillError] = useState<string | null>(null)
@@ -246,6 +245,14 @@ function CreateEventContent() {
     profile?.phone,
     user?.email,
   ])
+
+  // Clear any stale draft so a fresh creation never starts with old data
+  useEffect(() => {
+    if (eventId) return
+    localStorage.removeItem("eventFormData")
+    localStorage.removeItem("eventFormCurrentStep")
+    localStorage.removeItem("eventFormOpenSections")
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let active = true
@@ -306,7 +313,7 @@ function CreateEventContent() {
 
       <EventPage
         isDashboardMode
-        startDirectly={startDirectly}
+        startDirectly={true}
         action={action}
         contactInfoPrefill={!eventId ? contactInfoPrefill : undefined}
         onSubmit={async (formData) => {

@@ -124,9 +124,6 @@ const EventPage: React.FC<EventPageProps> = ({
   const [formData, setFormData] = useState<EventFormData>(INITIAL_EVENT_FORM_DATA);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
-  const [additionalPhotos, setAdditionalPhotos] = useState<File[]>([]);
-  const [additionalPhotoPreviews, setAdditionalPhotoPreviews] = useState<string[]>([]);
-  const [additionalPhotosError, setAdditionalPhotosError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -258,6 +255,27 @@ const EventPage: React.FC<EventPageProps> = ({
     setShowCreateEvent(true);
   };
 
+  const handleStepClick = (targetStep: number) => {
+    if (targetStep <= currentStep) {
+      setCurrentStep(targetStep);
+      setFormErrors({});
+      setTimeout(scrollToFormTop, 0);
+      return;
+    }
+    const errors = validateEventForm(formData);
+    const currentStepKeys = stepFields[currentStep - 1] ?? [];
+    const hasCurrentErrors = Object.keys(errors).some((field) =>
+      currentStepKeys.some((key) => field === key || field.startsWith(`${key}.`))
+    );
+    if (hasCurrentErrors) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+    setCurrentStep(targetStep);
+    setTimeout(scrollToFormTop, 0);
+  };
+
   const scrollToFormTop = () => {
     if (!formRef.current) return;
     const container = getScrollContainer(formRef.current, mainContainerRef, isDashboardMode);
@@ -298,6 +316,8 @@ const EventPage: React.FC<EventPageProps> = ({
             break;
           }
         }
+        const count = Object.keys(errors).length;
+        setSubmitError(`${count} required field${count > 1 ? "s are" : " is"} incomplete. Please fix the highlighted fields before submitting.`);
         setCurrentStep(jumpStep);
         setTimeout(scrollToFormTop, 0);
         return;
@@ -328,6 +348,7 @@ const EventPage: React.FC<EventPageProps> = ({
 
     setCurrentStep((s) => s + 1);
     setFormErrors({});
+    setSubmitError(null);
     setTimeout(scrollToFormTop, 0);
   };
 
@@ -388,32 +409,6 @@ const EventPage: React.FC<EventPageProps> = ({
       return;
     }
 
-    if (name === "additionalPhotos") {
-      const filesArray = Array.from(files || []);
-      const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-      const previews: string[] = [];
-      const filteredFiles: File[] = [];
-      let error = "";
-
-      filesArray.forEach((file) => {
-        if (!validTypes.includes(file.type)) {
-          error = "Please upload only JPG, PNG, GIF, or WEBP files.";
-          return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-          error = "Each file size must be less than 5MB.";
-          return;
-        }
-        filteredFiles.push(file);
-        previews.push(URL.createObjectURL(file));
-      });
-
-      setAdditionalPhotos(filteredFiles);
-      setAdditionalPhotoPreviews(previews);
-      setAdditionalPhotosError(error);
-      return;
-    }
-
     if (name.startsWith("transport.") || name.startsWith("addOns.")) {
       const path = name.split(".");
       setFormData((prev) => updateNestedState(prev, path, checked));
@@ -439,7 +434,9 @@ const EventPage: React.FC<EventPageProps> = ({
               ? { name: "", description: "" }
               : arrayName === "audienceCategory"
                 ? { category: "", numberOfTickets: "", isLimited: true, isFree: false, price: "", description: "" }
-                : { name: "", logo: null, details: "" },
+                : arrayName === "timeSlots"
+                  ? { name: "", startTime: "", endTime: "" }
+                  : { name: "", logo: null, details: "" },
       ],
     }));
   };
@@ -557,17 +554,11 @@ const EventPage: React.FC<EventPageProps> = ({
                       <React.Fragment key={step.number}>
                         <div
                           className="flex flex-col items-center min-w-20 z-2 cursor-pointer"
-                          onClick={() => {
-                            setCurrentStep(Number(step.number));
-                            setTimeout(scrollToFormTop, 0);
-                          }}
+                          onClick={() => handleStepClick(Number(step.number))}
                           role="button"
                           tabIndex={0}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              setCurrentStep(Number(step.number));
-                              setTimeout(scrollToFormTop, 0);
-                            }
+                            if (e.key === "Enter" || e.key === " ") handleStepClick(Number(step.number));
                           }}
                         >
                           <div
@@ -624,12 +615,6 @@ const EventPage: React.FC<EventPageProps> = ({
                     setPhotoPreview={setPhotoPreview}
                     photoError={photoError}
                     setPhotoError={setPhotoError}
-                    additionalPhotos={additionalPhotos}
-                    setAdditionalPhotos={setAdditionalPhotos}
-                    additionalPhotoPreviews={additionalPhotoPreviews}
-                    setAdditionalPhotoPreviews={setAdditionalPhotoPreviews}
-                    additionalPhotosError={additionalPhotosError}
-                    setAdditionalPhotosError={setAdditionalPhotosError}
                     addArrayItem={addArrayItem}
                     updateArrayField={updateArrayField}
                     removeArrayItem={removeArrayItem}

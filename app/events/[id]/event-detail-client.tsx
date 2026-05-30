@@ -75,6 +75,14 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   }, [event])
 
+  type TimeSlot = { name: string; startTime: string; endTime: string }
+  const timeSlots = useMemo(() => {
+    const requirements = asRecord(event.requirements)
+    const slots = requirements.timeSlots
+    if (!Array.isArray(slots)) return []
+    return slots.filter((s): s is TimeSlot => s && typeof s === "object" && typeof s.name === "string")
+  }, [event])
+
   const ageRange = (() => {
     const range = event.audienceRange
     if (range && typeof range.min === "number" && typeof range.max === "number") {
@@ -351,6 +359,22 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
           >
             <h3 className="mb-4 text-lg font-bold text-(--black)">About the Event</h3>
             <p className="mb-6 leading-relaxed text-(--gray-600)">{event.description}</p>
+
+            {timeSlots.length > 0 ? (
+              <>
+                <h3 className="mb-3 text-lg font-bold text-(--black)">Event Schedule</h3>
+                <div className="mb-6 flex flex-col gap-2">
+                  {timeSlots.map((slot, i) => (
+                    <div key={i} className="flex items-center gap-3 rounded-lg border border-(--gray-200) bg-(--gray-50) px-4 py-2.5">
+                      <span className="min-w-36 shrink-0 text-sm font-semibold text-(--brand-blue)">
+                        {slot.startTime} – {slot.endTime}
+                      </span>
+                      <span className="text-sm text-(--gray-700)">{slot.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
 
             <h3 className="mb-4 text-lg font-bold text-(--black)">Event Highlights</h3>
             <ul className="list-disc space-y-2 pl-5 text-(--gray-600)">
