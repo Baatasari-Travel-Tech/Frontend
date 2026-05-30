@@ -45,6 +45,7 @@ const EventForm: React.FC<EventFormProps> = ({
 }) => {
   const [showStartTimePicker, setShowStartTimePicker] = useState(false)
   const [showEndTimePicker, setShowEndTimePicker] = useState(false)
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [activeSlotPicker, setActiveSlotPicker] = useState<{ index: number; field: "startTime" | "endTime" } | null>(null)
 
   return (
@@ -180,7 +181,7 @@ const EventForm: React.FC<EventFormProps> = ({
             <div className="flex flex-col gap-6">
               <div className="flex w-full flex-wrap gap-4 items-start">
                 <div className="relative min-w-37.5 flex-[1_1_200px]">
-                  <Popover>
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -202,8 +203,8 @@ const EventForm: React.FC<EventFormProps> = ({
                         selected={formData.date && !Number.isNaN(new Date(formData.date).getTime()) ? new Date(formData.date) : undefined}
                         onSelect={(date) => {
                           if (date) {
-                            const formatted = format(date, "yyyy-MM-dd")
-                            setFormData((prev) => ({ ...prev, date: formatted }))
+                            setFormData((prev) => ({ ...prev, date: format(date, "yyyy-MM-dd") }))
+                            setDatePickerOpen(false)
                           }
                         }}
                         startMonth={new Date()}
