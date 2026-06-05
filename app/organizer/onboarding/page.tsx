@@ -51,7 +51,13 @@ const INDIAN_STATES = Array.from(new Set(Object.values(GST_STATE_CODES)))
   .filter((name) => !/[()]/.test(name) && name !== "Centre" && name !== "Other Territory")
   .sort((a, b) => a.localeCompare(b))
 
-const stateFromGstin = (gstin: string): string => GST_STATE_CODES[gstin.slice(0, 2)] ?? ""
+const stateFromGstin = (gstin: string): string => {
+  const raw = GST_STATE_CODES[gstin.slice(0, 2)] ?? ""
+  // Drop any parenthetical qualifier (e.g. "Andhra Pradesh (Amaravati)") and
+  // only return a value that's actually a selectable State option.
+  const normalized = raw.replace(/\s*\(.*\)\s*/g, "").trim()
+  return INDIAN_STATES.includes(normalized) ? normalized : ""
+}
 
 const GSTN_CODEPOINT_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -815,12 +821,15 @@ export default function OrganizerOnboardingPage() {
         if (i !== index) return row
         if (field === "gstin") {
           const gstin = value.toUpperCase()
+          // The GSTIN's first two digits are the state code, so it drives the
+          // state: auto-fill/override whenever those map to a known state, and
+          // keep the current value while the code is still incomplete/unknown.
+          const derivedState = stateFromGstin(gstin)
           // Editing the GSTIN invalidates any prior verification.
           return {
             ...row,
             gstin,
-            // Auto-fill the state from the GSTIN's state code only when still blank.
-            state: row.state.trim() ? row.state : stateFromGstin(gstin),
+            state: derivedState || row.state,
             verified: false,
             error: null,
             legalName: null,
