@@ -56,7 +56,8 @@ const FinalForm: React.FC<FinalFormProps> = ({
                         }))
                       }
                     }}
-                    className="w-full px-4 py-3 border border-gray-400 rounded text-sm outline-none text-gray-800 bg-background box-border"
+                    name="contactInfo.mobile"
+                    className={`w-full px-4 py-3 border rounded text-sm outline-none text-gray-800 bg-background box-border ${formErrors["contactInfo.mobile"] ? "border-red-400" : "border-gray-400"}`}
                     placeholder="Enter mobile number"
                   />
                   {formErrors["contactInfo.mobile"] ? <span className="text-danger-red text-xs">{formErrors["contactInfo.mobile"]}</span> : null}
@@ -75,7 +76,8 @@ const FinalForm: React.FC<FinalFormProps> = ({
                         contactInfo: { ...prev.contactInfo, email: e.target.value },
                       }))
                     }
-                    className="w-full px-4 py-3 border border-gray-400 rounded text-sm outline-none text-gray-800 bg-background box-border"
+                    name="contactInfo.email"
+                    className={`w-full px-4 py-3 border rounded text-sm outline-none text-gray-800 bg-background box-border ${formErrors["contactInfo.email"] ? "border-red-400" : "border-gray-400"}`}
                     placeholder="example@email.com"
                   />
                   {formErrors["contactInfo.email"] ? <span className="text-danger-red text-xs">{formErrors["contactInfo.email"]}</span> : null}
@@ -129,7 +131,7 @@ const FinalForm: React.FC<FinalFormProps> = ({
             <div className="mt-4 relative">
               <label className="absolute -top-2.5 left-3 bg-card px-1 text-xs font-medium text-gray-700 z-1">Follow-up Message *</label>
               <textarea
-                className="w-full h-30 px-4 py-3 border border-gray-400 rounded text-sm outline-none resize-y text-gray-800 bg-background box-border"
+                className={`w-full h-30 px-4 py-3 border rounded text-sm outline-none resize-y text-gray-800 bg-background box-border ${formErrors["postEventFollowUp.thankYouNote"] ? "border-red-400" : "border-gray-400"}`}
                 name="postEventFollowUp.thankYouNote"
                 value={formData.postEventFollowUp?.thankYouNote || ""}
                 onChange={(e) =>

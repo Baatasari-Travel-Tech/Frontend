@@ -276,6 +276,26 @@ const EventPage: React.FC<EventPageProps> = ({
     setTimeout(scrollToFormTop, 0);
   };
 
+  const scrollToFirstError = (errors: Record<string, string>) => {
+    setTimeout(() => {
+      if (Object.keys(errors).length === 0) return;
+      // Try each error key — find a named input and focus+scroll
+      for (const key of Object.keys(errors)) {
+        const el = document.querySelector<HTMLElement>(`[name="${key}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          if ((el as HTMLInputElement).type !== "file") {
+            try { el.focus(); } catch {}
+          }
+          return;
+        }
+      }
+      // Fallback: scroll to first visible error message
+      const firstMsg = document.querySelector<HTMLElement>(".text-danger-red");
+      if (firstMsg) firstMsg.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  };
+
   const scrollToFormTop = () => {
     if (!formRef.current) return;
     const container = getScrollContainer(formRef.current, mainContainerRef, isDashboardMode);
@@ -298,6 +318,7 @@ const EventPage: React.FC<EventPageProps> = ({
         setFormErrors(errors);
         setSubmitError(null);
         setSubmitSuccess(null);
+        scrollToFirstError(errors);
         return;
       }
     }
@@ -319,7 +340,7 @@ const EventPage: React.FC<EventPageProps> = ({
         const count = Object.keys(errors).length;
         setSubmitError(`${count} required field${count > 1 ? "s are" : " is"} incomplete. Please fix the highlighted fields before submitting.`);
         setCurrentStep(jumpStep);
-        setTimeout(scrollToFormTop, 0);
+        scrollToFirstError(errors);
         return;
       }
 

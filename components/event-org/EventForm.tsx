@@ -64,7 +64,7 @@ const EventForm: React.FC<EventFormProps> = ({
             <div className="flex w-full flex-wrap gap-10 items-start">
               <div className="flex flex-col w-64.5 min-w-50 flex-[1_1_258px] max-w-full max-[600px]:w-full">
                 <label htmlFor="eventPhoto" className="cursor-pointer block w-full">
-                  <div className="flex flex-col h-97 min-h-97 items-center justify-center gap-3.25 px-6 py-5 bg-background rounded-xl border border-dashed border-gray-400 w-full">
+                  <div className={`flex flex-col h-97 min-h-97 items-center justify-center gap-3.25 px-6 py-5 bg-background rounded-xl border border-dashed w-full ${formErrors.eventPhoto ? "border-red-400" : "border-gray-400"}`}>
                     <input
                       id="eventPhoto"
                       type="file"
@@ -98,7 +98,7 @@ const EventForm: React.FC<EventFormProps> = ({
                 <div className="flex w-full flex-wrap gap-6 items-center">
                   <div className="relative w-full flex-1">
                     <input
-                      className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14"
+                      className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.eventName ? "border-red-400" : "border-ring"}`}
                       placeholder="Enter event title"
                       name="eventName"
                       value={formData.eventName}
@@ -110,7 +110,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
                   <div className="relative w-full flex-1">
                     <select
-                      className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14"
+                      className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.category ? "border-red-400" : "border-ring"}`}
                       name="category"
                       value={formData.category}
                       onChange={handleInputChange}
@@ -141,7 +141,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
                 <div className="relative w-full">
                   <textarea
-                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-background box-border min-h-30 resize-y"
+                    className={`w-full border rounded px-4 py-2 text-base text-gray-800 bg-background box-border min-h-30 resize-y ${formErrors.description ? "border-red-400" : "border-ring"}`}
                     placeholder="Describe the event purpose and attendee experience"
                     name="description"
                     value={formData.description}
@@ -186,8 +186,9 @@ const EventForm: React.FC<EventFormProps> = ({
                       <Button
                         variant="outline"
                         className={cn(
-                          "h-14 px-4 py-1 border border-ring rounded text-base bg-transparent w-full justify-start text-left font-normal relative",
-                          formData.date ? "text-gray-800" : "text-muted-foreground"
+                          "h-14 px-4 py-1 border rounded text-base bg-transparent w-full justify-start text-left font-normal relative",
+                          formData.date ? "text-gray-800" : "text-muted-foreground",
+                          formErrors.date ? "border-red-400" : "border-ring"
                         )}
                       >
                         {formData.date && !Number.isNaN(new Date(formData.date).getTime())
@@ -228,7 +229,7 @@ const EventForm: React.FC<EventFormProps> = ({
                   <input
                     type="text"
                     readOnly
-                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14"
+                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.time ? "border-red-400" : "border-ring"}`}
                     value={formData.time || ""}
                     onClick={() => setShowStartTimePicker(true)}
                     placeholder="HH:MM AM/PM"
@@ -250,7 +251,7 @@ const EventForm: React.FC<EventFormProps> = ({
                   <input
                     type="text"
                     readOnly
-                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14"
+                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.endTime ? "border-red-400" : "border-ring"}`}
                     value={formData.endTime || ""}
                     onClick={() => setShowEndTimePicker(true)}
                     placeholder="HH:MM AM/PM"
@@ -272,7 +273,7 @@ const EventForm: React.FC<EventFormProps> = ({
               <div className="flex w-full flex-wrap gap-6 items-start">
                 <div className="relative min-w-62.5 flex-[1_1_250px]">
                   <input
-                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14"
+                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.venue ? "border-red-400" : "border-ring"}`}
                     placeholder="Enter venue address or name"
                     name="venue"
                     value={formData.venue}
@@ -284,7 +285,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
                 <div className="relative min-w-62.5 flex-[1_1_250px]">
                   <input
-                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14"
+                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.googleMapsUrl ? "border-red-400" : "border-ring"}`}
                     placeholder="Paste Google Maps URL"
                     name="googleMapsUrl"
                     value={formData.googleMapsUrl}

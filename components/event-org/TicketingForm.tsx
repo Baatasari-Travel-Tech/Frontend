@@ -266,7 +266,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                       type="text"
                       value={tier.category || ""}
                       onChange={(e) => updateArrayField("audienceCategory", index, "category", e.target.value)}
-                      className="w-full h-12 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-background"
+                      className={`w-full h-12 px-4 py-3 border rounded-md text-sm text-gray-800 bg-background ${formErrors[`audienceCategory.${index}.category`] ? "border-red-400" : "border-gray-400"}`}
                       placeholder="Ex: Gold Pass"
                     />
                     {formErrors[`audienceCategory.${index}.category`] ? (
@@ -299,7 +299,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                           min="1"
                           value={tier.numberOfTickets || ""}
                           onChange={(e) => updateArrayField("audienceCategory", index, "numberOfTickets", e.target.value)}
-                          className="w-full h-12 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-background"
+                          className={`w-full h-12 px-4 py-3 border rounded-md text-sm text-gray-800 bg-background ${formErrors[`audienceCategory.${index}.numberOfTickets`] ? "border-red-400" : "border-gray-400"}`}
                           placeholder="Ex: 100"
                         />
                         {formErrors[`audienceCategory.${index}.numberOfTickets`] ? (
@@ -325,7 +325,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                             step="1"
                             value={tier.price || ""}
                             onChange={(e) => updateArrayField("audienceCategory", index, "price", e.target.value)}
-                            className="w-full h-12 pl-8 pr-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-background"
+                            className={`w-full h-12 pl-8 pr-4 py-3 border rounded-md text-sm text-gray-800 bg-background ${formErrors[`audienceCategory.${index}.price`] ? "border-red-400" : "border-gray-400"}`}
                             placeholder="Min ₹10"
                           />
                         </div>
@@ -385,7 +385,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                     <textarea
                       value={tier.description || ""}
                       onChange={(e) => updateArrayField("audienceCategory", index, "description", e.target.value)}
-                      className="w-full min-h-20 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-background resize-y"
+                      className={`w-full min-h-20 px-4 py-3 border rounded-md text-sm text-gray-800 bg-background resize-y ${formErrors[`audienceCategory.${index}.description`] ? "border-red-400" : "border-gray-400"}`}
                       placeholder="Describe this ticket category"
                     />
                     {formErrors[`audienceCategory.${index}.description`] ? (
