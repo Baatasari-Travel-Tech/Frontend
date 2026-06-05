@@ -2,6 +2,7 @@
 
 import { Calendar, Clock, Info, MapPin, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ShareEventButton } from "@/components/event-org/share-event-button"
 import type { EventDetail } from "@/types/api"
 
 type Status = "Upcoming" | "Ongoing" | "Past"
@@ -120,13 +121,21 @@ export function EventOverview({ event, isLoading, onEdit }: Props) {
           </div>
         </div>
 
-        <Button
-          className="gap-2 self-start lg:self-auto rounded-full bg-blue-soft text-white transition-transform duration-160 ease-out active:scale-[0.97]"
-          onClick={onEdit}
-        >
-          <Pencil className="h-4 w-4" />
-          Edit Event
-        </Button>
+        <div className="flex items-center gap-2 self-start lg:self-auto">
+          <ShareEventButton
+            eventId={event.id}
+            slug={event.slug}
+            title={event.title}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          />
+          <Button
+            className="gap-2 rounded-full bg-blue-soft text-white transition-transform duration-160 ease-out active:scale-[0.97]"
+            onClick={onEdit}
+          >
+            <Pencil className="h-4 w-4" />
+            Edit Event
+          </Button>
+        </div>
       </div>
     </div>
   )

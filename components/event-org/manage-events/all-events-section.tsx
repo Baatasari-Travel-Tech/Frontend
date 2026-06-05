@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ShareEventButton } from "@/components/event-org/share-event-button"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import type { EventDetail } from "@/types/api"
@@ -201,16 +202,25 @@ export function AllEventsSection({
                   </TableCell>
 
                   <TableCell className="px-6 py-4 text-sm">
-                    <Button
-                      size="sm"
-                      onClick={(clickEvent) => handleAction(event, clickEvent)}
-                      className={cn(
-                        "text-(--events-white) px-6 rounded-full",
-                        "bg-blue-soft"
-                      )}
-                    >
-                      {event.action}
-                    </Button>
+                    <div className="flex items-center gap-2" onClick={(clickEvent) => clickEvent.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        onClick={(clickEvent) => handleAction(event, clickEvent)}
+                        className={cn(
+                          "text-(--events-white) px-6 rounded-full",
+                          "bg-blue-soft"
+                        )}
+                      >
+                        {event.action}
+                      </Button>
+                      <ShareEventButton
+                        eventId={event.id}
+                        slug={event.slug}
+                        title={event.name}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-(--events-gray-300) text-(--events-gray-700) transition hover:bg-(--events-gray-100)"
+                        iconOnly
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

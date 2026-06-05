@@ -30,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ShareEventButton } from "@/components/event-org/share-event-button"
 import type { EventDetail } from "@/types/api"
 import {
   toUpcomingManageEvents,
@@ -332,6 +333,13 @@ export function UpcomingEventsSection({
                       >
                         Reschedule
                       </Button>
+
+                      <ShareEventButton
+                        eventId={event.id}
+                        slug={event.slug}
+                        title={event.title}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-foreground px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-foreground whitespace-nowrap flex-1 sm:flex-none transition hover:bg-slate-50"
+                      />
 
                       <Button
                         className="rounded-full text-xs sm:text-sm px-2 sm:px-4 py-2 bg-foreground text-background whitespace-nowrap flex-1 sm:flex-none"
