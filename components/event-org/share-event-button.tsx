@@ -48,33 +48,30 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
         const logo = new Image()
         logo.onload = () => {
           if (cancelled) return
-          const cx = canvas.width / 2
-          const cy = canvas.height / 2
-          const logoRadius = canvas.width * 0.13
-          const ringRadius = logoRadius + canvas.width * 0.025
+          const size = canvas.width * 0.24
+          const x = (canvas.width - size) / 2
+          const y = (canvas.height - size) / 2
+          const pad = size * 0.16
+          const bx = x - pad
+          const by = y - pad
+          const bw = size + pad * 2
+          const bh = size + pad * 2
+          const r = canvas.width * 0.02
 
-          // Round white backdrop (the logo is circular), with a soft ring.
-          ctx.save()
-          ctx.beginPath()
-          ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2)
-          ctx.closePath()
+          // Rounded white backdrop, then the logo drawn on top, crisply.
           ctx.fillStyle = "#ffffff"
-          ctx.fill()
-          ctx.lineWidth = canvas.width * 0.006
-          ctx.strokeStyle = "#e2e8f0"
-          ctx.stroke()
-          ctx.restore()
-
-          // Clip the logo into a circle and draw it crisply.
-          ctx.save()
           ctx.beginPath()
-          ctx.arc(cx, cy, logoRadius, 0, Math.PI * 2)
+          ctx.moveTo(bx + r, by)
+          ctx.arcTo(bx + bw, by, bx + bw, by + bh, r)
+          ctx.arcTo(bx + bw, by + bh, bx, by + bh, r)
+          ctx.arcTo(bx, by + bh, bx, by, r)
+          ctx.arcTo(bx, by, bx + bw, by, r)
           ctx.closePath()
-          ctx.clip()
+          ctx.fill()
+
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = "high"
-          ctx.drawImage(logo, cx - logoRadius, cy - logoRadius, logoRadius * 2, logoRadius * 2)
-          ctx.restore()
+          ctx.drawImage(logo, x, y, size, size)
         }
         logo.src = "/logo.png"
       })

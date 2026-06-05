@@ -289,7 +289,7 @@ export function UpcomingEventsSection({
                       <Stat title="Date Change" value={event.stats.dateChange} />
                     </div>
 
-                    <div className="flex flex-nowrap items-center gap-2 sm:gap-3 mt-10 w-full justify-between sm:justify-start pb-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-10 w-full justify-start pb-2">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
