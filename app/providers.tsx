@@ -42,6 +42,7 @@ type AuthCtx = {
   session: Session | null
   user: SafeUser | null
   isLoading: boolean
+  hasHydrated: boolean
   profile: LegacyProfile | null
   organizerProfile: OrganizerProfile | null
   talentProfile: TalentProfile | null
@@ -167,6 +168,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   const {
     bootstrapping,
+    hasHydrated,
     user,
     activeRole,
     profile,
@@ -272,13 +274,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const bootstrap = useCallback(async () => {
     setBootstrapping(true)
     try {
-      await apiRequest("/auth/refresh", {
-        method: "POST",
-        retryOn401: false,
-      })
-
+      // A single /auth/me call: it carries the httpOnly cookie and the API
+      // client transparently refreshes the access token on a 401 (deduped),
+      // so we no longer need a separate, sequential /auth/refresh round-trip.
       const me = await apiRequest<ApiEnvelope<{ user: SafeUser }>>("/auth/me", {
         auth: true,
+        retryOn401: true,
         activeRole: useAuthStore.getState().activeRole,
       })
 
@@ -293,6 +294,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       setBootstrapping(false)
     }
   }, [clearSession, hydrateForUser, setBootstrapping])
+
+  // Rehydrate the persisted identity snapshot first (synchronous localStorage
+  // read), so cached pages can render instantly before bootstrap revalidates.
+  useEffect(() => {
+    const result = useAuthStore.persist.rehydrate()
+    Promise.resolve(result).finally(() => {
+      useAuthStore.getState().setHasHydrated(true)
+    })
+  }, [])
 
   useEffect(() => {
     if (typeof window !== "undefined" && isAdminRoutePath(window.location.pathname)) {
@@ -467,6 +477,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     session: userToSession(user),
     user,
     isLoading: bootstrapping,
+    hasHydrated,
     profile,
     organizerProfile,
     talentProfile,

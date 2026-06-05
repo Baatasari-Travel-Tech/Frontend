@@ -13,6 +13,7 @@ import type {
 
 type AuthStore = {
   bootstrapping: boolean
+  hasHydrated: boolean
   user: SafeUser | null
   activeRole: ActiveRole
   profile: LegacyProfile | null
@@ -20,6 +21,7 @@ type AuthStore = {
   preferences: SimplePreferences | null
   talentProfile: TalentProfile | null
   setBootstrapping: (value: boolean) => void
+  setHasHydrated: (value: boolean) => void
   setUser: (user: SafeUser | null) => void
   setActiveRole: (role: ActiveRole) => void
   setProfile: (profile: LegacyProfile | null) => void
@@ -33,6 +35,7 @@ export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
       bootstrapping: true,
+      hasHydrated: false,
       user: null,
       activeRole: "USER",
       profile: null,
@@ -40,6 +43,7 @@ export const useAuthStore = create<AuthStore>()(
       preferences: null,
       talentProfile: null,
       setBootstrapping: (value) => set({ bootstrapping: value }),
+      setHasHydrated: (value) => set({ hasHydrated: value }),
       setUser: (user) => set({ user }),
       setActiveRole: (role) => set({ activeRole: role }),
       setProfile: (profile) => set({ profile }),
@@ -58,9 +62,21 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: "baatasari-auth",
-      storage: createJSONStorage(() => sessionStorage),
+      // localStorage (not sessionStorage) so a cached identity survives full
+      // reloads and new tabs. No tokens are stored here — auth itself stays in
+      // httpOnly cookies; this is only a UI snapshot to render instantly while
+      // the session revalidates in the background.
+      storage: createJSONStorage(() => localStorage),
+      // Rehydrate manually (in Providers) so server and first client render
+      // agree (both start empty), avoiding hydration mismatches.
+      skipHydration: true,
       partialize: (state) => ({
         activeRole: state.activeRole,
+        user: state.user,
+        profile: state.profile,
+        organizerProfile: state.organizerProfile,
+        talentProfile: state.talentProfile,
+        preferences: state.preferences,
       }),
     }
   )

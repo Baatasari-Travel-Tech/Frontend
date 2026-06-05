@@ -24,10 +24,12 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const { isLoading, session, user, activeRole, organizerVerificationStatus, profile, talentProfile } = useAuth()
+  const { isLoading, hasHydrated, session, user, activeRole, organizerVerificationStatus, profile, talentProfile } = useAuth()
 
   useEffect(() => {
-    if (isLoading) return
+    // Don't act until the cached identity is loaded and a revalidation pass has
+    // settled — otherwise we'd redirect on a momentarily-empty session.
+    if (!hasHydrated || isLoading) return
 
     if (!session?.user || !user) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
@@ -78,6 +80,7 @@ export function ProtectedRoute({
     }
   }, [
     activeRole,
+    hasHydrated,
     isLoading,
     organizerVerificationStatus,
     pathname,
@@ -93,7 +96,11 @@ export function ProtectedRoute({
     user,
   ])
 
-  if (isLoading || !session?.user || !user) {
+  // Before hydration both server and client render the loader (no mismatch).
+  // Once hydrated, a cached user renders immediately — the session revalidates
+  // in the background. Only a genuinely empty session keeps the loader (the
+  // effect above redirects it to /login).
+  if (!hasHydrated || !session?.user || !user) {
     return <LoadingScreen />
   }
 
