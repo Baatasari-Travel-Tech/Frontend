@@ -51,13 +51,8 @@ const INDIAN_STATES = Array.from(new Set(Object.values(GST_STATE_CODES)))
   .filter((name) => !/[()]/.test(name) && name !== "Centre" && name !== "Other Territory")
   .sort((a, b) => a.localeCompare(b))
 
-const stateFromGstin = (gstin: string): string => {
-  const raw = GST_STATE_CODES[gstin.slice(0, 2)] ?? ""
-  // Drop any parenthetical qualifier (e.g. "Andhra Pradesh (Amaravati)") and
-  // only return a value that's actually a selectable State option.
-  const normalized = raw.replace(/\s*\(.*\)\s*/g, "").trim()
-  return INDIAN_STATES.includes(normalized) ? normalized : ""
-}
+// Return the exact state the GSTIN's state code maps to (no normalization).
+const stateFromGstin = (gstin: string): string => GST_STATE_CODES[gstin.slice(0, 2)] ?? ""
 
 const GSTN_CODEPOINT_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -1550,6 +1545,9 @@ export default function OrganizerOnboardingPage() {
                                       onChange={(e) => updateGstinRow(index, "state", e.target.value)}
                                     >
                                       <option value="">State</option>
+                                      {row.state && !INDIAN_STATES.includes(row.state) ? (
+                                        <option value={row.state}>{row.state}</option>
+                                      ) : null}
                                       {INDIAN_STATES.map((stateName) => (
                                         <option key={stateName} value={stateName}>{stateName}</option>
                                       ))}
