@@ -5,6 +5,39 @@ import { createPortal } from "react-dom"
 import QRCode from "qrcode"
 import { Share2, Copy, Check, X } from "lucide-react"
 
+const LOGO_SRC = "/logonew.png"
+
+function triggerDownload(href: string, filename: string) {
+  const a = document.createElement("a")
+  a.href = href
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
+// Load the logo and return a self-contained data URI + its aspect ratio,
+// so it can be embedded into the SVG (no external reference needed).
+function loadLogoDataUri(): Promise<{ dataUri: string; aspect: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement("canvas")
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        reject(new Error("no-2d-context"))
+        return
+      }
+      ctx.drawImage(img, 0, 0)
+      resolve({ dataUri: canvas.toDataURL("image/png"), aspect: img.naturalWidth / img.naturalHeight })
+    }
+    img.onerror = () => reject(new Error("logo-load-failed"))
+    img.src = LOGO_SRC
+  })
+}
+
 interface ShareEventButtonProps {
   eventId: string
   slug?: string | null
@@ -100,6 +133,51 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
     }
   }
 
+  const fileBase = `baatasari-event-qr-${slug || eventId}`
+
+  // PNG / JPG: export the rendered canvas (QR + centre logo) directly.
+  const downloadRaster = (type: "image/png" | "image/jpeg", ext: "png" | "jpg") => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const dataUrl = canvas.toDataURL(type, type === "image/jpeg" ? 0.92 : undefined)
+    triggerDownload(dataUrl, `${fileBase}.${ext}`)
+  }
+
+  // SVG: a crisp vector QR with the logo embedded as a centred <image>.
+  const downloadSvg = async () => {
+    try {
+      const svg = await QRCode.toString(link, {
+        type: "svg",
+        errorCorrectionLevel: "H",
+        margin: 1,
+        color: { dark: "#0f172a", light: "#ffffff" },
+      })
+      const { dataUri, aspect } = await loadLogoDataUri()
+      const viewBoxMatch = svg.match(/viewBox="0 0 ([\d.]+) /)
+      const unit = viewBoxMatch ? Number(viewBoxMatch[1]) : 33
+      const w = unit * 0.34
+      const h = w / aspect
+      const x = (unit - w) / 2
+      const y = (unit - h) / 2
+      const pad = unit * 0.032
+      const bx = x - pad
+      const by = y - pad
+      const bw = w + pad * 2
+      const bh = h + pad * 2
+      const r = Math.min(bw, bh) * 0.3
+      const overlay =
+        `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${r}" fill="#ffffff"/>` +
+        `<image x="${x}" y="${y}" width="${w}" height="${h}" href="${dataUri}" preserveAspectRatio="xMidYMid meet"/>`
+      const finalSvg = svg.replace("</svg>", `${overlay}</svg>`)
+      const blob = new Blob([finalSvg], { type: "image/svg+xml" })
+      const url = URL.createObjectURL(blob)
+      triggerDownload(url, `${fileBase}.svg`)
+      setTimeout(() => URL.revokeObjectURL(url), 2000)
+    } catch {
+      // ignore — raster downloads remain available
+    }
+  }
+
   return (
     <>
       <button
@@ -171,6 +249,31 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
                   </>
                 )}
               </button>
+
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <span className="text-xs text-slate-400">Download</span>
+                <button
+                  type="button"
+                  onClick={() => downloadRaster("image/png", "png")}
+                  className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  PNG
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadRaster("image/jpeg", "jpg")}
+                  className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  JPG
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void downloadSvg()}
+                  className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  SVG
+                </button>
+              </div>
             </div>
           </div>
         </div>,
