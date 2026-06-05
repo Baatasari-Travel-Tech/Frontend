@@ -62,10 +62,12 @@ const CoverImageCropper: React.FC<CoverImageCropperProps> = ({ source, onCancel,
   useEffect(() => {
     if (defaultedRef.current) return
     if (!image || containScale <= 0) return
-    setZoom(coverZoom)
+    // Start fitted — the whole image is visible inside the frame — so the
+    // organizer can see everything before deciding to zoom in and fill.
+    setZoom(1)
     setOffset({ x: 0, y: 0 })
     defaultedRef.current = true
-  }, [image, containScale, coverZoom])
+  }, [image, containScale])
 
   const getMetrics = (nextZoom = zoom) => {
     if (!image || containScale <= 0) return null
