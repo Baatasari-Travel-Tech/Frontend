@@ -252,13 +252,8 @@ const schema = z
       })
     }
 
-    if (value.itrFiledLastTwoYears !== "yes" && value.itrFiledLastTwoYears !== "no") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["itrFiledLastTwoYears"],
-        message: "Please tell us about your ITR filing.",
-      })
-    }
+    // ITR is only asked (and only required) when the organizer has a GSTIN —
+    // that branch is validated in onSubmit since it depends on UI state.
   })
 
 type Values = z.infer<typeof schema>
@@ -315,7 +310,6 @@ const stepThreeFields: Array<keyof Values> = [
   "bankAccountNumber",
   "confirmBankAccountNumber",
   "bankIfsc",
-  "itrFiledLastTwoYears",
 ]
 
 const ACCOUNT_TYPE_OPTIONS = ["Savings account", "Current account"]
@@ -405,6 +399,7 @@ export default function OrganizerOnboardingPage() {
   const [gstinRows, setGstinRows] = useState<GstinRow[]>([makeGstinRow()])
   const [gstinError, setGstinError] = useState<string | null>(null)
   const [noGstinStateError, setNoGstinStateError] = useState<string | null>(null)
+  const [itrError, setItrError] = useState<string | null>(null)
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
@@ -762,7 +757,13 @@ export default function OrganizerOnboardingPage() {
       undertakingAccepted: hasGstin === "no" ? gstDeclarationAccepted : false,
       undertakingState: hasGstin === "no" ? (values.state?.trim() || null) : null,
       itrFiledLastTwoYears:
-        values.itrFiledLastTwoYears === "yes" ? true : values.itrFiledLastTwoYears === "no" ? false : null,
+        hasGstin === "no"
+          ? null
+          : values.itrFiledLastTwoYears === "yes"
+            ? true
+            : values.itrFiledLastTwoYears === "no"
+              ? false
+              : null,
       bankAccountName: values.bankAccountName.trim() || null,
       bankName: values.bankName?.trim() || null,
       bankAccountType: values.bankAccountType?.trim() || null,
@@ -1065,6 +1066,13 @@ export default function OrganizerOnboardingPage() {
           }
         }
         setGstinError(null)
+
+        if (values.itrFiledLastTwoYears !== "yes" && values.itrFiledLastTwoYears !== "no") {
+          setItrError("Please tell us if you have filed the last 2 years' ITR.")
+          setError("Please answer the ITR filing question.")
+          return
+        }
+        setItrError(null)
       }
 
       await uploadAvatarIfNeeded()
@@ -1623,33 +1631,41 @@ export default function OrganizerOnboardingPage() {
                       </div>
                     </div>
 
-                    {/* ITR filing */}
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                      <p className="block text-sm font-semibold text-slate-700">Have you filed last 2 years ITR return?</p>
-                      <div className="mt-2 flex items-center gap-6">
-                        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                          <input
-                            type="radio"
-                            name="itr"
-                            className="h-4 w-4 accent-brand-900"
-                            checked={form.watch("itrFiledLastTwoYears") === "yes"}
-                            onChange={() => form.setValue("itrFiledLastTwoYears", "yes", { shouldValidate: true })}
-                          />
-                          Yes
-                        </label>
-                        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                          <input
-                            type="radio"
-                            name="itr"
-                            className="h-4 w-4 accent-brand-900"
-                            checked={form.watch("itrFiledLastTwoYears") === "no"}
-                            onChange={() => form.setValue("itrFiledLastTwoYears", "no", { shouldValidate: true })}
-                          />
-                          No
-                        </label>
+                    {/* ITR filing — only relevant when the organizer has a GSTIN */}
+                    {hasGstin === "yes" ? (
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                        <p className="block text-sm font-semibold text-slate-700">Have you filed last 2 years ITR return?</p>
+                        <div className="mt-2 flex items-center gap-6">
+                          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                            <input
+                              type="radio"
+                              name="itr"
+                              className="h-4 w-4 accent-brand-900"
+                              checked={form.watch("itrFiledLastTwoYears") === "yes"}
+                              onChange={() => {
+                                form.setValue("itrFiledLastTwoYears", "yes")
+                                setItrError(null)
+                              }}
+                            />
+                            Yes
+                          </label>
+                          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                            <input
+                              type="radio"
+                              name="itr"
+                              className="h-4 w-4 accent-brand-900"
+                              checked={form.watch("itrFiledLastTwoYears") === "no"}
+                              onChange={() => {
+                                form.setValue("itrFiledLastTwoYears", "no")
+                                setItrError(null)
+                              }}
+                            />
+                            No
+                          </label>
+                        </div>
+                        {itrError ? <p className="mt-1 text-xs text-rose-600">{itrError}</p> : null}
                       </div>
-                      <p className="mt-1 text-xs text-rose-600">{form.formState.errors.itrFiledLastTwoYears?.message ?? ""}</p>
-                    </div>
+                    ) : null}
 
                     {/* State — required for the declaration when there is no GSTIN */}
                     {hasGstin === "no" ? (
@@ -1805,7 +1821,7 @@ export default function OrganizerOnboardingPage() {
                 ) : (
                   <button
                     type="submit"
-                    disabled={form.formState.isSubmitting}
+                    disabled={form.formState.isSubmitting || (hasGstin === "no" && !gstDeclarationAccepted)}
                     className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
                   >
                     {form.formState.isSubmitting ? "Submitting..." : "Submit"}
