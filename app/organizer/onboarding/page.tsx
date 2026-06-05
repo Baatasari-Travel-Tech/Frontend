@@ -53,6 +53,31 @@ const INDIAN_STATES = Array.from(new Set(Object.values(GST_STATE_CODES)))
 
 const stateFromGstin = (gstin: string): string => GST_STATE_CODES[gstin.slice(0, 2)] ?? ""
 
+const GSTN_CODEPOINT_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+// Validates the GSTIN check digit (15th char) so fabricated-but-well-formatted
+// GSTINs are rejected before/independent of the server verification call.
+const isValidGstinChecksum = (gstin: string): boolean => {
+  if (gstin.length !== 15) return false
+  const body = gstin.slice(0, 14)
+  const providedCheck = gstin[14]
+  const mod = GSTN_CODEPOINT_CHARS.length
+  let factor = 2
+  let sum = 0
+
+  for (let i = body.length - 1; i >= 0; i -= 1) {
+    const codePoint = GSTN_CODEPOINT_CHARS.indexOf(body[i])
+    if (codePoint < 0) return false
+    let digit = factor * codePoint
+    factor = factor === 2 ? 1 : 2
+    digit = Math.floor(digit / mod) + (digit % mod)
+    sum += digit
+  }
+
+  const checkCodePoint = (mod - (sum % mod)) % mod
+  return GSTN_CODEPOINT_CHARS[checkCodePoint] === providedCheck
+}
+
 type GstinVerifyResult = {
   valid: boolean
   embeddedPan: string
@@ -379,6 +404,7 @@ export default function OrganizerOnboardingPage() {
   const [showGstModal, setShowGstModal] = useState(false)
   const [gstinRows, setGstinRows] = useState<GstinRow[]>([makeGstinRow()])
   const [gstinError, setGstinError] = useState<string | null>(null)
+  const [noGstinStateError, setNoGstinStateError] = useState<string | null>(null)
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
@@ -836,6 +862,10 @@ export default function OrganizerOnboardingPage() {
       setRow({ verified: false, error: "Enter a valid 15-character GSTIN." })
       return
     }
+    if (!isValidGstinChecksum(gstin)) {
+      setRow({ verified: false, error: "This GSTIN is not valid — its check digit does not match." })
+      return
+    }
     if (!pan) {
       setRow({ verified: false, error: "Enter your PAN above before verifying GSTIN." })
       return
@@ -997,9 +1027,11 @@ export default function OrganizerOnboardingPage() {
           return
         }
         if (!values.state?.trim()) {
+          setNoGstinStateError("Please select your state.")
           setError("Please select your state.")
           return
         }
+        setNoGstinStateError(null)
       } else {
         const pan = values.panNumber.trim().toUpperCase()
         const filled = gstinRows.filter((row) => row.gstin.trim() || row.state.trim())
@@ -1011,9 +1043,9 @@ export default function OrganizerOnboardingPage() {
         }
         for (const row of filled) {
           const gstin = row.gstin.trim().toUpperCase()
-          if (!GSTIN_RE.test(gstin)) {
-            setGstinError("Enter a valid 15-character GSTIN for each row.")
-            setError("One of your GSTIN numbers is not a valid 15-character GSTIN.")
+          if (!GSTIN_RE.test(gstin) || !isValidGstinChecksum(gstin)) {
+            setGstinError("Enter a valid GSTIN for each row.")
+            setError("One of your GSTIN numbers is not a valid GSTIN.")
             return
           }
           if (pan && gstin.slice(2, 12) !== pan) {
@@ -1623,14 +1655,24 @@ export default function OrganizerOnboardingPage() {
                     {hasGstin === "no" ? (
                       <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
                         <label className="block text-sm font-semibold text-slate-700">
-                          State
-                          <select className={inputClassName} {...form.register("state")}>
+                          State *
+                          <select
+                            className={inputClassName}
+                            value={form.watch("state") ?? ""}
+                            onChange={(e) => {
+                              form.setValue("state", e.target.value, { shouldValidate: true })
+                              if (e.target.value.trim()) setNoGstinStateError(null)
+                            }}
+                          >
                             <option value="">Select state</option>
                             {INDIAN_STATES.map((stateName) => (
                               <option key={stateName} value={stateName}>{stateName}</option>
                             ))}
                           </select>
                         </label>
+                        {noGstinStateError ? (
+                          <p className="mt-1 text-xs text-rose-600">{noGstinStateError}</p>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
