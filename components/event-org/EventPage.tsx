@@ -12,6 +12,7 @@ import EventForm from "./EventForm";
 import TicketingForm from "./TicketingForm";
 import SponsorshipForm from "./SponsorshipForm";
 import FinalForm from "./FinalForm";
+import CoverImageCropper from "./CoverImageCropper";
 
 import {
   INITIAL_EVENT_FORM_DATA,
@@ -29,6 +30,8 @@ interface EventPageProps {
   startDirectly?: boolean;
   action?: string | null;
   contactInfoPrefill?: Partial<EventFormData["contactInfo"]>;
+  // Existing cover URL to show in the preview when editing an event.
+  initialCoverPreview?: string | null;
   onSubmit?: (formData: EventFormData) => Promise<void>;
 }
 
@@ -103,6 +106,7 @@ const EventPage: React.FC<EventPageProps> = ({
   startDirectly = false,
   action = null,
   contactInfoPrefill,
+  initialCoverPreview = null,
   onSubmit,
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(() => {
@@ -122,8 +126,9 @@ const EventPage: React.FC<EventPageProps> = ({
   }, [startDirectly]);
 
   const [formData, setFormData] = useState<EventFormData>(INITIAL_EVENT_FORM_DATA);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(initialCoverPreview);
   const [photoError, setPhotoError] = useState("");
+  const [coverCropSource, setCoverCropSource] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -427,24 +432,23 @@ const EventPage: React.FC<EventPageProps> = ({
         const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
         if (!validTypes.includes(file.type)) {
           setPhotoError("Please upload a JPG, PNG, GIF, or WEBP file.");
-          setPhotoPreview(null);
-          setFormData((prev) => ({ ...prev, eventPhoto: null }));
           return;
         }
         if (file.size > 5 * 1024 * 1024) {
           setPhotoError("File size must be less than 5MB.");
-          setPhotoPreview(null);
-          setFormData((prev) => ({ ...prev, eventPhoto: null }));
           return;
         }
         setPhotoError("");
-        setFormData((prev) => ({ ...prev, eventPhoto: file, hasStoredCover: true }));
-        setPhotoPreview(URL.createObjectURL(file));
-      } else {
-        setPhotoError("");
-        setPhotoPreview(null);
-        setFormData((prev) => ({ ...prev, eventPhoto: null }));
+        // Open the cropper so the organizer frames the cover to the exact ratio
+        // that's stored and shown everywhere, instead of a blind center-crop.
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") setCoverCropSource(reader.result);
+        };
+        reader.readAsDataURL(file);
       }
+      // Reset the input so re-selecting the same file re-opens the cropper.
+      target.value = "";
       return;
     }
 
@@ -736,6 +740,19 @@ const EventPage: React.FC<EventPageProps> = ({
           </div>
         </div>
       )}
+
+      {coverCropSource ? (
+        <CoverImageCropper
+          source={coverCropSource}
+          onCancel={() => setCoverCropSource(null)}
+          onApply={(file, previewUrl) => {
+            setFormData((prev) => ({ ...prev, eventPhoto: file, hasStoredCover: true }));
+            setPhotoPreview(previewUrl);
+            setPhotoError("");
+            setCoverCropSource(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 };

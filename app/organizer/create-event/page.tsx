@@ -9,6 +9,7 @@ import type { EventFormData } from "@/components/event-org/data/create-event-dat
 import { UNLIMITED_TICKET_CAPACITY } from "@/components/event-org/data/create-event-data"
 import { toEventFormDraft } from "@/components/event-org/manage-events/manage-events"
 import { uploadEventCoverImage } from "@/lib/api/uploads"
+import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { apiRequest } from "@/lib/api/client"
 import { useAuth } from "@/app/providers"
 import type { EventDetail } from "@/types/api"
@@ -223,6 +224,7 @@ function CreateEventContent() {
   const isUpdateFlow = Boolean(eventId) && (action === "edit" || action === "reschedule")
   const [isHydratingEvent, setIsHydratingEvent] = useState(() => Boolean(eventId))
   const [prefillError, setPrefillError] = useState<string | null>(null)
+  const [storedCoverPreview, setStoredCoverPreview] = useState<string | null>(null)
 
   const contactInfoPrefill = useMemo<EventContactInfoPrefill>(() => {
     const additionalLinks = [organizerProfile?.instagramUrl, organizerProfile?.linkedinUrl]
@@ -278,6 +280,8 @@ function CreateEventContent() {
 
         if (!active) return
         localStorage.setItem("eventFormData", JSON.stringify(toEventFormDraft(response.data.event)))
+        // Show the event's existing cover in the upload banner while editing.
+        setStoredCoverPreview(getEventCoverImageUrl(eventId, response.data.event.updatedAt))
       } catch (error) {
         if (!active) return
         setPrefillError(error instanceof Error ? error.message : "Unable to load event details.")
@@ -316,6 +320,7 @@ function CreateEventContent() {
         startDirectly={true}
         action={action}
         contactInfoPrefill={!eventId ? contactInfoPrefill : undefined}
+        initialCoverPreview={storedCoverPreview}
         onSubmit={async (formData) => {
           const payload = buildCreateEventPayload(formData)
           let persistedEventId = eventId ?? ""

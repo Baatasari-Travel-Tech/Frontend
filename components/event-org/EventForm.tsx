@@ -2,7 +2,6 @@
 
 import React, { useState } from "react"
 import { CalendarIcon, ChevronDownIcon, ChevronUpIcon, ClockIcon, PlusIcon, Trash2, X, Upload } from "lucide-react"
-import Image from "next/image"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -35,6 +34,7 @@ const EventForm: React.FC<EventFormProps> = ({
   setFormData,
   handleInputChange,
   photoPreview,
+  setPhotoPreview,
   photoError,
   addArrayItem,
   updateArrayField,
@@ -61,10 +61,10 @@ const EventForm: React.FC<EventFormProps> = ({
 
         {openSections["event-info"] && (
           <div className="px-8 pb-8">
-            <div className="flex w-full flex-wrap gap-10 items-start">
-              <div className="flex flex-col w-64.5 min-w-50 flex-[1_1_258px] max-w-full max-[600px]:w-full">
+            <div className="flex flex-col w-full gap-8">
+              <div className="w-full">
                 <label htmlFor="eventPhoto" className="cursor-pointer block w-full">
-                  <div className={`flex flex-col h-97 min-h-97 items-center justify-center gap-3.25 px-6 py-5 bg-background rounded-xl border border-dashed w-full ${formErrors.eventPhoto ? "border-red-400" : "border-gray-400"}`}>
+                  <div className={`relative w-full aspect-[40/21] overflow-hidden flex flex-col items-center justify-center gap-2 bg-background rounded-xl border border-dashed ${formErrors.eventPhoto ? "border-red-400" : "border-gray-400"}`}>
                     <input
                       id="eventPhoto"
                       type="file"
@@ -74,27 +74,32 @@ const EventForm: React.FC<EventFormProps> = ({
                       className="hidden"
                     />
                     {photoPreview ? (
-                      <Image
-                        src={photoPreview}
-                        alt="Uploaded event cover"
-                        className="h-64 w-auto object-contain max-w-full"
-                        width={240}
-                        height={360}
-                        style={{ objectFit: "cover", borderRadius: "8px" }}
-                      />
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photoPreview}
+                          alt="Event cover preview"
+                          className="absolute inset-0 h-full w-full object-cover"
+                          onError={() => setPhotoPreview(null)}
+                        />
+                        <span className="absolute bottom-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white">
+                          Change / adjust
+                        </span>
+                      </>
                     ) : (
-                      <div className="flex flex-col items-center gap-2">
+                      <>
                         <Upload className="w-6 h-6 text-gray-900" />
                         <span className="font-normal text-gray-900 text-lg">Upload Cover Image *</span>
-                      </div>
+                        <span className="text-xs text-gray-500">Landscape banner · shown everywhere at 1200 × 630</span>
+                      </>
                     )}
                   </div>
                 </label>
-                {photoError ? <span className="text-danger-red text-xs mt-2">{photoError}</span> : null}
-                {formErrors.eventPhoto ? <span className="text-danger-red text-xs mt-2">{formErrors.eventPhoto}</span> : null}
+                {photoError ? <span className="text-danger-red text-xs mt-2 block">{photoError}</span> : null}
+                {formErrors.eventPhoto ? <span className="text-danger-red text-xs mt-2 block">{formErrors.eventPhoto}</span> : null}
               </div>
 
-              <div className="flex flex-col flex-[1_1_300px] min-w-0 gap-5">
+              <div className="flex flex-col w-full min-w-0 gap-5">
                 <div className="flex w-full flex-wrap gap-6 items-center">
                   <div className="relative w-full flex-1">
                     <input
