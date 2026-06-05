@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import QRCode from "qrcode"
 import { Share2, Copy, Check, X } from "lucide-react"
 
@@ -43,22 +44,29 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
     })
       .then(() => {
         if (cancelled) return
+        // qrcode stamps an inline 464px style on the canvas; constrain the
+        // displayed size so it fits the modal frame (internal res stays 464).
+        canvas.style.width = "100%"
+        canvas.style.height = "auto"
         const ctx = canvas.getContext("2d")
         if (!ctx) return
         const logo = new Image()
         logo.onload = () => {
           if (cancelled) return
-          const size = canvas.width * 0.24
-          const x = (canvas.width - size) / 2
-          const y = (canvas.height - size) / 2
-          const pad = size * 0.16
+          // Draw the real brand wordmark at its true aspect ratio (no squashing,
+          // no upscaling blur), on a clean white rounded backdrop sized to it.
+          const aspect = (logo.naturalWidth || 1) / (logo.naturalHeight || 1)
+          const w = canvas.width * 0.34
+          const h = w / aspect
+          const x = (canvas.width - w) / 2
+          const y = (canvas.height - h) / 2
+          const pad = canvas.width * 0.032
           const bx = x - pad
           const by = y - pad
-          const bw = size + pad * 2
-          const bh = size + pad * 2
-          const r = canvas.width * 0.02
+          const bw = w + pad * 2
+          const bh = h + pad * 2
+          const r = Math.min(bw, bh) * 0.3
 
-          // Rounded white backdrop, then the logo drawn on top, crisply.
           ctx.fillStyle = "#ffffff"
           ctx.beginPath()
           ctx.moveTo(bx + r, by)
@@ -71,9 +79,9 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
 
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = "high"
-          ctx.drawImage(logo, x, y, size, size)
+          ctx.drawImage(logo, x, y, w, h)
         }
-        logo.src = "/logo.png"
+        logo.src = "/logonew.png"
       })
       .catch(() => {})
 
@@ -110,7 +118,8 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
         {iconOnly ? null : <span>Share</span>}
       </button>
 
-      {open ? (
+      {open && typeof document !== "undefined"
+        ? createPortal(
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 px-4"
           onClick={(event) => {
@@ -137,7 +146,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
             {title ? <p className="mb-3 line-clamp-2 text-xs text-slate-500">{title}</p> : null}
 
             <div className="flex justify-center rounded-xl border border-slate-100 bg-white p-3">
-              <canvas ref={canvasRef} className="h-auto w-[232px] max-w-full rounded-lg" />
+              <canvas ref={canvasRef} className="block h-auto w-full max-w-[232px] rounded-lg" />
             </div>
 
             <div className="mt-4">
@@ -164,8 +173,10 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
               </button>
             </div>
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body,
+          )
+        : null}
     </>
   )
 }
