@@ -22,6 +22,42 @@ export function computeEventStatus(
   return (event.ticketTierCount ?? 0) > 0 ? "live" : "upcoming"
 }
 
+export type EventPhase = "ongoing" | "upcoming" | "recent" | "hidden"
+
+const endOfDayMs = (iso: string): number => {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return NaN
+  d.setHours(23, 59, 59, 999)
+  return d.getTime()
+}
+
+const RECENTLY_COMPLETED_WINDOW_MS = 2 * 24 * 60 * 60 * 1000
+
+// Classifies an event for the events list: ongoing/upcoming events show first,
+// events that finished within the last 2 days show below, and anything older
+// is hidden. `sort` is the timestamp to order within a phase.
+export function getEventPhase(
+  event: Pick<EventSummary, "date" | "endDate">
+): { phase: EventPhase; sort: number } {
+  const now = Date.now()
+  const startMs = new Date(event.date).getTime()
+  const endMs = endOfDayMs(event.endDate ?? event.date)
+
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+    return { phase: "upcoming", sort: Number.isNaN(startMs) ? now : startMs }
+  }
+
+  if (now <= endMs) {
+    return { phase: startMs <= now ? "ongoing" : "upcoming", sort: startMs }
+  }
+
+  if (now - endMs <= RECENTLY_COMPLETED_WINDOW_MS) {
+    return { phase: "recent", sort: endMs }
+  }
+
+  return { phase: "hidden", sort: endMs }
+}
+
 export function formatCardDate(date: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",

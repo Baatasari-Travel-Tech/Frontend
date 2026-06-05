@@ -1,17 +1,68 @@
 "use client"
 
-import { useMemo } from "react"
+import { Suspense, useMemo } from "react"
 import Image from "next/image"
+import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { EventGrid } from "@/components/events/event-grid"
 import { EventsSearchHero } from "@/components/events/events-search-hero"
 import { FooterSocialLinks } from "@/components/events/footer-social-edit"
-import { toEventCardData, computeEventStatus } from "@/lib/event-helpers"
+import { toEventCardData, getEventPhase } from "@/lib/event-helpers"
 import { apiRequest } from "@/lib/api/client"
 import { fetchPublicSiteConfig } from "@/lib/api/admin"
 import type { EventSummary } from "@/types/api"
 
-export default function EventsPage() {
+const PHASE_ORDER: Record<string, number> = { ongoing: 0, upcoming: 1, recent: 2 }
+
+// Partial, case-insensitive search across the fields a person would type —
+// no need to fill every field; any matching token is enough.
+function matchesQuery(event: EventSummary, query: string): boolean {
+  if (!query.trim()) return true
+  const needle = query.trim().toLowerCase()
+  return [event.title, event.venue, event.category, event.tagline].some(
+    (value) => typeof value === "string" && value.toLowerCase().includes(needle),
+  )
+}
+
+function matchesCategory(event: EventSummary, category: string): boolean {
+  if (!category || category.toLowerCase() === "all") return true
+  const eventCategory = (event.category ?? "").toLowerCase()
+  const selected = category.toLowerCase()
+  return eventCategory.includes(selected) || selected.includes(eventCategory)
+}
+
+function matchesWhen(event: EventSummary, when: string): boolean {
+  if (!when || when === "anytime") return true
+  const date = new Date(event.date)
+  if (Number.isNaN(date.getTime())) return false
+  const now = new Date()
+  if (when === "today") return date.toDateString() === now.toDateString()
+  if (when === "month")
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+  if (when === "weekend") {
+    const day = date.getDay()
+    const withinWeek = date.getTime() - now.getTime() <= 7 * 24 * 60 * 60 * 1000 && date.getTime() >= now.setHours(0, 0, 0, 0)
+    return (day === 0 || day === 6) && withinWeek
+  }
+  return true
+}
+
+function matchesBudget(event: EventSummary, budget: string): boolean {
+  if (!budget || budget === "any") return true
+  const price = event.startingPrice ?? 0
+  if (budget === "free") return price === 0
+  if (budget === "pocket") return price > 0 && price <= 500
+  if (budget === "premium") return price > 500
+  return true
+}
+
+function EventsPageContent() {
+  const searchParams = useSearchParams()
+  const query = searchParams.get("q") ?? ""
+  const category = searchParams.get("category") ?? ""
+  const when = searchParams.get("when") ?? ""
+  const budget = searchParams.get("budget") ?? ""
+
   const eventsQuery = useQuery({
     queryKey: ["public-events"],
     queryFn: () =>
@@ -28,21 +79,26 @@ export default function EventsPage() {
   const data = eventsQuery.data
 
   const sortedCards = useMemo(() => {
-    const cards = (data ?? []).map(toEventCardData)
-    return cards.sort((a, b) => (b.bookedCount ?? 0) - (a.bookedCount ?? 0))
-  }, [data])
+    const filtered = (data ?? []).filter(
+      (event) =>
+        matchesQuery(event, query) &&
+        matchesCategory(event, category) &&
+        matchesWhen(event, when) &&
+        matchesBudget(event, budget),
+    )
 
-  const liveCount = useMemo(
-    () => (data ?? []).filter((e) => computeEventStatus(e) === "live").length,
-    [data],
-  )
-  const liveGoingCount = useMemo(
-    () =>
-      (data ?? [])
-        .filter((e) => computeEventStatus(e) === "live")
-        .reduce((sum, e) => sum + (e.bookedCount ?? 0), 0),
-    [data],
-  )
+    // Live/ongoing first, then upcoming (soonest first), then recently
+    // completed (most recent first); events older than 2 days are dropped.
+    return filtered
+      .map((event) => ({ event, ...getEventPhase(event) }))
+      .filter((item) => item.phase !== "hidden")
+      .sort((a, b) => {
+        const order = (PHASE_ORDER[a.phase] ?? 9) - (PHASE_ORDER[b.phase] ?? 9)
+        if (order !== 0) return order
+        return a.phase === "recent" ? b.sort - a.sort : a.sort - b.sort
+      })
+      .map((item) => toEventCardData(item.event))
+  }, [data, query, category, when, budget])
 
   return (
     <main className="min-h-screen bg-(--white)">
@@ -54,7 +110,7 @@ export default function EventsPage() {
           </section>
         ) : (
           <>
-            <EventsSearchHero liveCount={liveCount} liveGoingCount={liveGoingCount} />
+            <EventsSearchHero />
             {sortedCards.length > 0 ? (
               <EventGrid events={sortedCards} title="All Events" />
             ) : (
@@ -128,5 +184,13 @@ export default function EventsPage() {
         </div>
       </footer>
     </main>
+  )
+}
+
+export default function EventsPage() {
+  return (
+    <Suspense fallback={null}>
+      <EventsPageContent />
+    </Suspense>
   )
 }

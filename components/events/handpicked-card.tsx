@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Calendar, Tag, Users } from "lucide-react"
+import { Calendar, Tag } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import type { EventStatus } from "@/lib/events-data"
@@ -34,7 +34,6 @@ export function HandpickedEventCard({
     price,
     category,
     date,
-    bookedCount = 0,
     gridMode = false,
     compact = false,
     status,
@@ -100,10 +99,6 @@ export function HandpickedEventCard({
                                 <div className="flex min-w-0 items-center gap-1.5">
                                     <Calendar className={compact ? "h-3 w-3 shrink-0" : "h-4 w-4 shrink-0"} />
                                     <span className="truncate">{date}</span>
-                                </div>
-                                <div className="flex shrink-0 items-center gap-1 text-(--upcoming-primary-700)">
-                                    <Users className={compact ? "h-3 w-3" : "h-4 w-4"} />
-                                    <span>{bookedCount}</span>
                                 </div>
                             </div>
 

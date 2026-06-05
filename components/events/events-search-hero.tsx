@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { animate, stagger } from "animejs";
 import {
@@ -26,15 +26,6 @@ import {
 
 const ROTATING_WORDS = ["Mood", "Crew", "Vibe", "Weekend"];
 
-const formatGoing = (n: number): string => {
-  const v = Math.floor(n);
-  if (v >= 1000) {
-    const k = v / 1000;
-    return `${k.toFixed(k >= 10 ? 0 : 1).replace(/\.0$/, "")}K`;
-  }
-  return String(v);
-};
-
 const CATEGORIES = [
   { name: "All", icon: <Flame size={14} /> },
   { name: "Music", icon: <Music size={14} /> },
@@ -44,23 +35,34 @@ const CATEGORIES = [
   { name: "Movies", icon: <Ticket size={14} /> },
 ];
 
-interface EventsSearchHeroProps {
-  liveCount?: number;
-  liveGoingCount?: number;
-}
-
-export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSearchHeroProps = {}) {
+export function EventsSearchHero() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const titleRef = useRef<HTMLHeadingElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const pillsRef = useRef<HTMLDivElement>(null);
-  const statsRef = useRef<HTMLDivElement>(null);
-  const liveCountRef = useRef<HTMLSpanElement>(null);
-  const goingCountRef = useRef<HTMLSpanElement>(null);
 
   const [wordIndex, setWordIndex] = useState(0);
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState(searchParams.get("category") ?? "All");
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [when, setWhen] = useState(searchParams.get("when") ?? "anytime");
+  const [budget, setBudget] = useState(searchParams.get("budget") ?? "any");
+  // Simulated count of others currently exploring (no presence backend yet).
+  // null until mounted so server/client first render agree.
+  const [othersCount, setOthersCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setOthersCount(Math.floor(40 + Math.random() * 200));
+  }, []);
+
+  const explorerText =
+    othersCount === null
+      ? "Exploring right now"
+      : othersCount <= 0
+        ? "You are only exploring right now"
+        : othersCount >= 999
+          ? "999+ exploring right now"
+          : `You and ${othersCount} are exploring right now`;
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -104,71 +106,23 @@ export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSe
     }
   }, []);
 
-  // anime.js count-up for stat numbers (re-runs when counts change, fires when stats card enters viewport)
-  useEffect(() => {
-    const node = statsRef.current;
-    if (!node) return;
-
-    let liveDone = false;
-    let goingDone = false;
-
-    const runCountUp = () => {
-      if (liveCountRef.current && !liveDone) {
-        liveDone = true;
-        const target = { value: 0 };
-        const el = liveCountRef.current;
-        animate(target, {
-          value: liveCount,
-          duration: 1600,
-          ease: "outExpo",
-          onUpdate: () => {
-            el.textContent = String(Math.floor(target.value));
-          },
-          onComplete: () => {
-            el.textContent = String(liveCount);
-          },
-        });
-      }
-      if (goingCountRef.current && !goingDone) {
-        goingDone = true;
-        const target = { value: 0 };
-        const el = goingCountRef.current;
-        animate(target, {
-          value: liveGoingCount,
-          duration: 1800,
-          ease: "outExpo",
-          onUpdate: () => {
-            el.textContent = formatGoing(target.value);
-          },
-          onComplete: () => {
-            el.textContent = formatGoing(liveGoingCount);
-          },
-        });
-      }
+  const applyFilters = (next?: Partial<{ q: string; category: string; when: string; budget: string }>) => {
+    const merged = {
+      q: next?.q ?? query,
+      category: next?.category ?? activeCategory,
+      when: next?.when ?? when,
+      budget: next?.budget ?? budget,
     };
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          runCountUp();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.3 }
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [liveCount, liveGoingCount]);
-
-  const handleSearch = () => {
     const params = new URLSearchParams();
-    if (query.trim()) params.set("q", query.trim());
-    if (activeCategory && activeCategory !== "All")
-      params.set("category", activeCategory);
+    if (merged.q.trim()) params.set("q", merged.q.trim());
+    if (merged.category && merged.category !== "All") params.set("category", merged.category);
+    if (merged.when && merged.when !== "anytime") params.set("when", merged.when);
+    if (merged.budget && merged.budget !== "any") params.set("budget", merged.budget);
     const qs = params.toString();
     router.push(qs ? `/events?${qs}` : "/events");
   };
+
+  const handleSearch = () => applyFilters();
 
   const titleText = "Find your perfect event";
 
@@ -207,7 +161,7 @@ export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSe
           </span>
           <Users size={14} className="text-(--brand-blue)" />
           <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--brand-blue)">
-            150+ exploring Vizag right now
+            {explorerText}
           </span>
         </motion.div>
 
@@ -304,7 +258,7 @@ export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSe
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
                   When
                 </span>
-                <Select defaultValue="anytime">
+                <Select value={when} onValueChange={(v) => { setWhen(v); applyFilters({ when: v }); }}>
                   <SelectTrigger className="h-auto w-full border-0 bg-transparent p-0 text-sm font-semibold text-(--gray-800) shadow-none focus:ring-0">
                     <SelectValue placeholder="Anytime" />
                   </SelectTrigger>
@@ -325,7 +279,7 @@ export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSe
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
                   Budget
                 </span>
-                <Select defaultValue="any">
+                <Select value={budget} onValueChange={(v) => { setBudget(v); applyFilters({ budget: v }); }}>
                   <SelectTrigger className="h-auto w-full border-0 bg-transparent p-0 text-sm font-semibold text-(--gray-800) shadow-none focus:ring-0">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
@@ -349,7 +303,7 @@ export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSe
               >
                 <span className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
                 <Search size={18} className="relative shrink-0" />
-                <span className="relative">Discover</span>
+                <span className="relative">Search</span>
               </motion.button>
             </div>
           </div>
@@ -367,7 +321,7 @@ export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSe
                 key={cat.name}
                 whileHover={{ y: -3, scale: 1.04 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveCategory(cat.name)}
+                onClick={() => { setActiveCategory(cat.name); applyFilters({ category: cat.name }); }}
                 className={`pill flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
                   isActive
                     ? "border-(--brand-navy) bg-(--brand-navy) text-white shadow-md"
@@ -381,100 +335,6 @@ export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSe
             );
           })}
         </div>
-      </div>
-
-      {/* Discovery banner */}
-      <div className="mx-auto w-full max-w-[1400px] px-4 pb-4 md:px-6 lg:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-3xl bg-linear-to-br from-(--brand-navy) via-[#1a3a6b] to-sky-800 px-8 py-14 text-white shadow-2xl"
-        >
-          {/* Decorative gradients */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(147,197,253,0.22),transparent_55%)]" />
-          <motion.div
-            animate={{ x: [0, 30, 0], y: [0, 15, 0] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 rounded-full bg-sky-400/20 blur-3xl"
-          />
-          <motion.div
-            animate={{ x: [0, -25, 0], y: [0, -10, 0] }}
-            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-            className="pointer-events-none absolute -bottom-16 -left-10 h-72 w-72 rounded-full bg-(--royal-blue)/25 blur-3xl"
-          />
-
-          <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <motion.p
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-                className="text-xs font-semibold uppercase tracking-[0.35em] text-sky-300/90"
-              >
-                Live Experiences
-              </motion.p>
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.3, duration: 0.7 }}
-                className="mt-2 font-bricolage text-4xl font-bold leading-tight md:text-5xl"
-              >
-                Discover What&apos;s Happening
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.4, duration: 0.7 }}
-                className="mt-3 max-w-xl text-sm leading-7 text-white/75 md:text-base"
-              >
-                Curated events, live performances, and community experiences —
-                sorted by what people love most.
-              </motion.p>
-            </div>
-
-            <motion.div
-              ref={statsRef}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.5, duration: 0.6 }}
-              className="flex gap-4 md:gap-6"
-            >
-              <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-white/10 px-5 py-3 backdrop-blur-md">
-                <div className="absolute -inset-1 -z-10 bg-emerald-400/20 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  </span>
-                  <p className="text-2xl font-bold">
-                    <span ref={liveCountRef}>0</span>
-                  </p>
-                </div>
-                <p className="mt-1 text-[11px] uppercase tracking-wider text-white/70">
-                  Live right now
-                </p>
-              </div>
-
-              <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-white/10 px-5 py-3 backdrop-blur-md">
-                <div className="absolute -inset-1 -z-10 bg-sky-400/20 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
-                <div className="flex items-baseline gap-1">
-                  <p className="text-2xl font-bold">
-                    <span ref={goingCountRef}>0</span>
-                  </p>
-                </div>
-                <p className="mt-1 text-[11px] uppercase tracking-wider text-white/70">
-                  People going
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
       </div>
     </section>
   );

@@ -40,9 +40,11 @@ function useDateRequests(eventId?: string) {
 }
 
 export function DateReviewsSection({ eventId }: { eventId?: string }) {
-  const currentYear = new Date().getFullYear()
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonthStart = new Date(currentYear, now.getMonth(), 1)
   const [date, setDate] = React.useState<Date | undefined>(undefined)
-  const [month, setMonth] = React.useState<Date>(new Date(currentYear, 0, 1))
+  const [month, setMonth] = React.useState<Date>(currentMonthStart)
   const [submitted, setSubmitted] = React.useState(false)
 
   const queryClient = useQueryClient()
@@ -66,7 +68,8 @@ export function DateReviewsSection({ eventId }: { eventId?: string }) {
     mutation.mutate(date)
   }
 
-  const isFirstMonth = month.getMonth() === 0 && month.getFullYear() === currentYear
+  // Can't go before the current month; cap at December of the current year.
+  const isFirstMonth = month.getMonth() === now.getMonth() && month.getFullYear() === currentYear
   const isLastMonth = month.getMonth() === 11 && month.getFullYear() === currentYear
 
   const today = new Date()
