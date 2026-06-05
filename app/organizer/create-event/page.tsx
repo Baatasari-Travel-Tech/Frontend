@@ -337,7 +337,15 @@ function CreateEventContent() {
           }
 
           if (formData.eventPhoto && persistedEventId) {
-            await uploadEventCoverImage(persistedEventId, formData.eventPhoto)
+            // The event is already saved; a cover-upload hiccup must not surface
+            // as "creation failed". uploadEventCoverImage already retries the
+            // transient read-after-write 404, so this only swallows a genuine
+            // residual failure — the cover can be re-added by editing the event.
+            try {
+              await uploadEventCoverImage(persistedEventId, formData.eventPhoto)
+            } catch (coverError) {
+              console.warn("Event created, but cover upload did not complete.", coverError)
+            }
           }
 
           await queryClient.invalidateQueries({ queryKey: ["organizer-events"] })

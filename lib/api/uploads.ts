@@ -1,7 +1,7 @@
 "use client"
 
 import { apiRequest } from "@/lib/api/client"
-import type { ApiEnvelope } from "@/types/api"
+import { ApiError, type ApiEnvelope } from "@/types/api"
 
 type UploadTarget = "organizerLogo" | "organizerKycPdf"
 
@@ -78,17 +78,35 @@ type EventCoverUploadPayload = {
 }
 
 export async function uploadEventCoverImage(eventId: string, file: File) {
-  const response = await apiRequest<ApiEnvelope<EventCoverUploadPayload>>(
-    `/organizer/events/${eventId}/cover`,
-    {
-      method: "PUT",
-      auth: true,
-      headers: {
-        "Content-Type": file.type || "application/octet-stream",
-      },
-      body: file,
-    }
-  )
+  // A freshly created event can briefly 404 here if the cover request lands on
+  // a DB connection/replica that hasn't caught up with the just-committed event
+  // (read-after-write lag). Retry the 404 a few times with backoff before giving
+  // up — other errors fail fast.
+  const maxAttempts = 5
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await apiRequest<ApiEnvelope<EventCoverUploadPayload>>(
+        `/organizer/events/${eventId}/cover`,
+        {
+          method: "PUT",
+          auth: true,
+          headers: {
+            "Content-Type": file.type || "application/octet-stream",
+          },
+          body: file,
+        }
+      )
 
-  return response.data.cover
+      return response.data.cover
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404 && attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** (attempt - 1)))
+        continue
+      }
+      throw error
+    }
+  }
+
+  // Unreachable — the loop either returns or throws — but keeps TS satisfied.
+  throw new ApiError(404, { code: "NOT_FOUND", message: "Event not found." })
 }
