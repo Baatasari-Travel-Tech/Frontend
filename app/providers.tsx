@@ -274,14 +274,31 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const bootstrap = useCallback(async () => {
     setBootstrapping(true)
     try {
-      // A single /auth/me call: it carries the httpOnly cookie and the API
-      // client transparently refreshes the access token on a 401 (deduped),
-      // so we no longer need a separate, sequential /auth/refresh round-trip.
-      const me = await apiRequest<ApiEnvelope<{ user: SafeUser }>>("/auth/me", {
-        auth: true,
-        retryOn401: true,
-        activeRole: useAuthStore.getState().activeRole,
-      })
+      // Probe the session. We pass retryOn401:false and refresh manually so a
+      // logged-out 401 stays a quiet "not signed in" — it must NOT route through
+      // the API client's global refresh, which hard-redirects to /login and would
+      // loop the bootstrap on the login page itself.
+      const fetchMe = () =>
+        apiRequest<ApiEnvelope<{ user: SafeUser }>>("/auth/me", {
+          auth: true,
+          retryOn401: false,
+          activeRole: useAuthStore.getState().activeRole,
+        })
+
+      let me: ApiEnvelope<{ user: SafeUser }>
+      try {
+        // Common case: the access-token cookie is still valid — a single call.
+        me = await fetchMe()
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          // Access token expired: refresh directly (no redirect side-effect),
+          // then retry. A failed refresh throws and is handled below as logged-out.
+          await apiRequest("/auth/refresh", { method: "POST", retryOn401: false })
+          me = await fetchMe()
+        } else {
+          throw error
+        }
+      }
 
       await hydrateForUser(me.data.user)
     } catch (error) {
