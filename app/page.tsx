@@ -6,7 +6,7 @@ import { useAuth } from '@/app/providers'
 import { getRoleDashboard, getRoleOnboarding } from '@/lib/roles'
 import Hero from "@/components/about/hero"
 import Features from "@/components/about/features"
-import { FaTwitter, FaLinkedin, FaInstagram} from "react-icons/fa";
+import { FooterSocialLinks } from "@/components/events/footer-social-edit";
 import Image from "next/image";
 import EventOrganizer from "@/components/about/organizer"
 import RestaurantOwner from "@/components/about/restaurant-owner"
@@ -101,7 +101,7 @@ export default function AboutPage() {
                   <div className="space-y-3 text-sm">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Resources</p>
                     <div className="grid gap-2 text-slate-300">
-                      <a className="hover:text-white transition" href="/contact">Contact</a>
+                      <a className="hover:text-white transition" href="/contact-us">Contact</a>
                     </div>
                   </div>
 
@@ -115,16 +115,8 @@ export default function AboutPage() {
                   </div>
 
                   {/* Row 3: Socials */}
-                  <div className="flex items-center gap-4 mt-4">
-                    <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800">
-                      <FaInstagram className="h-5 w-5" />
-                    </a>
-                    <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800">
-                      <FaLinkedin className="h-5 w-5" />
-                    </a>
-                    <a className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800">
-                      <FaTwitter className="h-5 w-5" />
-                    </a>
+                  <div className="mt-4">
+                    <FooterSocialLinks />
                   </div>
 
                 </div>

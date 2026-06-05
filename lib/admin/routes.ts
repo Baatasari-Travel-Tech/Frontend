@@ -8,6 +8,7 @@ export const ADMIN_ROUTES = {
   verify: `${ADMIN_ROUTE_BASE}/verify`,
   dashboard: `${ADMIN_ROUTE_BASE}/dashboard`,
   users: `${ADMIN_ROUTE_BASE}/users`,
+  support: `${ADMIN_ROUTE_BASE}/support`,
 } as const
 
 export const isAdminRoutePath = (pathname: string | null | undefined): boolean =>

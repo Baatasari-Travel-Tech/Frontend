@@ -1,42 +1,31 @@
-import { FaInstagram, FaLinkedin, FaTwitter } from "react-icons/fa"
-import type { SiteConfig } from "@/types/api"
+import { FaInstagram, FaLinkedin, FaEnvelope } from "react-icons/fa"
 
-export function FooterSocialLinks({ config }: { config: SiteConfig }) {
+export const SOCIAL_LINKS = {
+  instagram: "https://www.instagram.com/baatasari._",
+  linkedin: "https://www.linkedin.com/company/baatasari/",
+  email: "contact-us@baatasari.com",
+} as const
+
+const ITEMS = [
+  { label: "Instagram", href: SOCIAL_LINKS.instagram, Icon: FaInstagram, external: true },
+  { label: "LinkedIn", href: SOCIAL_LINKS.linkedin, Icon: FaLinkedin, external: true },
+  { label: "Email", href: `mailto:${SOCIAL_LINKS.email}`, Icon: FaEnvelope, external: false },
+]
+
+export function FooterSocialLinks() {
   return (
     <div className="flex items-center gap-4">
-      {config.instagram !== "#" && (
+      {ITEMS.map(({ label, href, Icon, external }) => (
         <a
-          href={config.instagram}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Instagram"
+          key={label}
+          href={href}
+          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          aria-label={label}
           className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800 transition"
         >
-          <FaInstagram className="h-5 w-5" />
+          <Icon className="h-5 w-5" />
         </a>
-      )}
-      {config.linkedin !== "#" && (
-        <a
-          href={config.linkedin}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="LinkedIn"
-          className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800 transition"
-        >
-          <FaLinkedin className="h-5 w-5" />
-        </a>
-      )}
-      {config.twitter !== "#" && (
-        <a
-          href={config.twitter}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Twitter / X"
-          className="rounded-full border border-slate-600 p-2.5 hover:bg-slate-800 transition"
-        >
-          <FaTwitter className="h-5 w-5" />
-        </a>
-      )}
+      ))}
     </div>
   )
 }

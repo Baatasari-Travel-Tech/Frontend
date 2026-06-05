@@ -601,6 +601,12 @@ export default function AdminDashboardPage() {
             <p className="text-sm text-slate-600">{dashboard?.message ?? "Manage users and organizer approvals."}</p>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href={ADMIN_ROUTES.support}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Support messages
+            </Link>
             <button
               type="button"
               onClick={() => void handleRefresh()}

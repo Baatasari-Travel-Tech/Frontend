@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api/client"
 import { getAdminToken } from "@/lib/admin/session"
+import type { SupportMessage } from "@/lib/api/support"
 import type {
   AdminDashboardResponse,
   AdminOrganizerDetailsResponse,
@@ -215,6 +216,16 @@ export const fetchPublicSiteConfig = async (): Promise<SiteConfig> => {
     return { ...DEFAULT_SITE_CONFIG }
   }
 }
+
+export const listAdminSupportMessages = (status?: "OPEN" | "RESOLVED") =>
+  requestAdmin<{ messages: SupportMessage[] }>(
+    `/admin/support/messages${status ? `?status=${status}` : ""}`,
+  )
+
+export const resolveAdminSupportMessage = (id: string) =>
+  requestAdmin<{ message: SupportMessage }>(`/admin/support/messages/${id}/resolve`, {
+    method: "PATCH",
+  })
 
 export const getAdminSiteConfig = () =>
   requestAdmin<SiteConfig>("/admin/site-config")

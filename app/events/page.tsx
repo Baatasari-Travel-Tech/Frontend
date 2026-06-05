@@ -9,7 +9,6 @@ import { EventsSearchHero } from "@/components/events/events-search-hero"
 import { FooterSocialLinks } from "@/components/events/footer-social-edit"
 import { toEventCardData, getEventPhase } from "@/lib/event-helpers"
 import { apiRequest } from "@/lib/api/client"
-import { fetchPublicSiteConfig } from "@/lib/api/admin"
 import type { EventSummary } from "@/types/api"
 
 const PHASE_ORDER: Record<string, number> = { ongoing: 0, upcoming: 1, recent: 2 }
@@ -68,12 +67,6 @@ function EventsPageContent() {
     queryFn: () =>
       apiRequest<{ data: { events: EventSummary[] } }>("/events").then((r) => r.data.events),
     staleTime: 60_000,
-  })
-
-  const siteConfigQuery = useQuery({
-    queryKey: ["public-site-config"],
-    queryFn: () => fetchPublicSiteConfig(),
-    staleTime: 5 * 60_000,
   })
 
   const data = eventsQuery.data
@@ -174,7 +167,7 @@ function EventsPageContent() {
               </div>
             </div>
 
-            {siteConfigQuery.data ? <FooterSocialLinks config={siteConfigQuery.data} /> : null}
+            <FooterSocialLinks />
           </div>
 
           <div className="mt-4 flex flex-col gap-2 border-t border-slate-700 pt-4 text-xs text-slate-400 md:flex-row md:items-center md:justify-between">
