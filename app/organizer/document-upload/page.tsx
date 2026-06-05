@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { PointerEvent as ReactPointerEvent } from "react"
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react"
 import html2canvas from "html2canvas"
 import { jsPDF } from "jspdf"
 import { useRouter } from "next/navigation"
@@ -25,12 +25,23 @@ const todayLabel = new Date().toLocaleDateString("en-GB", {
 const isPdfFile = (file: File) =>
   file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
 
+const BAATASARI_LEGAL_NAME = "Simha Karthik Reddy"
+const BAATASARI_TRADE_NAME = "Baatasari"
+const BAATASARI_GSTIN = "37HRGPR8105H1ZD"
+const BAATASARI_NOTICE_EMAIL = "contact-us@baatasari.com"
 const BAATASARI_ADDRESS_LINES = [
-  "Ground Floor, Wajeda House",
-  "Gulmohar Cross Road No. 7, Juhu Scheme",
-  "Mumbai - 400049",
+  "28/1A-4-145/41, Sathyamjee Layout",
+  "Near General Shop, Navalak Gardens",
+  "Nellore, Sri Potti Sriramulu Nellore",
+  "Andhra Pradesh - 524002",
 ]
 const MAX_AGREEMENT_UPLOAD_BYTES = 25 * 1024 * 1024
+
+// Inline styles (the agreement is rasterized by html2canvas, which strips
+// stylesheets — so every rule must be inline and inherit the container font).
+const agSectionTitle: CSSProperties = { margin: "16px 0 6px", fontWeight: 700 }
+const agPara: CSSProperties = { margin: "0 0 8px" }
+const agList: CSSProperties = { margin: "0 0 8px 18px", padding: 0 }
 
 const formatValue = (value: string | null | undefined, fallback = "Not provided") => {
   const nextValue = value?.trim()
@@ -429,205 +440,341 @@ export default function OrganizerDocumentUploadPage() {
     }
   }
 
-  const renderAgreementContainer = (withRef = false, compact = false) => (
+  const renderAgreementContainer = (withRef = false, compact = false) => {
+    const organizerGstinDisplay = organizerProfile?.gstNumber?.trim()
+      ? organizerProfile.gstNumber
+      : "Not registered — GST Undertaking accepted"
+    const organizerBankDetails =
+      [
+        organizerProfile?.bankAccountName,
+        organizerProfile?.bankName,
+        organizerProfile?.bankAccountNumber,
+        organizerProfile?.bankIfsc,
+      ]
+        .map((value) => value?.trim())
+        .filter(Boolean)
+        .join(", ") || "To be filled"
+
+    return (
       <div
-      ref={withRef ? agreementRef : undefined}
-      style={{
-        width: "100%",
-        minWidth: compact ? "auto" : "780px",
-        backgroundColor: "#ffffff",
-        color: "#111827",
-        border: "1px solid #cbd5e1",
-        borderRadius: "14px",
-        padding: compact ? "16px" : "24px",
-        fontFamily: "Times New Roman, Georgia, serif",
-        fontSize: compact ? "12px" : "13px",
-        lineHeight: 1.6,
-      }}
-    >
-      <p style={{ margin: 0, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#6b7280" }}>
-        Privileged and Confidential
-      </p>
-      <h3 style={{ margin: "10px 0 4px", fontSize: compact ? "24px" : "28px", lineHeight: 1.2 }}>AGREEMENT</h3>
-      <p style={{ margin: 0 }}>
-        This agreement is made on <strong>{todayLabel}</strong> between <strong>Baatasari</strong> and{" "}
-        <strong>{organizerDisplayName}</strong>.
-      </p>
-
-      <div style={{ marginTop: "16px", border: "1px solid #d1d5db", borderRadius: "10px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: compact ? "fixed" : "auto" }}>
-          <tbody>
-            <tr>
-              <td
-                style={{
-                  width: "28%",
-                  borderRight: "1px solid #d1d5db",
-                  borderBottom: "1px solid #d1d5db",
-                  padding: "10px",
-                  fontWeight: 700,
-                  wordBreak: "break-word",
-                }}
-              >
-                First Party
-              </td>
-              <td style={{ borderBottom: "1px solid #d1d5db", padding: "10px", wordBreak: "break-word" }}>
-                Baatasari (baatasari.com)
-                <br />
-                {BAATASARI_ADDRESS_LINES.join(", ")}
-              </td>
-            </tr>
-            <tr>
-              <td
-                style={{
-                  width: "28%",
-                  borderRight: "1px solid #d1d5db",
-                  padding: "10px",
-                  fontWeight: 700,
-                  wordBreak: "break-word",
-                }}
-              >
-                Second Party
-              </td>
-              <td style={{ padding: "10px", wordBreak: "break-word" }}>
-                {organizerDisplayName} ({organizerEntityTypeLabel})
-                <br />
-                Address: {organizerAddress}
-                <br />
-                Email: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}
-                <br />
-                Phone: {formatValue(organizerProfile?.contactPhone)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div style={{ marginTop: "18px" }}>
-        <p style={{ margin: "0 0 8px" }}>
-          <strong>Recitals</strong>
-        </p>
-        <p style={{ margin: "0 0 8px" }}>A) Baatasari provides event discovery and ticketing services through its platform.</p>
-        <p style={{ margin: "0 0 8px" }}>
-          B) The Organizer appoints Baatasari to facilitate event listing and ticket bookings on the platform.
-        </p>
-        <p style={{ margin: 0 }}>
-          C) The Parties agree to the commercial and legal terms below, modeled on the BookMyShow-style agreement format.
-        </p>
-      </div>
-
-      <div style={{ marginTop: "18px" }}>
-        <p style={{ margin: "0 0 8px" }}>
-          <strong>Key Terms</strong>
-        </p>
-        <ol style={{ margin: "0 0 0 18px", padding: 0 }}>
-          <li>Baatasari will provide platform listing and online ticketing support.</li>
-          <li>The Organizer is solely responsible for event execution, safety, licenses, and legal compliance.</li>
-          <li>Payment terms and commission structure are as communicated for each event listing.</li>
-          <li>Cancellation, refund handling, and chargebacks follow the agreed event policy and applicable laws.</li>
-          <li>Both parties shall maintain confidentiality and comply with applicable tax and data-protection laws.</li>
-        </ol>
-      </div>
-
-      <div style={{ marginTop: "18px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
-        <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Schedule 1 - Organizer Particulars</p>
-        <p style={{ margin: "0 0 4px" }}>Name: {organizerDisplayName}</p>
-        <p style={{ margin: "0 0 4px" }}>PAN: {formatValue(organizerProfile?.panNumber, "Pending")}</p>
-        <p style={{ margin: "0 0 4px" }}>
-          GST: {formatValue(organizerProfile?.gstNumber, "Not registered under GST")}
-        </p>
-        <p style={{ margin: 0 }}>
-          Registered Address: <strong>{organizerAddress}</strong>
-        </p>
-      </div>
-
-      <div style={{ marginTop: "18px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
-        <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Schedule 2 - Notices</p>
-        <p style={{ margin: "0 0 6px" }}>
-          <strong>To Baatasari:</strong> Contact Team, contact-us@baatasari.com
-        </p>
-        <p style={{ margin: "0 0 6px" }}>
-          Address: <strong>{BAATASARI_ADDRESS_LINES.join(", ")}</strong>
-        </p>
-        <p style={{ margin: "0 0 6px" }}>
-          <strong>To Organizer:</strong> {organizerDisplayName}
-        </p>
-        <p style={{ margin: "0 0 6px" }}>Email: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}</p>
-        <p style={{ margin: 0 }}>
-          Address: <strong>{organizerAddress}</strong>
-        </p>
-      </div>
-
-      <div
+        ref={withRef ? agreementRef : undefined}
         style={{
-          marginTop: "20px",
-          paddingTop: "12px",
-          borderTop: "1px solid #d1d5db",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "16px",
+          width: "100%",
+          minWidth: compact ? "auto" : "780px",
+          backgroundColor: "#ffffff",
+          color: "#111827",
+          border: "1px solid #cbd5e1",
+          borderRadius: "14px",
+          padding: compact ? "16px" : "24px",
+          fontFamily: "Times New Roman, Georgia, serif",
+          fontSize: compact ? "12px" : "13px",
+          lineHeight: 1.6,
         }}
       >
-        <div style={{ flex: "1 1 260px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
-          <p style={{ margin: 0, fontWeight: 700 }}>For Baatasari</p>
-          <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Authorized Signatory</p>
-          <div style={{ minHeight: "76px", display: "flex", alignItems: "center" }}>
-            <img
-              src="/Signature.png"
-              alt="Baatasari authorized signature"
-              style={{ maxHeight: "64px", width: "auto", objectFit: "contain" }}
-            />
-          </div>
-          <p style={{ margin: "8px 0 0" }}>Date: {todayLabel}</p>
+        <p style={{ margin: 0, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#6b7280" }}>
+          Privileged and Confidential
+        </p>
+        <h3 style={{ margin: "10px 0 10px", fontSize: compact ? "20px" : "24px", lineHeight: 1.2, textAlign: "center" }}>
+          Event Organizer Agreement
+        </h3>
+
+        <p style={agPara}>
+          This Agreement (&ldquo;Agreement&rdquo;) is made on this <strong>{todayLabel}</strong> (&ldquo;Signing Date&rdquo;)
+          between:
+        </p>
+        <p style={agPara}>
+          <strong>{BAATASARI_LEGAL_NAME}</strong>, a Sole Proprietor operating under the name and style &ldquo;
+          {BAATASARI_TRADE_NAME}&rdquo;, having its principal place of business at {BAATASARI_ADDRESS_LINES.join(", ")},
+          GSTIN: {BAATASARI_GSTIN} (hereinafter referred to as &ldquo;Baatasari&rdquo; or the &ldquo;Platform&rdquo;, which
+          expression shall, unless repugnant to the context or meaning thereof, be deemed to include its successors and
+          permitted assigns);
+        </p>
+        <p style={{ ...agPara, fontWeight: 700 }}>AND</p>
+        <p style={agPara}>
+          <strong>{organizerDisplayName}</strong>, an {organizerEntityTypeLabel}, having its address at {organizerAddress}{" "}
+          (hereinafter referred to as the &ldquo;Event Organizer&rdquo;);
+        </p>
+        <p style={agPara}>
+          Baatasari and the Event Organizer shall hereinafter be individually referred to as a &ldquo;Party&rdquo; and
+          collectively as the &ldquo;Parties&rdquo;.
+        </p>
+
+        <div style={{ marginTop: "10px", border: "1px solid #d1d5db", borderRadius: "10px", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: compact ? "fixed" : "auto" }}>
+            <tbody>
+              <tr>
+                <td
+                  style={{
+                    width: "28%",
+                    borderRight: "1px solid #d1d5db",
+                    borderBottom: "1px solid #d1d5db",
+                    padding: "10px",
+                    fontWeight: 700,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  Platform (First Party)
+                </td>
+                <td style={{ borderBottom: "1px solid #d1d5db", padding: "10px", wordBreak: "break-word" }}>
+                  {BAATASARI_LEGAL_NAME}, Sole Proprietor trading as {BAATASARI_TRADE_NAME} (baatasari.com)
+                  <br />
+                  Address: {BAATASARI_ADDRESS_LINES.join(", ")}
+                  <br />
+                  GSTIN: {BAATASARI_GSTIN}
+                </td>
+              </tr>
+              <tr>
+                <td
+                  style={{
+                    width: "28%",
+                    borderRight: "1px solid #d1d5db",
+                    padding: "10px",
+                    fontWeight: 700,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  Event Organizer (Second Party)
+                </td>
+                <td style={{ padding: "10px", wordBreak: "break-word" }}>
+                  {organizerDisplayName} ({organizerEntityTypeLabel})
+                  <br />
+                  Address: {organizerAddress}
+                  <br />
+                  Email: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}
+                  <br />
+                  Phone: {formatValue(organizerProfile?.contactPhone)}
+                  <br />
+                  PAN: {formatValue(organizerProfile?.panNumber, "Pending")} &nbsp;|&nbsp; GSTIN: {organizerGstinDisplay}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <div style={{ flex: "1 1 260px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
-          <p style={{ margin: 0, fontWeight: 700 }}>For Organizer</p>
-          <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Authorized Signatory</p>
-          <div
-            style={{
-              minHeight: "76px",
-              border: "1px dashed #94a3b8",
-              borderRadius: "8px",
-              padding: "8px",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            {signatureDataUrl ? (
-              <button
-                type="button"
-                onClick={() => setSignatureModalOpen(true)}
-                style={{ width: "100%", border: "none", background: "transparent", padding: 0, cursor: "pointer" }}
-              >
-                <img
-                  src={signatureDataUrl}
-                  alt="Organizer signature"
-                  style={{ maxHeight: "58px", width: "100%", objectFit: "contain" }}
-                />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setSignatureModalOpen(true)}
-                style={{
-                  border: "1px solid #111827",
-                  borderRadius: "999px",
-                  padding: "8px 14px",
-                  background: "#ffffff",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Click to sign
-              </button>
-            )}
+
+        <p style={{ ...agSectionTitle, marginTop: "16px" }}>Recitals</p>
+        <p style={agPara}>
+          (A) Baatasari is engaged in the business of operating an online platform (www.baatasari.com and mobile
+          application) that enables customers to discover, connect with, and book various local events, experiences,
+          workshops, performances, meetups, and activities without accessing physical points of sale.
+        </p>
+        <p style={agPara}>
+          (B) The Event Organizer is organizing an Event (as defined below) and has approached Baatasari for listing and
+          booking services through the Platform.
+        </p>
+        <p style={agPara}>
+          (C) Based on the representations and assurances made by the Event Organizer, the Parties are entering into this
+          Agreement to record the terms and conditions based on which Baatasari shall provide the Services for the Event.
+        </p>
+        <p style={agPara}>
+          NOW THEREFORE, in consideration of the mutual promises and agreements expressed herein, the Parties agree as
+          follows:
+        </p>
+
+        <p style={agSectionTitle}>1. Definitions</p>
+        <p style={agPara}>
+          The following capitalized words and expressions shall have the respective meanings set forth below:
+        </p>
+        <ul style={agList}>
+          <li><strong>&ldquo;Confidential Information&rdquo;</strong> — Includes inventions, ideas, know-how, techniques, processes, designs, data, Intellectual Property Rights, software, business information, customer data, etc., disclosed by either Party.</li>
+          <li><strong>&ldquo;Customers&rdquo;</strong> — Persons who book Tickets through the Platform.</li>
+          <li><strong>&ldquo;Event&rdquo;</strong> — All events, workshops, experiences, or activities listed by the Event Organizer on the Platform.</li>
+          <li><strong>&ldquo;Intellectual Property Rights&rdquo;</strong> — All rights in copyrights, trademarks, trade names, logos, patents, know-how, software, etc.</li>
+          <li><strong>&ldquo;Losses&rdquo;</strong> — All liabilities, damages, penalties, costs, expenses, legal fees, etc.</li>
+          <li><strong>&ldquo;Platform&rdquo;</strong> — www.baatasari.com, mobile applications, and any other channels operated or associated with Baatasari.</li>
+          <li><strong>&ldquo;Ticket / Booking&rdquo;</strong> — Any ticket or reservation issued to Customers through the Platform.</li>
+          <li><strong>&ldquo;Venue&rdquo;</strong> — The location(s) where the Event will take place.</li>
+        </ul>
+
+        <p style={agSectionTitle}>2. Appointment &amp; Services</p>
+        <p style={agPara}>
+          2.1 The Event Organizer hereby appoints Baatasari to facilitate online discovery, promotion, and booking of
+          Tickets for the Event through the Platform (&ldquo;Services&rdquo;).
+        </p>
+        <p style={agPara}>2.2 It is clarified that:</p>
+        <ul style={agList}>
+          <li>Baatasari is a service provider offering booking facilitation.</li>
+          <li>The sale/booking of Tickets is concluded directly between the Event Organizer and the Customer.</li>
+          <li>Tickets are issued on behalf of the Event Organizer.</li>
+          <li>Baatasari is not responsible for bookings made outside the Platform.</li>
+        </ul>
+        <p style={agPara}>2.3 The appointment is made on a non-exclusive basis.</p>
+
+        <p style={agSectionTitle}>3. Responsibilities of the Event Organizer</p>
+        <p style={agPara}>The Event Organizer shall:</p>
+        <ol style={agList} type="a">
+          <li>Be responsible for end-to-end execution and delivery of the Event.</li>
+          <li>Notify Baatasari of all discounts, schemes, or benefits at least 3 days in advance.</li>
+          <li>Obtain all necessary approvals, licenses, permissions, clearances (including from police, fire, entertainment tax, etc.), and insurance at its sole cost.</li>
+          <li>Comply with all applicable laws, including GST, Income Tax, DPDP Act 2023, and COVID/local guidelines.</li>
+          <li>Provide accurate and complete information about the Event.</li>
+          <li>Ensure safety and security of Customers at the Event.</li>
+          <li>Promptly notify Baatasari of any delay, postponement, or cancellation.</li>
+          <li>Handle all customer complaints and grievances within 72 hours.</li>
+          <li>Provide valid PAN and GSTIN or accept the GST Undertaking.</li>
+          <li>Indemnify Baatasari against any claims arising from the Event.</li>
+          <li>Not engage in illegal or unfair trade practices.</li>
+          <li>Maintain valid agreements with venue owners, vendors, and performers.</li>
+          <li>Procure appropriate insurance policies for the Event.</li>
+        </ol>
+
+        <p style={agSectionTitle}>4. Responsibilities of Baatasari</p>
+        <p style={agPara}>
+          Baatasari shall render the Services in a professional manner by providing the Platform for listing, discovery,
+          and online booking.
+        </p>
+
+        <p style={agSectionTitle}>5. Consideration &amp; Payment Terms</p>
+        <p style={agPara}>5.1 Baatasari will charge a Platform Fee of 10% (or as mutually agreed) + applicable taxes on the total booking revenue.</p>
+        <p style={agPara}>5.2 Payment Gateway fees (Razorpay) shall be charged as per actuals and may be absorbed by Organizer or passed to Customer as selected during event creation.</p>
+        <p style={agPara}>5.3 Baatasari shall release the Organizer&rsquo;s share after deduction of Platform Fee, PG Fee, TCS (if applicable), and any other charges, within T+7 days after the Event (subject to Razorpay settlement policy).</p>
+        <p style={agPara}>5.4 In case of cancellations or refunds, the Organizer shall reimburse Baatasari immediately for any amounts already settled.</p>
+        <p style={agPara}>5.5 Baatasari shall raise an invoice for its Platform Fees.</p>
+
+        <p style={agSectionTitle}>6. Taxes &amp; GST Compliance</p>
+        <p style={agPara}>6.1 Organizer is solely responsible for its tax compliance including charging and remitting GST on tickets.</p>
+        <p style={agPara}>6.2 Baatasari, as an E-commerce Operator, shall collect TCS @ 0.5% as per GST law and file GSTR-8.</p>
+        <p style={agPara}>6.3 Organizer shall indemnify Baatasari against any tax demands, interest, or penalties arising due to Organizer&rsquo;s non-compliance.</p>
+
+        <p style={agSectionTitle}>7. Material Changes / Cancellation</p>
+        <p style={agPara}>
+          If the Event is cancelled, postponed, or materially changed, Baatasari may charge cancellation fees and process
+          refunds. Organizer shall reimburse all refund amounts to Baatasari within 7 days.
+        </p>
+
+        <p style={agSectionTitle}>8. Intellectual Property Rights</p>
+        <p style={agPara}>
+          Each Party retains its own IP. Organizer grants Baatasari a limited license to use Event content for promotion on
+          the Platform.
+        </p>
+
+        <p style={agSectionTitle}>9. Limitation of Liability</p>
+        <p style={agPara}>
+          Baatasari&rsquo;s total liability shall not exceed the Platform Fees received. Baatasari shall not be liable for
+          indirect, consequential, or punitive damages.
+        </p>
+
+        <p style={agSectionTitle}>10. Indemnity</p>
+        <p style={agPara}>
+          Organizer shall indemnify and hold harmless Baatasari against all Losses arising from breach of this Agreement,
+          the Event, or tax non-compliance.
+        </p>
+
+        <p style={agSectionTitle}>11. Term and Termination</p>
+        <p style={agPara}>11.1 This Agreement shall remain valid for 12 months or until all payments are settled.</p>
+        <p style={agPara}>11.2 Either Party may terminate with 30 days&rsquo; notice.</p>
+        <p style={agPara}>11.3 Baatasari may terminate immediately for breach, legal risk, or reputation damage.</p>
+
+        <p style={agSectionTitle}>12. Confidentiality, Force Majeure, Governing Law</p>
+        <ul style={agList}>
+          <li>Governing Law: Laws of India.</li>
+          <li>Dispute Resolution: Arbitration in Visakhapatnam.</li>
+          <li>Confidentiality &amp; Force Majeure: Standard clauses as per industry practice.</li>
+        </ul>
+
+        <p style={agSectionTitle}>13. Miscellaneous</p>
+        <p style={agPara}>Entire Agreement, Severability, Waiver, Counterparts, etc.</p>
+
+        <p style={agPara}>
+          IN WITNESS WHEREOF the Parties have executed this Agreement on the date mentioned above.
+        </p>
+
+        <div
+          style={{
+            marginTop: "12px",
+            paddingTop: "12px",
+            borderTop: "1px solid #d1d5db",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
+          <div style={{ flex: "1 1 260px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+            <p style={{ margin: 0, fontWeight: 700 }}>For Baatasari</p>
+            <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Sole Proprietor / Authorized Signatory</p>
+            <div style={{ minHeight: "76px", display: "flex", alignItems: "center" }}>
+              <img
+                src="/Signature.png"
+                alt="Baatasari authorized signature"
+                style={{ maxHeight: "64px", width: "auto", objectFit: "contain" }}
+              />
+            </div>
+            <p style={{ margin: "8px 0 0" }}>Name: {BAATASARI_LEGAL_NAME}</p>
+            <p style={{ margin: "2px 0 0" }}>GSTIN: {BAATASARI_GSTIN}</p>
+            <p style={{ margin: "2px 0 0" }}>Date: {todayLabel}</p>
           </div>
-          <p style={{ margin: "8px 0 0" }}>Name: {organizerDisplayName}</p>
-          <p style={{ margin: "2px 0 0" }}>Date: {todayLabel}</p>
+          <div style={{ flex: "1 1 260px", border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+            <p style={{ margin: 0, fontWeight: 700 }}>For Event Organizer</p>
+            <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#4b5563" }}>Authorized Signatory</p>
+            <div
+              style={{
+                minHeight: "76px",
+                border: "1px dashed #94a3b8",
+                borderRadius: "8px",
+                padding: "8px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {signatureDataUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setSignatureModalOpen(true)}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: 0, cursor: "pointer" }}
+                >
+                  <img
+                    src={signatureDataUrl}
+                    alt="Organizer signature"
+                    style={{ maxHeight: "58px", width: "100%", objectFit: "contain" }}
+                  />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSignatureModalOpen(true)}
+                  style={{
+                    border: "1px solid #111827",
+                    borderRadius: "999px",
+                    padding: "8px 14px",
+                    background: "#ffffff",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Click to sign
+                </button>
+              )}
+            </div>
+            <p style={{ margin: "8px 0 0" }}>Name: {organizerDisplayName}</p>
+            <p style={{ margin: "2px 0 0" }}>Date: {todayLabel}</p>
+          </div>
+        </div>
+
+        <p style={{ ...agSectionTitle, textAlign: "center", marginTop: "18px" }}>Schedule 1 — Particulars of the Event Organizer</p>
+        <div style={{ border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+          <p style={{ margin: "0 0 4px" }}>Name: {organizerDisplayName}</p>
+          <p style={{ margin: "0 0 4px" }}>Address: {organizerAddress}</p>
+          <p style={{ margin: "0 0 4px" }}>PAN: {formatValue(organizerProfile?.panNumber, "Pending")}</p>
+          <p style={{ margin: "0 0 4px" }}>GSTIN: {organizerGstinDisplay}</p>
+          <p style={{ margin: 0 }}>Bank Account Details: {organizerBankDetails}</p>
+        </div>
+
+        <p style={{ ...agSectionTitle, textAlign: "center" }}>Schedule 2 — Commercial Arrangement</p>
+        <div style={{ border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
+          <p style={{ margin: "0 0 4px" }}>Platform Fee: 10%</p>
+          <p style={{ margin: "0 0 4px" }}>Settlement Timeline: T+7 days</p>
+          <p style={{ margin: "0 0 8px" }}>Term: 12 months</p>
+          <p style={{ margin: "0 0 4px", fontWeight: 700 }}>Notices</p>
+          <p style={{ margin: "0 0 2px" }}>To Baatasari: {BAATASARI_NOTICE_EMAIL}</p>
+          <p style={{ margin: "0 0 2px" }}>Address: {BAATASARI_ADDRESS_LINES.join(", ")}</p>
+          <p style={{ margin: "0 0 2px" }}>
+            To Organizer: {formatValue(organizerProfile?.contactEmail, user?.email ?? "Not provided")}
+          </p>
+          <p style={{ margin: 0 }}>Address: {organizerAddress}</p>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <ProtectedRoute requireOnboarding={false}>

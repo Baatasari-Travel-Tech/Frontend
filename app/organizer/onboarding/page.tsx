@@ -43,7 +43,7 @@ const GST_STATE_CODES: Record<string, string> = {
   "20": "Jharkhand", "21": "Odisha", "22": "Chhattisgarh", "23": "Madhya Pradesh", "24": "Gujarat",
   "25": "Daman and Diu", "26": "Dadra and Nagar Haveli", "27": "Maharashtra", "28": "Andhra Pradesh",
   "29": "Karnataka", "30": "Goa", "31": "Lakshadweep", "32": "Kerala", "33": "Tamil Nadu",
-  "34": "Puducherry", "35": "Andaman and Nicobar Islands", "36": "Telangana", "37": "Andhra Pradesh (Amaravati)",
+  "34": "Puducherry", "35": "Andaman and Nicobar Islands", "36": "Telangana", "37": "Andhra Pradesh",
   "38": "Ladakh", "97": "Other Territory", "99": "Centre"
 }
 
@@ -399,7 +399,6 @@ export default function OrganizerOnboardingPage() {
   const [showGstModal, setShowGstModal] = useState(false)
   const [gstinRows, setGstinRows] = useState<GstinRow[]>([makeGstinRow()])
   const [gstinError, setGstinError] = useState<string | null>(null)
-  const [noGstinStateError, setNoGstinStateError] = useState<string | null>(null)
   const [itrError, setItrError] = useState<string | null>(null)
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
@@ -1031,12 +1030,6 @@ export default function OrganizerOnboardingPage() {
           setShowGstModal(true)
           return
         }
-        if (!values.state?.trim()) {
-          setNoGstinStateError("Please select your state.")
-          setError("Please select your state.")
-          return
-        }
-        setNoGstinStateError(null)
       } else {
         const pan = values.panNumber.trim().toUpperCase()
         const filled = gstinRows.filter((row) => row.gstin.trim() || row.state.trim())
@@ -1674,30 +1667,6 @@ export default function OrganizerOnboardingPage() {
                       </div>
                     ) : null}
 
-                    {/* State — required for the declaration when there is no GSTIN */}
-                    {hasGstin === "no" ? (
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                        <label className="block text-sm font-semibold text-slate-700">
-                          State *
-                          <select
-                            className={inputClassName}
-                            value={form.watch("state") ?? ""}
-                            onChange={(e) => {
-                              form.setValue("state", e.target.value, { shouldValidate: true })
-                              if (e.target.value.trim()) setNoGstinStateError(null)
-                            }}
-                          >
-                            <option value="">Select state</option>
-                            {INDIAN_STATES.map((stateName) => (
-                              <option key={stateName} value={stateName}>{stateName}</option>
-                            ))}
-                          </select>
-                        </label>
-                        {noGstinStateError ? (
-                          <p className="mt-1 text-xs text-rose-600">{noGstinStateError}</p>
-                        ) : null}
-                      </div>
-                    ) : null}
                   </div>
 
                   {/* Right: Bank details */}
