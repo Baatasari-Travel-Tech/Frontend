@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import QRCode from "qrcode"
-import { Share2, Copy, Check, X } from "lucide-react"
+import { Share2, Copy, Check, X, Loader2 } from "lucide-react"
 
 const LOGO_SRC = "/qr_logo.png"
 
@@ -52,6 +52,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [link, setLink] = useState("")
+  const [qrReady, setQrReady] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
     const canvas = canvasRef.current
     if (!canvas) return
     let cancelled = false
+    setQrReady(false)
 
     // Render at higher internal resolution (shown at 232px via CSS) so the
     // centre logo stays sharp instead of looking pixelated/blurry.
@@ -113,6 +115,11 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = "high"
           ctx.drawImage(logo, x, y, w, h)
+          setQrReady(true)
+        }
+        // If the logo can't load, still reveal the QR rather than spin forever.
+        logo.onerror = () => {
+          if (!cancelled) setQrReady(true)
         }
         logo.src = LOGO_SRC
       })
@@ -223,8 +230,18 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
 
             {title ? <p className="mb-3 line-clamp-2 text-xs text-slate-500">{title}</p> : null}
 
-            <div className="flex justify-center rounded-xl border border-slate-100 bg-white p-3">
-              <canvas ref={canvasRef} className="block h-auto w-full max-w-[232px] rounded-lg" />
+            <div className="relative flex min-h-[210px] items-center justify-center rounded-xl border border-slate-100 bg-white p-3">
+              {!qrReady ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
+                </div>
+              ) : null}
+              <canvas
+                ref={canvasRef}
+                className={`block h-auto w-full max-w-[232px] rounded-lg transition-opacity duration-200 ${
+                  qrReady ? "opacity-100" : "opacity-0"
+                }`}
+              />
             </div>
 
             <div className="mt-4">
