@@ -83,6 +83,8 @@ export type OrganizerProfile = {
   bankAccountName: string | null;
   bankAccountNumber: string | null;
   bankIfsc: string | null;
+  bankAccountType: string | null;
+  bankName: string | null;
   websiteUrl: string | null;
   instagramUrl: string | null;
   linkedinUrl: string | null;
@@ -96,6 +98,7 @@ export type OrganizerProfile = {
   gstDetails: Array<{ gstin: string; state: string }>;
   undertakingAccepted: boolean;
   undertakingState: string | null;
+  itrFiledLastTwoYears: boolean | null;
   panDocumentKey: string | null;
   agreementDocumentKey: string | null;
   agreementDownloadedAt: string | null;

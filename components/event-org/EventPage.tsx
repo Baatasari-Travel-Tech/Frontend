@@ -269,6 +269,7 @@ const EventPage: React.FC<EventPageProps> = ({
     );
     if (hasCurrentErrors) {
       setFormErrors(errors);
+      scrollToFirstError(errors);
       return;
     }
     setFormErrors({});
@@ -277,23 +278,40 @@ const EventPage: React.FC<EventPageProps> = ({
   };
 
   const scrollToFirstError = (errors: Record<string, string>) => {
-    setTimeout(() => {
-      if (Object.keys(errors).length === 0) return;
-      // Try each error key — find a named input and focus+scroll
-      for (const key of Object.keys(errors)) {
-        const el = document.querySelector<HTMLElement>(`[name="${key}"]`);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          if ((el as HTMLInputElement).type !== "file") {
-            try { el.focus(); } catch {}
-          }
-          return;
-        }
+    if (Object.keys(errors).length === 0) return;
+
+    // Expand every collapsible section so a collapsed one can't hide the field.
+    setOpenSections((prev) => ({
+      ...prev,
+      "event-info": true,
+      "date-time": true,
+      "event-highlights": true,
+      ticketing: true,
+      sponsorship: true,
+      audience: true,
+      guidelines: true,
+      addOns: true,
+    }));
+
+    const focusFirstError = () => {
+      // Error messages all render with `.text-danger-red` directly beside their
+      // field, in DOM order — so the first one is the first invalid field.
+      const msg = document.querySelector<HTMLElement>(".text-danger-red");
+      if (!msg) return;
+
+      const field = msg.closest<HTMLElement>(".relative") ?? msg.parentElement ?? msg;
+      field.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      const control = field.querySelector<HTMLElement>(
+        "input:not([type='file']):not([type='hidden']), select, textarea"
+      );
+      if (control) {
+        try { control.focus({ preventScroll: true }); } catch {}
       }
-      // Fallback: scroll to first visible error message
-      const firstMsg = document.querySelector<HTMLElement>(".text-danger-red");
-      if (firstMsg) firstMsg.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 50);
+    };
+
+    // Wait for any step switch / section expansion to render before measuring.
+    requestAnimationFrame(() => setTimeout(focusFirstError, 120));
   };
 
   const scrollToFormTop = () => {

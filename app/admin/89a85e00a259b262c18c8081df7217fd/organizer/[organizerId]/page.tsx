@@ -70,6 +70,8 @@ const mapPendingProfileToOrganizerProfile = (profile: Record<string, unknown>): 
   bankAccountName: readString(profile.bank_account_name),
   bankAccountNumber: readString(profile.bank_account_number),
   bankIfsc: readString(profile.bank_ifsc),
+  bankAccountType: readString(profile.bank_account_type),
+  bankName: readString(profile.bank_name),
   websiteUrl: readString(profile.website_url),
   instagramUrl: readString(profile.instagram_url),
   linkedinUrl: readString(profile.linkedin_url),
@@ -95,6 +97,12 @@ const mapPendingProfileToOrganizerProfile = (profile: Record<string, unknown>): 
       : [],
   undertakingAccepted: profile.undertaking_accepted === true,
   undertakingState: readString(profile.undertaking_state),
+  itrFiledLastTwoYears:
+    profile.itr_filed_last_two_years === true
+      ? true
+      : profile.itr_filed_last_two_years === false
+        ? false
+        : null,
   panDocumentKey: readString(profile.pan_document_key),
   agreementDocumentKey: readString(profile.agreement_document_key),
   agreementDownloadedAt: readString(profile.agreement_downloaded_at),
@@ -334,13 +342,24 @@ export default function OrganizerProfilePage() {
     { label: "Undertaking accepted", value: formatBoolean(organizerProfile?.undertakingAccepted === true) },
     { label: "Undertaking state", value: organizerProfile?.undertakingState ?? null },
     {
+      label: "Filed last 2 years ITR",
+      value:
+        organizerProfile?.itrFiledLastTwoYears === true
+          ? "Yes"
+          : organizerProfile?.itrFiledLastTwoYears === false
+            ? "No"
+            : null,
+    },
+    {
       label: "GST details",
       value:
         organizerProfile?.gstDetails?.length
           ? organizerProfile.gstDetails.map((entry) => `${entry.gstin} (${entry.state})`).join(", ")
           : null,
     },
-    { label: "Bank account name", value: organizerProfile?.bankAccountName ?? null },
+    { label: "Beneficiary name", value: organizerProfile?.bankAccountName ?? null },
+    { label: "Account type", value: organizerProfile?.bankAccountType ?? null },
+    { label: "Bank name", value: organizerProfile?.bankName ?? null },
     { label: "Bank account number", value: organizerProfile?.bankAccountNumber ?? null },
     { label: "Bank IFSC", value: organizerProfile?.bankIfsc ?? null },
     { label: "Logo URL", value: organizerProfile?.logoUrl ?? null, isLink: true },
