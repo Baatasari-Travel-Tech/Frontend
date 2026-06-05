@@ -403,6 +403,7 @@ export default function OrganizerOnboardingPage() {
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
+  const ifscLookupRef = useRef<string | null>(null)
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -930,12 +931,17 @@ export default function OrganizerOnboardingPage() {
     }
   }
 
-  const handleIfscBlur = async (code: string) => {
+  // Looks up the bank/branch as soon as a complete, valid IFSC is entered —
+  // no need to blur the field. Deduped so the same code isn't fetched twice.
+  const lookupIfsc = async (code: string) => {
     const upper = code.toUpperCase().trim()
     if (!IFSC_RE.test(upper)) {
       setIfscBranch(null)
+      ifscLookupRef.current = null
       return
     }
+    if (ifscLookupRef.current === upper) return
+    ifscLookupRef.current = upper
     setIfscLoading(true)
     try {
       const res = await apiRequest<{ data: { bank: string; branch: string } }>(
@@ -945,6 +951,7 @@ export default function OrganizerOnboardingPage() {
       setIfscBranch(`${res.data.bank} — ${res.data.branch}`)
     } catch {
       setIfscBranch(null)
+      ifscLookupRef.current = null
     } finally {
       setIfscLoading(false)
     }
@@ -1721,10 +1728,14 @@ export default function OrganizerOnboardingPage() {
                           placeholder="SBIN0000001"
                           style={{ textTransform: "uppercase" }}
                           {...form.register("bankIfsc")}
+                          maxLength={11}
                           onChange={(e) => {
-                            form.setValue("bankIfsc", e.target.value.toUpperCase(), { shouldValidate: true })
+                            const value = e.target.value.toUpperCase()
+                            form.setValue("bankIfsc", value, { shouldValidate: true })
+                            // Look up immediately once a complete, valid IFSC is typed/pasted.
+                            void lookupIfsc(value)
                           }}
-                          onBlur={(e) => void handleIfscBlur(e.target.value)}
+                          onBlur={(e) => void lookupIfsc(e.target.value)}
                         />
                         <p className="mt-1 text-xs text-rose-600">{form.formState.errors.bankIfsc?.message ?? ""}</p>
                         {ifscLoading ? (
