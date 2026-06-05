@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import QRCode from "qrcode"
 import { Share2, Copy, Check, X } from "lucide-react"
 
-const LOGO_SRC = "/logo.png"
+const LOGO_SRC = "/qr_logo.png"
 
 function triggerDownload(href: string, filename: string) {
   const a = document.createElement("a")
@@ -89,7 +89,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
           // Draw the real brand wordmark at its true aspect ratio (no squashing,
           // no upscaling blur), on a clean white rounded backdrop sized to it.
           const aspect = (logo.naturalWidth || 1) / (logo.naturalHeight || 1)
-          const w = canvas.width * 0.24
+          const w = canvas.width * 0.28
           const h = w / aspect
           const x = (canvas.width - w) / 2
           const y = (canvas.height - h) / 2
@@ -155,7 +155,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
       const { dataUri, aspect } = await loadLogoDataUri()
       const viewBoxMatch = svg.match(/viewBox="0 0 ([\d.]+) /)
       const unit = viewBoxMatch ? Number(viewBoxMatch[1]) : 33
-      const w = unit * 0.24
+      const w = unit * 0.28
       const h = w / aspect
       const x = (unit - w) / 2
       const y = (unit - h) / 2
