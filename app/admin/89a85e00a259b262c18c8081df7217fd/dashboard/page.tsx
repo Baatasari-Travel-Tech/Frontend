@@ -11,6 +11,7 @@ import {
   getAdminOrganizerDetails,
   getAdminUserDetails,
   isAdminAuthFailure,
+  listAdminEvents,
   listAdminSupportMessages,
   listAdminUsers,
   listPendingOrganizers,
@@ -256,6 +257,12 @@ export default function AdminDashboardPage() {
   const prevPendingCount = useRef<number | null>(null)
   const prevSupportCount = useRef<number | null>(null)
 
+  // Counts shown as badges on the Events / Support buttons. Refreshed by the
+  // same 20s poll below. "Live" = published, not cancelled, and the event
+  // date is today or later (i.e. currently active on the platform).
+  const [liveEventsCount, setLiveEventsCount] = useState<number | null>(null)
+  const [openSupportCount, setOpenSupportCount] = useState<number | null>(null)
+
   const playChime = useCallback(() => {
     try {
       const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
@@ -288,19 +295,27 @@ export default function AdminDashboardPage() {
     let cancelled = false
     const poll = async () => {
       try {
-        const [pending, support] = await Promise.all([
+        const [pending, support, eventsRes] = await Promise.all([
           listPendingOrganizers(),
           listAdminSupportMessages("OPEN"),
+          listAdminEvents(),
         ])
         if (cancelled) return
         const pendingCount = pending.length
         const supportCount = support.messages.length
+        const startOfToday = new Date()
+        startOfToday.setHours(0, 0, 0, 0)
+        const liveCount = eventsRes.events.filter(
+          (e) => e.published && !e.cancelledAt && new Date(e.date) >= startOfToday,
+        ).length
         const grew =
           (prevPendingCount.current !== null && pendingCount > prevPendingCount.current) ||
           (prevSupportCount.current !== null && supportCount > prevSupportCount.current)
         if (grew) playChime()
         prevPendingCount.current = pendingCount
         prevSupportCount.current = supportCount
+        setOpenSupportCount(supportCount)
+        setLiveEventsCount(liveCount)
       } catch {
         /* transient failure — keep the previous baseline, try again next tick */
       }
@@ -645,15 +660,31 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-2">
             <Link
               href={ADMIN_ROUTES.events}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Events
+              {liveEventsCount && liveEventsCount > 0 ? (
+                <span
+                  title={`${liveEventsCount} live event${liveEventsCount === 1 ? "" : "s"}`}
+                  className="inline-flex min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-xs font-bold leading-none text-white"
+                >
+                  {liveEventsCount > 99 ? "99+" : liveEventsCount}
+                </span>
+              ) : null}
             </Link>
             <Link
               href={ADMIN_ROUTES.support}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Support messages
+              {openSupportCount && openSupportCount > 0 ? (
+                <span
+                  title={`${openSupportCount} open message${openSupportCount === 1 ? "" : "s"}`}
+                  className="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-xs font-bold leading-none text-white"
+                >
+                  {openSupportCount > 99 ? "99+" : openSupportCount}
+                </span>
+              ) : null}
             </Link>
             <button
               type="button"
