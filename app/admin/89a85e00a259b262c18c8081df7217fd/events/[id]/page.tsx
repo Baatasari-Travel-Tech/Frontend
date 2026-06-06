@@ -15,6 +15,7 @@ import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { getAdminToken } from "@/lib/admin/session"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { EVENT_CATEGORY_GROUPS } from "@/lib/event-categories"
+import CoverImageCropper from "@/components/event-org/CoverImageCropper"
 import type { EventDetail } from "@/types/api"
 
 const isoToLocalInput = (iso: string) => {
@@ -43,6 +44,9 @@ export default function AdminEventDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [coverVersion, setCoverVersion] = useState<string | number | null>(null)
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [cropSource, setCropSource] = useState<string | null>(null)
+  const [coverError, setCoverError] = useState<string | null>(null)
 
   // form fields
   const [form, setForm] = useState({
@@ -138,8 +142,30 @@ export default function AdminEventDetailPage() {
     }
   }
 
-  const handleCover = async (file: File | null) => {
+  // Open the adjustable cropper when a file is picked, so the admin frames the
+  // cover to the exact 2:3 portrait that's stored and shown everywhere — same
+  // UX organizers get — instead of a blind upload.
+  const handlePickCover = (file: File | null) => {
     if (!file) return
+    setCoverError(null)
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if (!validTypes.includes(file.type)) {
+      setCoverError("Please upload a JPG, PNG, GIF, or WEBP file.")
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCoverError("File size must be less than 5MB.")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === "string") setCropSource(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleCover = async (file: File, previewUrl: string) => {
+    setCoverPreview(previewUrl)
     setUploading(true)
     setError(null)
     setSuccess(null)
@@ -149,6 +175,7 @@ export default function AdminEventDetailPage() {
       setSuccess("Cover updated.")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cover upload failed.")
+      setCoverPreview(null)
     } finally {
       setUploading(false)
     }
@@ -181,22 +208,27 @@ export default function AdminEventDetailPage() {
               <div className="relative w-full aspect-[2/3] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={getEventCoverImageUrl(id, coverVersion)}
+                  src={coverPreview ?? getEventCoverImageUrl(id, coverVersion)}
                   alt="Event cover"
                   className="h-full w-full object-cover"
                   onError={(e) => { e.currentTarget.style.display = "none" }}
                 />
               </div>
               <label className="cursor-pointer rounded-full bg-slate-900 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-slate-800">
-                {uploading ? "Uploading…" : "Change cover"}
+                {uploading ? "Uploading…" : "Change & adjust cover"}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   className="hidden"
-                  onChange={(e) => void handleCover(e.target.files?.[0] ?? null)}
+                  disabled={uploading}
+                  onChange={(e) => {
+                    handlePickCover(e.target.files?.[0] ?? null)
+                    e.target.value = ""
+                  }}
                 />
               </label>
-              <p className="text-center text-xs text-slate-400">Stored as 2:3 portrait.</p>
+              {coverError ? <p className="text-center text-xs text-rose-600">{coverError}</p> : null}
+              <p className="text-center text-xs text-slate-400">Pick an image, then drag &amp; zoom to frame it. Stored as 2:3 portrait.</p>
             </div>
 
             {/* Details form */}
@@ -331,6 +363,17 @@ export default function AdminEventDetailPage() {
           </div>
         ) : null}
       </div>
+
+      {cropSource ? (
+        <CoverImageCropper
+          source={cropSource}
+          onCancel={() => setCropSource(null)}
+          onApply={(file, previewUrl) => {
+            setCropSource(null)
+            void handleCover(file, previewUrl)
+          }}
+        />
+      ) : null}
     </main>
   )
 }
