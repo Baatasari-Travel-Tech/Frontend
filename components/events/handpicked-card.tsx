@@ -38,10 +38,10 @@ export function HandpickedEventCard({
     compact = false,
     status,
 }: HandpickedEventCardProps) {
-    const [imageSrc, setImageSrc] = useState(image)
+    const [errored, setErrored] = useState(false)
 
     useEffect(() => {
-        setImageSrc(image)
+        setErrored(false)
     }, [image])
 
     return (
@@ -60,14 +60,18 @@ export function HandpickedEventCard({
                                     : "aspect-square mb-4 rounded-4xl"
                             }`}
                         >
-                            <Image
-                                src={imageSrc}
-                                alt={title}
-                                fill
-                                sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
-                                className="object-cover transition-transform duration-500 hover:scale-105"
-                                onError={() => setImageSrc("/e1.png")}
-                            />
+                            {image && !errored ? (
+                                <Image
+                                    src={image}
+                                    alt={title}
+                                    fill
+                                    sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
+                                    className="object-cover transition-transform duration-500 hover:scale-105"
+                                    onError={() => setErrored(true)}
+                                />
+                            ) : (
+                                <div className="absolute inset-0 bg-slate-100" />
+                            )}
 
                             {status === "live" || status === "upcoming" ? (
                                 <div

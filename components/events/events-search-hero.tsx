@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { apiRequest } from "@/lib/api/client";
 
 const ROTATING_WORDS = ["Mood", "Crew", "Vibe", "Weekend"];
 
@@ -47,22 +48,51 @@ export function EventsSearchHero() {
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [when, setWhen] = useState(searchParams.get("when") ?? "anytime");
   const [budget, setBudget] = useState(searchParams.get("budget") ?? "any");
-  // Simulated count of others currently exploring (no presence backend yet).
-  // null until mounted so server/client first render agree.
-  const [othersCount, setOthersCount] = useState<number | null>(null);
+  // Real "currently exploring" count from the presence service. The visitor
+  // heartbeats with a stable id; the count is the live global active total.
+  const [activeCount, setActiveCount] = useState<number | null>(null);
 
   useEffect(() => {
-    setOthersCount(Math.floor(40 + Math.random() * 200));
+    let cancelled = false;
+    let visitorId = "";
+    try {
+      visitorId = localStorage.getItem("baatasari-visitor-id") || "";
+      if (!visitorId) {
+        visitorId = crypto.randomUUID();
+        localStorage.setItem("baatasari-visitor-id", visitorId);
+      }
+    } catch {
+      visitorId = "";
+    }
+
+    const ping = async () => {
+      try {
+        const res = await apiRequest<{ data: { count: number } }>("/presence/ping", {
+          method: "POST",
+          body: JSON.stringify({ visitorId }),
+        });
+        if (!cancelled && typeof res?.data?.count === "number") setActiveCount(res.data.count);
+      } catch {
+        // ignore — keep the last known count
+      }
+    };
+
+    void ping();
+    const id = setInterval(ping, 25_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, []);
 
   const explorerText =
-    othersCount === null
+    activeCount === null
       ? "Exploring right now"
-      : othersCount <= 0
+      : activeCount <= 1
         ? "You are only exploring right now"
-        : othersCount >= 999
+        : activeCount - 1 > 999
           ? "999+ exploring right now"
-          : `You and ${othersCount} are exploring right now`;
+          : `You and ${activeCount - 1} are exploring right now`;
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -237,17 +267,8 @@ export function EventsSearchHero() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
                   Where
                 </span>
-                <Select defaultValue="vizag">
-                  <SelectTrigger className="h-auto w-full border-0 bg-transparent p-0 text-sm font-semibold text-(--gray-800) shadow-none focus:ring-0">
-                    <SelectValue placeholder="City" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="vizag">Visakhapatnam</SelectItem>
-                    <SelectItem value="hyderabad">Hyderabad</SelectItem>
-                    <SelectItem value="bangalore">Bangalore</SelectItem>
-                    <SelectItem value="chennai">Chennai</SelectItem>
-                  </SelectContent>
-                </Select>
+                {/* Fixed to Visakhapatnam for now (single-city launch). */}
+                <span className="text-sm font-semibold text-(--gray-800)">Visakhapatnam</span>
               </div>
             </div>
 
