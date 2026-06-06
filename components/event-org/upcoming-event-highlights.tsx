@@ -182,7 +182,10 @@ export function UpcomingEventHighlights({
                 {cancelError}
               </p>
             )}
-            <div className="flex flex-nowrap items-center gap-2 sm:gap-3 mt-10 w-full justify-between sm:justify-start pb-2">
+            <div
+              className="flex flex-wrap items-center gap-2 sm:gap-3 mt-10 w-full justify-start pb-2"
+              onClick={(clickEvent) => clickEvent.stopPropagation()}
+            >
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
