@@ -602,6 +602,12 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link
+              href={ADMIN_ROUTES.events}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Events
+            </Link>
+            <Link
               href={ADMIN_ROUTES.support}
               className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >

@@ -61,9 +61,9 @@ const EventForm: React.FC<EventFormProps> = ({
 
         {openSections["event-info"] && (
           <div className="px-8 pb-8">
-            <div className="flex flex-col w-full gap-8">
-              <div className="flex flex-col items-center gap-3">
-                <label htmlFor="eventPhoto" className="cursor-pointer block w-full max-w-[260px]">
+            <div className="flex flex-col lg:flex-row w-full gap-8 items-start">
+              <div className="flex flex-col items-center gap-3 w-full lg:w-auto shrink-0">
+                <label htmlFor="eventPhoto" className="cursor-pointer block w-full max-w-[260px] mx-auto">
                   <div className={`relative w-full aspect-[2/3] overflow-hidden flex flex-col items-center justify-center gap-2 bg-background rounded-2xl border border-dashed ${formErrors.eventPhoto ? "border-red-400" : "border-gray-400"}`}>
                     <input
                       id="eventPhoto"
@@ -103,7 +103,7 @@ const EventForm: React.FC<EventFormProps> = ({
                 {formErrors.eventPhoto ? <span className="text-danger-red text-xs block">{formErrors.eventPhoto}</span> : null}
               </div>
 
-              <div className="flex flex-col w-full min-w-0 gap-5">
+              <div className="flex flex-col flex-1 w-full min-w-0 gap-5">
                 <div className="flex w-full flex-wrap gap-6 items-center">
                   <div className="relative w-full flex-1">
                     <input

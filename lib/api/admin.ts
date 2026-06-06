@@ -19,6 +19,7 @@ import type {
   SafeUser,
   SiteConfig,
   UserProfile,
+  EventDetail,
 } from "@/types/api"
 
 // Admin auth is Bearer-token, not refresh-cookie. We funnel every admin
@@ -215,6 +216,66 @@ export const fetchPublicSiteConfig = async (): Promise<SiteConfig> => {
   } catch {
     return { ...DEFAULT_SITE_CONFIG }
   }
+}
+
+export type AdminEventListItem = {
+  id: string
+  title: string
+  date: string
+  venue: string
+  category: string | null
+  capacity: number
+  published: boolean
+  cancelledAt: string | null
+  organizerId: string
+  organizerName: string | null
+  organizerEmail: string | null
+  updatedAt: string
+}
+
+export type AdminEventPayment = {
+  id: string
+  orderNumber: string
+  name: string | null
+  email: string | null
+  phone: string | null
+  quantity: number
+  totalAmount: number
+  status: string
+  provider: string
+  providerPaymentId: string | null
+  paidAt: string | null
+  createdAt: string
+}
+
+export const listAdminEvents = () => requestAdmin<{ events: AdminEventListItem[] }>("/admin/events")
+
+export const getAdminEvent = (id: string) => requestAdmin<{ event: EventDetail }>(`/admin/events/${id}`)
+
+export const updateAdminEvent = (id: string, payload: Record<string, unknown>) =>
+  requestAdmin<{ event: EventDetail }>(`/admin/events/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
+
+export const listAdminEventPayments = (id: string) =>
+  requestAdmin<{ payments: AdminEventPayment[] }>(`/admin/events/${id}/payments`)
+
+export const uploadAdminEventCover = async (id: string, file: File) => {
+  const token = getAdminToken()
+  if (!token) throw new Error("Not authenticated")
+  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? ""
+  const response = await fetch(`${base}/api/v1/admin/events/${id}/cover`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  })
+  if (!response.ok) throw new Error("Cover upload failed. Please try again.")
+  const json = (await response.json()) as { data?: { cover?: unknown } }
+  return json.data?.cover
 }
 
 export const listAdminSupportMessages = (status?: "OPEN" | "RESOLVED") =>
