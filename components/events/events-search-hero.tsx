@@ -6,12 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { animate, stagger } from "animejs";
 import {
   Search,
-  Sparkles,
-  Music,
-  Mic2,
-  Laptop,
-  Ticket,
-  Flame,
   MapPin,
   Calendar as CalendarIcon,
   Users,
@@ -24,17 +18,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api/client";
+import { EVENT_CATEGORY_NAMES } from "@/lib/event-categories";
 
 const ROTATING_WORDS = ["Mood", "Crew", "Vibe", "Weekend"];
 
-const CATEGORIES = [
-  { name: "All", icon: <Flame size={14} /> },
-  { name: "Music", icon: <Music size={14} /> },
-  { name: "Comedy", icon: <Mic2 size={14} /> },
-  { name: "Workshops", icon: <Laptop size={14} /> },
-  { name: "Festival", icon: <Sparkles size={14} /> },
-  { name: "Movies", icon: <Ticket size={14} /> },
-];
+const CATEGORIES = ["All", ...EVENT_CATEGORY_NAMES];
 
 export function EventsSearchHero() {
   const router = useRouter();
@@ -336,13 +324,13 @@ export function EventsSearchHero() {
           className="mx-auto mt-8 flex max-w-4xl flex-wrap justify-center gap-2 md:gap-3"
         >
           {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.name;
+            const isActive = activeCategory === cat;
             return (
               <motion.button
-                key={cat.name}
+                key={cat}
                 whileHover={{ y: -3, scale: 1.04 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => { setActiveCategory(cat.name); applyFilters({ category: cat.name }); }}
+                onClick={() => { setActiveCategory(cat); applyFilters({ category: cat }); }}
                 className={`pill flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
                   isActive
                     ? "border-(--brand-navy) bg-(--brand-navy) text-white shadow-md"
@@ -350,8 +338,7 @@ export function EventsSearchHero() {
                 }`}
                 style={{ opacity: 0 }}
               >
-                {cat.icon}
-                {cat.name}
+                {cat}
               </motion.button>
             );
           })}

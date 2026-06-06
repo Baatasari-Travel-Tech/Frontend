@@ -325,7 +325,19 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
           </div>
           <div>
             <p className="mb-1 text-lg font-semibold text-(--black)">
-              Venue: <span className="underline decoration-1 underline-offset-4">{event.venue}</span>
+              Venue:{" "}
+              {event.googleMapsUrl ? (
+                <a
+                  href={event.googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-1 underline-offset-4 hover:text-(--brand-blue)"
+                >
+                  {event.venue}
+                </a>
+              ) : (
+                <span className="underline decoration-1 underline-offset-4">{event.venue}</span>
+              )}
             </p>
           </div>
           <div>

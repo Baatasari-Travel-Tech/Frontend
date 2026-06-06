@@ -2,12 +2,13 @@
 
 import React, { useEffect, useRef, useState } from "react"
 
-// The backend stores event covers at 1200×630 (fit: cover). The cropper frames
-// to that exact ratio so the upload is WYSIWYG everywhere. The organizer can
-// zoom out to fit a whole poster (letterboxed on white) or zoom in to fill.
-const TARGET_WIDTH = 1200
-const TARGET_HEIGHT = 630
-const MAX_BOX_WIDTH = 540
+// Event covers are 2:3 portrait (poster style) to match how they're shown on
+// the events pages. The cropper frames to that exact ratio so the upload is
+// WYSIWYG. The organizer can zoom out to fit a whole poster (letterboxed on
+// white) or zoom in to fill.
+const TARGET_WIDTH = 1000
+const TARGET_HEIGHT = 1500
+const MAX_BOX_WIDTH = 320
 const FILL_COLOR = "#ffffff"
 
 interface CoverImageCropperProps {
@@ -141,7 +142,7 @@ const CoverImageCropper: React.FC<CoverImageCropperProps> = ({ source, onCancel,
         <div className="flex flex-col items-center gap-4">
           <div
             ref={boxRef}
-            className="relative aspect-[40/21] w-full max-w-[540px] touch-none select-none overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner"
+            className="relative aspect-[2/3] w-full max-w-[320px] touch-none select-none overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner"
             onPointerDown={(event) => {
               event.currentTarget.setPointerCapture(event.pointerId)
               setDragStart({ x: event.clientX, y: event.clientY })

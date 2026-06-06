@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import TimePicker from "@/components/ui/time-picker"
 import { cn } from "@/lib/utils"
 import type { EventFormData } from "./validateEventform"
-import { EVENT_CATEGORIES } from "./data/create-event-data"
+import { EVENT_CATEGORY_GROUPS } from "@/lib/event-categories"
 
 interface EventFormProps {
   formData: EventFormData
@@ -62,9 +62,9 @@ const EventForm: React.FC<EventFormProps> = ({
         {openSections["event-info"] && (
           <div className="px-8 pb-8">
             <div className="flex flex-col w-full gap-8">
-              <div className="w-full">
-                <label htmlFor="eventPhoto" className="cursor-pointer block w-full">
-                  <div className={`relative w-full aspect-[40/21] overflow-hidden flex flex-col items-center justify-center gap-2 bg-background rounded-xl border border-dashed ${formErrors.eventPhoto ? "border-red-400" : "border-gray-400"}`}>
+              <div className="flex flex-col items-center gap-3">
+                <label htmlFor="eventPhoto" className="cursor-pointer block w-full max-w-[260px]">
+                  <div className={`relative w-full aspect-[2/3] overflow-hidden flex flex-col items-center justify-center gap-2 bg-background rounded-2xl border border-dashed ${formErrors.eventPhoto ? "border-red-400" : "border-gray-400"}`}>
                     <input
                       id="eventPhoto"
                       type="file"
@@ -89,14 +89,18 @@ const EventForm: React.FC<EventFormProps> = ({
                     ) : (
                       <>
                         <Upload className="w-6 h-6 text-gray-900" />
-                        <span className="font-normal text-gray-900 text-lg">Upload Cover Image *</span>
-                        <span className="text-xs text-gray-500">Landscape banner · shown everywhere at 1200 × 630</span>
+                        <span className="font-normal text-gray-900 text-lg">Upload Image</span>
                       </>
                     )}
                   </div>
                 </label>
-                {photoError ? <span className="text-danger-red text-xs mt-2 block">{photoError}</span> : null}
-                {formErrors.eventPhoto ? <span className="text-danger-red text-xs mt-2 block">{formErrors.eventPhoto}</span> : null}
+                <div className="text-center text-xs text-gray-500 max-w-[260px]">
+                  <p>Upload a high-quality image for your event</p>
+                  <p>Formats: PNG, JPG, JPEG</p>
+                  <p>Accepted aspect ratio: 2:3 (Portrait)</p>
+                </div>
+                {photoError ? <span className="text-danger-red text-xs block">{photoError}</span> : null}
+                {formErrors.eventPhoto ? <span className="text-danger-red text-xs block">{formErrors.eventPhoto}</span> : null}
               </div>
 
               <div className="flex flex-col w-full min-w-0 gap-5">
@@ -121,10 +125,14 @@ const EventForm: React.FC<EventFormProps> = ({
                       onChange={handleInputChange}
                     >
                       <option value="">Select category</option>
-                      {EVENT_CATEGORIES.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
+                      {EVENT_CATEGORY_GROUPS.map((group) => (
+                        <optgroup key={group.category} label={group.category}>
+                          {group.subcategories.map((sub) => (
+                            <option key={`${group.category}-${sub}`} value={sub}>
+                              {sub}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                     <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Category *</span>

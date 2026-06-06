@@ -56,8 +56,8 @@ export function HandpickedEventCard({
                         <div
                             className={`relative w-full shrink-0 overflow-hidden ${
                                 compact
-                                    ? "aspect-[4/3] mb-3 rounded-xl"
-                                    : "aspect-square mb-4 rounded-4xl"
+                                    ? "aspect-[2/3] mb-3 rounded-xl"
+                                    : "aspect-[2/3] mb-4 rounded-4xl"
                             }`}
                         >
                             {image && !errored ? (

@@ -8,6 +8,7 @@ import { EventGrid } from "@/components/events/event-grid"
 import { EventsSearchHero } from "@/components/events/events-search-hero"
 import { FooterSocialLinks } from "@/components/events/footer-social-edit"
 import { toEventCardData, getEventPhase } from "@/lib/event-helpers"
+import { eventMatchesCategoryGroup } from "@/lib/event-categories"
 import { apiRequest } from "@/lib/api/client"
 import type { EventSummary } from "@/types/api"
 
@@ -25,9 +26,7 @@ function matchesQuery(event: EventSummary, query: string): boolean {
 
 function matchesCategory(event: EventSummary, category: string): boolean {
   if (!category || category.toLowerCase() === "all") return true
-  const eventCategory = (event.category ?? "").toLowerCase()
-  const selected = category.toLowerCase()
-  return eventCategory.includes(selected) || selected.includes(eventCategory)
+  return eventMatchesCategoryGroup(event.category, category)
 }
 
 function matchesWhen(event: EventSummary, when: string): boolean {
