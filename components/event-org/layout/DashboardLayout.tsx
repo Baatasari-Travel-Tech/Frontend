@@ -18,8 +18,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     "/organizer/pending"
   ].includes(pathname);
 
+  // Create-event renders its form inside a white card; on the default
+  // stone-50 shell that card reads as a floating box. Use a plain white
+  // shell here so the card blends into a single seamless white page.
+  const whiteShell = pathname === "/organizer/create-event";
+
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col overflow-x-hidden">
+    <div className={`min-h-screen flex flex-col overflow-x-hidden ${whiteShell ? "bg-white" : "bg-stone-50"}`}>
       <div className="flex flex-1 relative">
         {!hideSidebar ? (
           <Sidebar

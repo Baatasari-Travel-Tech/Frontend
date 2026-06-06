@@ -1,23 +1,21 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { CheckCircle, Pencil, RefreshCw, X, XCircle } from "lucide-react"
 import {
   bulkDeleteAdminUsers,
   deleteAdminUser,
-  fetchPublicSiteConfig,
   getAdminDashboard,
   getAdminOrganizerDetails,
-  getAdminSiteConfig,
   getAdminUserDetails,
   isAdminAuthFailure,
+  listAdminSupportMessages,
   listAdminUsers,
   listPendingOrganizers,
   reviveAdminUser,
   updateAdminOrganizerProfile,
-  updateAdminSiteConfig,
   updateAdminUser,
   updateAdminUserProfile,
   verifyAdminOrganizerGstin,
@@ -34,7 +32,6 @@ import type {
   OrganizerProfile,
   PanVerifyResult,
   SafeUser,
-  SiteConfig,
   UserProfile,
 } from "@/types/api"
 
@@ -219,22 +216,17 @@ export default function AdminDashboardPage() {
   const [gstinVerify, setGstinVerify] = useState<{ busy: boolean; result: GstinVerifyResult | "error" | null }>({ busy: false, result: null })
 
   // Site config
-  const [siteConfigDraft, setSiteConfigDraft] = useState<SiteConfig>({ instagram: "#", linkedin: "#", twitter: "#", contactEmail: "contact-us@baatasari.com" })
-  const [siteConfigBusy, setSiteConfigBusy] = useState(false)
-  const [siteConfigMsg, setSiteConfigMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   const refresh = useCallback(async (logoutOnFailure = true) => {
     try {
-      const [dashboardData, usersData, pendingData, configData] = await Promise.all([
+      const [dashboardData, usersData, pendingData] = await Promise.all([
         getAdminDashboard(),
         listAdminUsers({ page: 1, limit: 100 }),
         listPendingOrganizers(),
-        getAdminSiteConfig(),
       ])
       setDashboard(dashboardData)
       setUsers(usersData.users)
       setPendingOrganizers(pendingData)
-      setSiteConfigDraft(configData)
       setError(null)
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : "Failed to load admin data"
@@ -253,6 +245,70 @@ export default function AdminDashboardPage() {
     if (!token) { router.replace(ADMIN_ROUTES.login); return }
     void refresh()
   }, [refresh, router])
+
+  // --- New-arrival notification chime -------------------------------------
+  // Polls pending-approval and open-support counts every 20s. When either
+  // grows beyond what we last saw, play a short two-tone chime. Uses Web
+  // Audio (no asset to ship); browsers gate audio until the admin has
+  // interacted with the page, which they always have by the time anything
+  // new lands. Baselines are seeded on the first poll so we never chime for
+  // the backlog that already existed when the dashboard opened.
+  const prevPendingCount = useRef<number | null>(null)
+  const prevSupportCount = useRef<number | null>(null)
+
+  const playChime = useCallback(() => {
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      if (!Ctx) return
+      const ctx = new Ctx()
+      const now = ctx.currentTime
+      const tones = [880, 1175]
+      tones.forEach((freq, i) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = "sine"
+        osc.frequency.value = freq
+        const start = now + i * 0.18
+        gain.gain.setValueAtTime(0.0001, start)
+        gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.32)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(start)
+        osc.stop(start + 0.34)
+      })
+      window.setTimeout(() => { void ctx.close() }, 900)
+    } catch {
+      /* audio unavailable — silently ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!getAdminToken()) return
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const [pending, support] = await Promise.all([
+          listPendingOrganizers(),
+          listAdminSupportMessages("OPEN"),
+        ])
+        if (cancelled) return
+        const pendingCount = pending.length
+        const supportCount = support.messages.length
+        const grew =
+          (prevPendingCount.current !== null && pendingCount > prevPendingCount.current) ||
+          (prevSupportCount.current !== null && supportCount > prevSupportCount.current)
+        if (grew) playChime()
+        prevPendingCount.current = pendingCount
+        prevSupportCount.current = supportCount
+      } catch {
+        /* transient failure — keep the previous baseline, try again next tick */
+      }
+    }
+    void poll()
+    const id = window.setInterval(() => void poll(), 20000)
+    return () => { cancelled = true; window.clearInterval(id) }
+  }, [playChime])
 
   const handleLogout = () => { clearAdminToken(); router.replace("/") }
 
@@ -560,20 +616,6 @@ export default function AdminDashboardPage() {
       setGstinVerify({ busy: false, result })
     } catch {
       setGstinVerify({ busy: false, result: "error" })
-    }
-  }
-
-  const handleSaveSiteConfig = async () => {
-    setSiteConfigBusy(true)
-    setSiteConfigMsg(null)
-    try {
-      const updated = await updateAdminSiteConfig(siteConfigDraft)
-      setSiteConfigDraft(updated)
-      setSiteConfigMsg({ type: "success", text: "Site config saved." })
-    } catch (e) {
-      setSiteConfigMsg({ type: "error", text: e instanceof Error ? e.message : "Failed to save" })
-    } finally {
-      setSiteConfigBusy(false)
     }
   }
 
@@ -999,57 +1041,6 @@ export default function AdminDashboardPage() {
           )}
         </section>
 
-        {/* Site Settings */}
-        <section className="rounded-xl bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-slate-900">Site Settings</h2>
-          <p className="mb-5 text-sm text-slate-500">
-            Configure footer social links and contact details. These appear on the events page footer and contact-us page.
-          </p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {(["instagram", "linkedin", "twitter"] as const).map((platform) => (
-              <div key={platform}>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1 capitalize">
-                  {platform} URL
-                </label>
-                <input
-                  type="url"
-                  value={siteConfigDraft[platform]}
-                  onChange={(e) => setSiteConfigDraft((prev) => ({ ...prev, [platform]: e.target.value }))}
-                  disabled={siteConfigBusy}
-                  placeholder={`https://${platform}.com/baatasari`}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60"
-                />
-              </div>
-            ))}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                Contact Email
-              </label>
-              <input
-                type="email"
-                value={siteConfigDraft.contactEmail}
-                onChange={(e) => setSiteConfigDraft((prev) => ({ ...prev, contactEmail: e.target.value }))}
-                disabled={siteConfigBusy}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60"
-              />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void handleSaveSiteConfig()}
-              disabled={siteConfigBusy}
-              className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70 transition"
-            >
-              {siteConfigBusy ? "Saving..." : "Save settings"}
-            </button>
-            {siteConfigMsg && (
-              <span className={`text-sm font-medium ${siteConfigMsg.type === "success" ? "text-green-700" : "text-red-700"}`}>
-                {siteConfigMsg.text}
-              </span>
-            )}
-          </div>
-        </section>
       </div>
 
       {/* Edit slide-over drawer */}
