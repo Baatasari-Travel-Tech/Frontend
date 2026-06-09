@@ -660,23 +660,6 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                           <span className="text-xs font-normal text-(--gray-400)">(max 10)</span>
                         </label>
                         <Input
-  id="tickets"
-  type="number"
-  min={1}
-  max={10}
-  {...register("quantity", {
-    valueAsNumber: true,
-    onBlur: (e) => {
-      const n = Number(e.target.value)
-      if (!Number.isFinite(n)) {
-        setValue("quantity", 1)
-      } else {
-        setValue("quantity", Math.max(1, Math.min(10, n)))
-      }
-    },
-  })}
-/>
-                        <Input
                           id="tickets"
                           type="number"
                           min={1}
