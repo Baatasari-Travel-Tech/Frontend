@@ -660,21 +660,36 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                           <span className="text-xs font-normal text-(--gray-400)">(max 10)</span>
                         </label>
                         <Input
+  id="tickets"
+  type="number"
+  min={1}
+  max={10}
+  {...register("quantity", {
+    valueAsNumber: true,
+    onBlur: (e) => {
+      const n = Number(e.target.value)
+      if (!Number.isFinite(n)) {
+        setValue("quantity", 1)
+      } else {
+        setValue("quantity", Math.max(1, Math.min(10, n)))
+      }
+    },
+  })}
+/>
+                        <Input
                           id="tickets"
                           type="number"
                           min={1}
                           max={10}
                           {...register("quantity", {
                             valueAsNumber: true,
-                            // Clamp to 1–10 on input, matching the original UX
-                            onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                              const n = Number(e.target.value)
-                              if (Number.isFinite(n)) {
-                                const clamped = Math.max(1, Math.min(10, n))
-                                if (clamped !== n) {
-                                  setValue("quantity", clamped, { shouldValidate: false })
-                                }
-                              }
+                            onBlur: (e) => {
+                            const n = Number(e.target.value)
+                            if (!Number.isFinite(n)) {
+                              setValue("quantity", 1)
+                            } else {
+                              setValue("quantity", Math.max(1, Math.min(10, n)))
+                            }
                             },
                           })}
                           className="w-full rounded-lg border border-(--gray-300) px-3 py-2 text-sm sm:px-4 sm:py-3 sm:text-base"
