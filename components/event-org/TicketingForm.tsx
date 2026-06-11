@@ -115,7 +115,7 @@ function PriceSummaryTable({ price, gatewayBearer, onGatewayBearerToggle }: {
   const totalCharges = PLATFORM_FEE + gatewayFee
 
   return (
-    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+    <div className="mt-4 rounded-xl border border-slate-200 bg-background p-4 text-sm">
       <p className="font-semibold text-slate-700 mb-3">Fee Summary</p>
       <table className="w-full text-xs">
         <tbody>
@@ -130,18 +130,18 @@ function PriceSummaryTable({ price, gatewayBearer, onGatewayBearerToggle }: {
               {price > 0 ? `₹${gatewayFee.toFixed(2)}` : "—"}
             </td>
             <td className="py-2 text-right">
-              <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-0.5 text-[11px] font-medium">
+              <div className="inline-flex rounded-full border border-slate-200 bg-background p-0.5 text-[11px] font-medium">
                 <button
                   type="button"
                   onClick={() => gatewayBearer !== "organizer" && onGatewayBearerToggle()}
-                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "organizer" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "organizer" ? "bg-background text-slate-900 shadow-sm" : "text-slate-500"}`}
                 >
                   Organizer
                 </button>
                 <button
                   type="button"
                   onClick={() => gatewayBearer !== "customer" && onGatewayBearerToggle()}
-                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "customer" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "customer" ? "bg-background text-slate-900 shadow-sm" : "text-slate-500"}`}
                 >
                   Customer
                 </button>
@@ -334,7 +334,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                         ) : null}
                       </div>
                     ) : (
-                      <div className="flex-1 h-12 flex items-center px-4 rounded-md border border-dashed border-gray-300 bg-gray-50">
+                      <div className="flex-1 h-12 flex items-center px-4 rounded-md border border-dashed border-gray-300 bg-background">
                         <span className="text-sm text-gray-400 italic">Free ticket — no charge to attendee</span>
                       </div>
                     )}
@@ -457,7 +457,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                           addOns: { ...prev.addOns, [option.id]: !active },
                         }))
                       }
-                      className={`px-3 py-2 rounded-full border text-sm ${active ? "bg-blue-soft text-white border-blue-soft" : "bg-gray-100 border-gray-200 text-slate-700"}`}
+                      className={`px-3 py-2 rounded-full border text-sm ${active ? "bg-blue-soft text-white border-blue-soft" : "bg-background border-gray-200 text-slate-700"}`}
                     >
                       {option.label}
                     </button>
@@ -561,7 +561,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                       className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors duration-150 ${
                         isActive
                           ? "bg-blue-soft text-white border-blue-soft"
-                          : "bg-gray-100 border-gray-200 text-slate-700 hover:bg-gray-200"
+                          : "bg-background border-gray-200 text-slate-700 hover:bg-gray-200"
                       }`}
                     >
                       {preset.label}
@@ -581,7 +581,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                       className={`px-3 py-1.5 rounded-full border cursor-pointer transition-all duration-200 text-sm font-medium ${
                         active
                           ? "border-blue-soft bg-blue-soft text-white"
-                          : "border-gray-200 bg-gray-100 text-slate-700 hover:bg-gray-200"
+                          : "border-gray-200 bg-background text-slate-700 hover:bg-gray-200"
                       }`}
                       onClick={() => handleAudienceSelection(audience)}
                       onKeyDown={(e) => e.key === "Enter" && handleAudienceSelection(audience)}

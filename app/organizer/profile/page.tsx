@@ -45,13 +45,13 @@ const schema = z.object({
 type Values = z.infer<typeof schema>
 
 const inputClassName =
-  "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
+  "mt-2 w-full rounded-xl border border-slate-200 bg-background px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
 
 const readOnlyInputClassName =
-  "mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-700 shadow-sm"
+  "mt-2 w-full rounded-xl border border-slate-200 bg-background px-4 py-2.5 text-sm text-slate-700 shadow-sm"
 
 const textareaClassName =
-  "mt-2 min-h-32 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
+  "mt-2 min-h-32 w-full rounded-xl border border-slate-200 bg-background px-4 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
 
 const stripIndianCode = (value: string | null | undefined) => (value ?? "").replace(/^\+91/, "")
 
@@ -270,7 +270,7 @@ export default function OrganizerProfilePage() {
               </label>
               <label className="block text-sm font-semibold text-slate-700">
                 Personal phone number *
-                <div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-brand-900 focus-within:ring-4 focus-within:ring-brand-900/10">
+                <div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-background px-3 py-2.5 shadow-sm focus-within:border-brand-900 focus-within:ring-4 focus-within:ring-brand-900/10">
                   <span className="text-sm font-semibold text-slate-500">+91</span>
                   <input
                     className="ml-2 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
@@ -343,7 +343,7 @@ export default function OrganizerProfilePage() {
                 <p className="mt-1 text-xs text-rose-600">{form.formState.errors.profession?.message ?? ""}</p>
               </label>
             </div>
-            <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-background px-4 py-4 text-sm text-slate-600">
               <Camera className="h-4 w-4 text-brand-900" />
               <span>{avatarFile ? avatarFile.name : "Upload new profile image (optional)"}</span>
               <input type="file" accept="image/*" className="hidden" onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)} />
@@ -447,12 +447,12 @@ export default function OrganizerProfilePage() {
               </label>
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <label className="flex cursor-pointer items-center gap-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+              <label className="flex cursor-pointer items-center gap-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-background px-4 py-4 text-sm text-slate-600">
                 <Camera className="h-4 w-4 text-brand-900" />
                 <span>{logoFile ? logoFile.name : "Upload organizer logo (optional)"}</span>
                 <input type="file" accept="image/*" className="hidden" onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)} />
               </label>
-              <label className="flex cursor-pointer items-center gap-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+              <label className="flex cursor-pointer items-center gap-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-background px-4 py-4 text-sm text-slate-600">
                 <FileBadge2 className="h-4 w-4 text-brand-900" />
                 <span>{kycFile ? kycFile.name : "Upload KYC PDF (optional)"}</span>
                 <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event) => setKycFile(event.target.files?.[0] ?? null)} />

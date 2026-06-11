@@ -33,10 +33,10 @@ export function ArtistCard({
         <>
             {/* Simplified Card — just image + name + role */}
             <Card
-                className="bg-white border border-gray-100 rounded-2xl shadow-sm transition-shadow h-full flex flex-col cursor-pointer overflow-hidden"
+                className="bg-background border border-gray-100 rounded-2xl shadow-sm transition-shadow h-full flex flex-col cursor-pointer overflow-hidden"
                 onClick={() => setShowDetail(true)}
             >
-                <div className="relative aspect-3/4 w-full bg-slate-100 rounded-t-2xl overflow-hidden">
+                <div className="relative aspect-3/4 w-full bg-background rounded-t-2xl overflow-hidden">
                     <Image
                         src={image || "/placeholder.svg"}
                         alt={name}
@@ -62,12 +62,12 @@ export function ArtistCard({
                         if (e.target === e.currentTarget) setShowDetail(false);
                     }}
                 >
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-110 max-h-[90vh] overflow-y-auto relative animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-background rounded-2xl shadow-2xl w-full max-w-110 max-h-[90vh] overflow-y-auto relative animate-in fade-in zoom-in-95 duration-200">
                         {/* Close button */}
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute right-3 top-3 z-10 h-8 w-8 rounded-full bg-white/80"
+                            className="absolute right-3 top-3 z-10 h-8 w-8 rounded-full bg-background/80"
                             onClick={() => setShowDetail(false)}
                         >
                             <X className="h-4 w-4" />

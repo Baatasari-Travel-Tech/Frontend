@@ -55,7 +55,7 @@ export default function OrganizerPendingPage() {
         description="All required onboarding steps are complete. Our team is now reviewing your profile and documents."
       >
         <div className="mx-auto w-full max-w-3xl">
-          <SectionCard className="border-slate-200 bg-white">
+          <SectionCard className="border-slate-200 bg-background">
             <div className="grid gap-6">
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 sm:px-5">
                 Status: Pending manual verification by the onboarding team.
@@ -70,7 +70,7 @@ export default function OrganizerPendingPage() {
                 </ol>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600 sm:px-5">
+              <div className="rounded-2xl border border-slate-200 bg-background px-4 py-4 text-sm leading-6 text-slate-600 sm:px-5">
                 Keep PAN, GST, and organization details handy to speed up verification if our team reaches out.
               </div>
 
@@ -85,7 +85,7 @@ export default function OrganizerPendingPage() {
                   type="button"
                   onClick={handleSwitchToUser}
                   disabled={switching}
-                  className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-background disabled:opacity-60"
                 >
                   Switch to user side
                 </button>

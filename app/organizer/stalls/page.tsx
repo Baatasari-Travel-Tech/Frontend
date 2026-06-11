@@ -128,7 +128,7 @@ export default function EventsPage() {
                             </div>
 
                             {visibleStalls.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-20 text-center bg-white/50 rounded-3xl border border-dashed border-slate-300">
+                                <div className="flex flex-col items-center justify-center py-20 text-center bg-background/50 rounded-3xl border border-dashed border-slate-300">
                                     <div className="bg-green-100 p-4 rounded-full mb-4">
                                         <svg
                                             xmlns="http://www.w3.org/2000/svg"

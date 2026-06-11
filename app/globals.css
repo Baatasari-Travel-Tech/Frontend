@@ -4,8 +4,9 @@
    1) Semantic UI tokens
    ========================= */
 :root {
-  --background: oklch(1 0 0);
+  --background: #f5efe4;
   --foreground: #0c1D37;
+  --nav: #faf9f6;
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -118,6 +119,15 @@
   /* Purple */
   --purple-soft-bg: #eee9ff;
   --purple-soft-text: #6b5ce7;
+
+  /* Gold */
+  --gold: #c2962e;
+  --gold-icon: #a98b4f;
+  --gold-text: #8a7136;
+  --gold-soft-bg: #f0e8d8;
+  --gold-soft-border: #e3d9c4;
+  --gold-bar-bg: #faf6ec;
+  --gold-bar-border: #e7ddc9;
 
   /* =========================
      6) Feature tokens: Events
@@ -265,7 +275,7 @@
   /* =========================
      12) Feature tokens: Talent
      ========================= */
-  --talent-page-bg: var(--white);
+  --talent-page-bg: var(--background);
   --talent-page-grid: color-mix(in srgb, var(--blue-100) 25%, transparent);
   --talent-section-border: color-mix(in srgb, var(--slate-200) 70%, transparent);
 
@@ -346,6 +356,7 @@
   --font-mono: "Geist Mono", "Geist Mono Fallback";
 
   --color-background: var(--background);
+  --color-nav: var(--nav);
   --color-foreground: var(--foreground);
 
   --color-card: var(--card);

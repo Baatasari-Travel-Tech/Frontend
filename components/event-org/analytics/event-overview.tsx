@@ -28,7 +28,7 @@ const formatLongDate = (value: string) =>
 const STATUS_COLORS: Record<Status, string> = {
   Upcoming: "bg-blue-100 text-blue-700",
   Ongoing: "bg-green-100 text-green-700",
-  Past: "bg-slate-100 text-slate-600",
+  Past: "bg-gray-100 text-slate-600",
 }
 
 type Props = {

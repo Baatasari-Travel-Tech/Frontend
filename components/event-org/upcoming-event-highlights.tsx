@@ -129,7 +129,7 @@ export function UpcomingEventHighlights({
                 }}
               />
             ) : (
-              <div className="w-58.5 h-90.75 rounded-lg bg-slate-100 flex items-center justify-center mx-auto lg:mx-0">
+              <div className="w-58.5 h-90.75 rounded-lg bg-background flex items-center justify-center mx-auto lg:mx-0">
                 <span className="text-slate-400 text-sm">No image</span>
               </div>
             )}

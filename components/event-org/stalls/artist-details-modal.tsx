@@ -33,10 +33,10 @@ export function ArtistDetailsModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-175 p-0 overflow-hidden bg-white gap-0 border-none shadow-2xl rounded-2xl">
+            <DialogContent className="sm:max-w-175 p-0 overflow-hidden bg-background gap-0 border-none shadow-2xl rounded-2xl">
                 <div className="flex flex-col md:flex-row h-full">
                     {/* Left Side - Image */}
-                    <div className="w-full md:w-70 bg-slate-100 relative h-75 md:h-auto shrink-0">
+                    <div className="w-full md:w-70 bg-background relative h-75 md:h-auto shrink-0">
                         <div className="absolute inset-4 rounded-xl overflow-hidden shadow-sm">
                             <Image
                                 src={artist.image}

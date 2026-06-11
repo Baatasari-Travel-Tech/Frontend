@@ -562,7 +562,7 @@ const EventPage: React.FC<EventPageProps> = ({
                           }}
                         >
                           <div
-                            className={`w-8.5 h-8.5 rounded-full flex items-center justify-center border-2 border-(--upcoming-primary-800) bg-gray-100 text-(--upcoming-primary-800) transition-all duration-200 ${active
+                            className={`w-8.5 h-8.5 rounded-full flex items-center justify-center border-2 border-(--upcoming-primary-800) bg-background text-(--upcoming-primary-800) transition-all duration-200 ${active
                                 ? "border-(--upcoming-primary-900) bg-card text-(--upcoming-primary-900)"
                                 : ""
                               } ${done
@@ -677,7 +677,7 @@ const EventPage: React.FC<EventPageProps> = ({
               onClick={handlePrevious}
               disabled={currentStep === 1 || isSubmitting}
               className={`flex items-center gap-2 py-3 px-6 rounded-full border border-border bg-background text-gray-700 cursor-pointer text-base font-medium ${currentStep === 1
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed invisible"
+                  ? "bg-background text-gray-400 cursor-not-allowed invisible"
                   : ""
                 }`}
             >

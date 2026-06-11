@@ -370,11 +370,11 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   }
 
   if (isOrderConfirmed) {
-    return <main className="min-h-dvh bg-white">{children}</main>
+    return <main className="min-h-dvh bg-background">{children}</main>
   }
 
   return (
-    <div className="min-h-dvh bg-stone-50 text-slate-900">
+    <div className="min-h-dvh bg-background text-slate-900">
       {!hideLoader && (
         <div
           className={`fixed inset-0 z-60 transition-opacity duration-500 ${
@@ -386,7 +386,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 text-slate-900 backdrop-blur-lg">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-nav text-slate-900 backdrop-blur-lg">
         <div className="flex w-full items-center justify-between gap-8 py-4 px-2 md:px-6 lg:px-8">
           <Link href={homeHref} className="flex items-center gap-2">
             <Image

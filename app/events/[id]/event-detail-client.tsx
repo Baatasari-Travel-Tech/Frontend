@@ -116,7 +116,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-(--white) via-(--blue-50)/30 to-(--white)">
+    <div className="min-h-screen bg-linear-to-b from-(--background) via-(--blue-50)/30 to-(--background)">
       <main className="flex-1 w-full px-4 py-8 md:py-12 max-w-6xl mx-auto">
         {/* Image + Right card */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12 items-stretch mb-12 w-full">

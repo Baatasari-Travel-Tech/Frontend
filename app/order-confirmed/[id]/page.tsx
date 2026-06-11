@@ -323,7 +323,7 @@ function OrderConfirmedContent() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-white">
+    <main className="relative min-h-screen overflow-hidden bg-background">
       {/* Subtle animated backdrop — fades in after the intro completes */}
       <motion.div
         initial={{ opacity: 0 }}

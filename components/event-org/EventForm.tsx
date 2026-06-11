@@ -391,7 +391,7 @@ const EventForm: React.FC<EventFormProps> = ({
                         <button
                           type="button"
                           onClick={() => removeArrayItem?.("timeSlots", index)}
-                          className="mt-0.5 p-2 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-100 h-10 w-10 flex items-center justify-center"
+                          className="mt-0.5 p-2 rounded-md border border-slate-200 text-slate-500 hover:bg-background h-10 w-10 flex items-center justify-center"
                           aria-label={`Remove slot ${index + 1}`}
                         >
                           <X className="h-4 w-4" />
@@ -430,7 +430,7 @@ const EventForm: React.FC<EventFormProps> = ({
                     <button
                       type="button"
                       onClick={() => removeArrayItem?.("artists", index)}
-                      className="p-2 rounded-md border border-slate-200 text-slate-700 hover:bg-slate-100"
+                      className="p-2 rounded-md border border-slate-200 text-slate-700 hover:bg-background"
                       aria-label={`Remove highlight ${index + 1}`}
                     >
                       <Trash2 className="h-4 w-4" />

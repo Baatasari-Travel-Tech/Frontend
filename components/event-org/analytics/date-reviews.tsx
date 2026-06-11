@@ -108,7 +108,7 @@ export function DateReviewsSection({
                 const data = dateRequests.find((d) => isSameDay(d.date, dateObj))
                 const wrapperClass = data
                   ? "bg-[#dcfce7] text-gray-900 hover:bg-[#bbf7d0]"
-                  : "bg-gray-50 text-gray-900"
+                  : "bg-background text-gray-900"
 
                 return (
                   <button

@@ -45,25 +45,16 @@ export default function EventsPage() {
   )
 
   return (
-    <main className="min-h-screen bg-(--white)">
-      <div className="pt-16">
-        {eventsQuery.isError ? (
-          <section className="flex flex-col items-center justify-center py-32 text-center">
-            <h2 className="text-2xl font-semibold text-(--brand-blue)">Unable to load events</h2>
-            <p className="mt-3 text-gray-500">Please try again in a moment.</p>
-          </section>
+    <main className="min-h-screen bg-background">
+      <div>
+        <EventsSearchHero liveCount={liveCount} liveGoingCount={liveGoingCount} />
+        {sortedCards.length > 0 ? (
+          <EventGrid events={sortedCards} title="All Events" />
         ) : (
-          <>
-            <EventsSearchHero liveCount={liveCount} liveGoingCount={liveGoingCount} />
-            {sortedCards.length > 0 ? (
-              <EventGrid events={sortedCards} title="All Events" />
-            ) : (
-              <section className="flex flex-col items-center justify-center py-24 text-center">
-                <h2 className="text-2xl font-semibold text-(--brand-blue)">No events available</h2>
-                <p className="mt-3 text-gray-500">Check back later or pitch an event you want to attend.</p>
-              </section>
-            )}
-          </>
+          <section className="flex flex-col items-center justify-center py-24 text-center">
+            <h2 className="text-2xl font-semibold text-(--brand-blue)">No events available</h2>
+            <p className="mt-3 text-gray-500">Check back later or pitch an event you want to attend.</p>
+          </section>
         )}
       </div>
 

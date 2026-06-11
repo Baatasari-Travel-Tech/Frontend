@@ -91,7 +91,7 @@ export function EventStats({ event, isLoading }: Props) {
               return (
                 <div key={tier.id ?? tier.name} className="flex items-center gap-3 text-xs">
                   <span className="w-28 truncate font-medium text-slate-700">{tier.name}</span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100">
+                  <div className="flex-1 h-2 rounded-full bg-gray-200">
                     {!unlimited && (
                       <div
                         className="h-2 rounded-full"

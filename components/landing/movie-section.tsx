@@ -13,7 +13,7 @@ export function MovieSection({ title }: MovieSectionProps) {
   const movies = MOVIES_DATA // or use props.movies if you pass it from parent
 
   return (
-    <section className="bg-muted/30 py-4 md:py-6">
+    <section className="bg-background py-4 md:py-6">
       <div className="w-full px-4 text-left">
         <h2 className="mb-4 text-balance text-2xl font-bold md:text-3xl text-(--brand-blue-heading)">
           {title}

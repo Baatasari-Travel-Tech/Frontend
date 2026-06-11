@@ -19,7 +19,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   ].includes(pathname);
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col overflow-x-hidden">
+    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       <div className="flex flex-1 relative">
         {!hideSidebar ? (
           <Sidebar

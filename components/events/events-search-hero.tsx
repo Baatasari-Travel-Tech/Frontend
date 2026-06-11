@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { animate, stagger } from "animejs";
+import Image from "next/image";
 import {
   Search,
   Sparkles,
@@ -173,24 +174,22 @@ export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSe
   const titleText = "Find your perfect event";
 
   return (
-    <section className="relative w-full overflow-hidden">
+    <section className="relative isolate flex min-h-[88vh] w-full flex-col justify-center overflow-hidden">
       {/* Ambient backdrop */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <motion.div
-          animate={{ x: [0, 60, 0], y: [0, 30, 0], scale: [1, 1.15, 1] }}
-          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-(--blue-200)/60 blur-[120px]"
+
+       {/* Background image */}
+        <Image
+          src="/events-hero.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
         />
-        <motion.div
-          animate={{ x: [0, -50, 0], y: [0, -20, 0], scale: [1, 1.2, 1] }}
-          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -bottom-40 -right-32 h-[30rem] w-[30rem] rounded-full bg-(--blue-100)/70 blur-[120px]"
-        />
-        <motion.div
-          animate={{ rotate: [0, 360] }}
-          transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-          className="absolute left-1/2 top-1/3 h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-[conic-gradient(from_0deg,rgba(31,79,216,0.08),transparent_40%,rgba(186,215,255,0.12),transparent_70%)] blur-2xl"
-        />
+
+        {/* Cream overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
       </div>
 
       <div className="mx-auto w-full max-w-[1400px] px-4 pt-10 pb-6 md:px-6 md:pt-16 md:pb-10 lg:px-10">
@@ -381,100 +380,6 @@ export function EventsSearchHero({ liveCount = 0, liveGoingCount = 0 }: EventsSe
             );
           })}
         </div>
-      </div>
-
-      {/* Discovery banner */}
-      <div className="mx-auto w-full max-w-[1400px] px-4 pb-4 md:px-6 lg:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-3xl bg-linear-to-br from-(--brand-navy) via-[#1a3a6b] to-sky-800 px-8 py-14 text-white shadow-2xl"
-        >
-          {/* Decorative gradients */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(147,197,253,0.22),transparent_55%)]" />
-          <motion.div
-            animate={{ x: [0, 30, 0], y: [0, 15, 0] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 rounded-full bg-sky-400/20 blur-3xl"
-          />
-          <motion.div
-            animate={{ x: [0, -25, 0], y: [0, -10, 0] }}
-            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-            className="pointer-events-none absolute -bottom-16 -left-10 h-72 w-72 rounded-full bg-(--royal-blue)/25 blur-3xl"
-          />
-
-          <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <motion.p
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-                className="text-xs font-semibold uppercase tracking-[0.35em] text-sky-300/90"
-              >
-                Live Experiences
-              </motion.p>
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.3, duration: 0.7 }}
-                className="mt-2 font-bricolage text-4xl font-bold leading-tight md:text-5xl"
-              >
-                Discover What&apos;s Happening
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.4, duration: 0.7 }}
-                className="mt-3 max-w-xl text-sm leading-7 text-white/75 md:text-base"
-              >
-                Curated events, live performances, and community experiences —
-                sorted by what people love most.
-              </motion.p>
-            </div>
-
-            <motion.div
-              ref={statsRef}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.5, duration: 0.6 }}
-              className="flex gap-4 md:gap-6"
-            >
-              <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-white/10 px-5 py-3 backdrop-blur-md">
-                <div className="absolute -inset-1 -z-10 bg-emerald-400/20 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  </span>
-                  <p className="text-2xl font-bold">
-                    <span ref={liveCountRef}>0</span>
-                  </p>
-                </div>
-                <p className="mt-1 text-[11px] uppercase tracking-wider text-white/70">
-                  Live right now
-                </p>
-              </div>
-
-              <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-white/10 px-5 py-3 backdrop-blur-md">
-                <div className="absolute -inset-1 -z-10 bg-sky-400/20 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
-                <div className="flex items-baseline gap-1">
-                  <p className="text-2xl font-bold">
-                    <span ref={goingCountRef}>0</span>
-                  </p>
-                </div>
-                <p className="mt-1 text-[11px] uppercase tracking-wider text-white/70">
-                  People going
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
       </div>
     </section>
   );

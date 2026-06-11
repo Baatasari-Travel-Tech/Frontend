@@ -46,7 +46,7 @@ export default function Features() {
   };
 
   return (
-    <section id="features" className="pt-16 pb-24 bg-(--white) overflow-hidden relative">
+    <section id="features" className="pt-16 pb-24 bg-background overflow-hidden relative">
       <div className="container mx-auto px-4 relative">
         {/* Section Heading */}
         <h2 className="font-bricolage font-bold text-[54px] leading-16 tracking-[0] text-(--brand-blue) mb-16">
@@ -70,26 +70,28 @@ export default function Features() {
                 }}
                 className={`
                     absolute
-                    w-95 h-117.5
-                    rounded-[64px] bg-(--white) 
+                    w-[360px] h-[504px]
+                    rounded-[32px] bg-(--background) shadow-xl
                     cursor-pointer
                     transition-all duration-700 ease-out
                     border
+                    flex flex-col overflow-hidden
                     ${isActive
-                    ? "border-(--blue-400) shadow-[0_25px_60px_rgba(37,99,235,0.35)]"
+                    ?
+                    "border-(--brand-blue) shadow-2xl"
                     : "border-(--gray-200) shadow-xl"
                   }
                   `}
               >
-                {/* Image */}
-                <div className="relative w-full h-60 rounded-t-2xl overflow-hidden">
+                {/* Image — fills all space above the text */}
+                <div className="relative w-full flex-1 overflow-hidden">
                   <Image
                     src={item.image}
                     alt={item.title}
                     fill
-                    sizes="(max-width: 768px) 100vw, 380px"
+                    sizes="360px"
                     priority={isActive}
-                    className={`object-contain transition-transform duration-1000 ease-out ${isActive ? "scale-105" : "scale-100"}`}
+                    className={`object-cover transition-transform duration-1000 ease-out ${isActive ? "scale-105" : "scale-100"}`}
                     onError={(e) => {
                       e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zNWVtIiBmaWxsPSIjOUI5QkE0IiBmb250LXNpemU9IjE0Ij5Ccm9rZW48L3RleHQ+Cjwvc3ZnPg==';
                     }}
@@ -98,10 +100,10 @@ export default function Features() {
 
                 {/* Content */}
                 <div className="p-6">
-                  <h3 className="font-albert font-bold text-[24px] leading-8 tracking-[0] text-(--text-subtle) mb-2">
+                  <h3 className="font-albert font-bold text-[24px] leading-8 tracking-[0] text-(--text-subtle) mb-3">
                     {item.title}
                   </h3>
-
+                  
                   <p className="font-albert font-medium text-[16px] leading-6 tracking-[0.005em] text-(--text-muted-custom)">
                     {item.description}
                   </p>

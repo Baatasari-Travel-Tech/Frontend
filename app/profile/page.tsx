@@ -114,7 +114,7 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute>
       <FormProvider {...form}>
-        <div className="relative min-h-screen bg-slate-50">
+        <div className="relative min-h-screen bg-background">
           {/* Subtle ambient backdrop */}
           <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
             <div className="absolute -top-32 -left-20 h-[28rem] w-[28rem] rounded-full bg-(--blue-100)/40 blur-3xl" />
