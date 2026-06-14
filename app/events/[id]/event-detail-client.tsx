@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import { useAuthModal } from "@/components/auth/auth-modal-context"
+import { ShareEventButton } from "@/components/event-org/share-event-button"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { apiRequest } from "@/lib/api/client"
 import { formatCurrency, formatDate } from "@/lib/format"
@@ -199,9 +200,17 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="lg:sticky lg:top-4 self-start"
           >
-            <h1 className="mb-6 text-left font-bricolage text-3xl font-bold text-(--brand-blue) md:text-4xl">
-              {event.title}
-            </h1>
+            <div className="mb-6 flex items-start justify-between gap-3">
+              <h1 className="text-left font-bricolage text-3xl font-bold text-(--brand-blue) md:text-4xl">
+                {event.title}
+              </h1>
+              <ShareEventButton
+                eventId={event.id}
+                slug={event.slug}
+                title={event.title}
+                className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-(--brand-blue)/30 px-3 py-1.5 text-xs font-semibold text-(--brand-blue) transition hover:bg-(--blue-50)"
+              />
+            </div>
 
             <div className="relative overflow-hidden rounded-3xl border border-(--gray-200) bg-white shadow-xl">
               {/* Soft top gradient */}

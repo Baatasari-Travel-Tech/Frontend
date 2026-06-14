@@ -261,24 +261,11 @@ const EventPage: React.FC<EventPageProps> = ({
   };
 
   const handleStepClick = (targetStep: number) => {
-    if (targetStep <= currentStep) {
-      setCurrentStep(targetStep);
-      setFormErrors({});
-      setTimeout(scrollToFormTop, 0);
-      return;
-    }
-    const errors = validateEventForm(formData);
-    const currentStepKeys = stepFields[currentStep - 1] ?? [];
-    const hasCurrentErrors = Object.keys(errors).some((field) =>
-      currentStepKeys.some((key) => field === key || field.startsWith(`${key}.`))
-    );
-    if (hasCurrentErrors) {
-      setFormErrors(errors);
-      scrollToFirstError(errors);
-      return;
-    }
-    setFormErrors({});
+    // Free navigation: jump to ANY step without validating the current one.
+    // Required fields are enforced only on the final submit (see handleNext).
     setCurrentStep(targetStep);
+    setFormErrors({});
+    setSubmitError(null);
     setTimeout(scrollToFormTop, 0);
   };
 
@@ -329,24 +316,21 @@ const EventPage: React.FC<EventPageProps> = ({
   const handleNext = async () => {
     if (isSubmitting) return;
 
-    const errors = validateEventForm(formData);
-
+    // Steps 1–3: "Proceed" just advances. No per-step validation gate — the
+    // organizer can move between steps freely and fill them in any order.
     if (currentStep < 4) {
-      const currentStepKeys = stepFields[currentStep - 1] ?? [];
-      const currentStepHasErrors = Object.keys(errors).some((field) =>
-        currentStepKeys.some((key) => field === key || field.startsWith(`${key}.`))
-      );
-
-      if (currentStepHasErrors) {
-        setFormErrors(errors);
-        setSubmitError(null);
-        setSubmitSuccess(null);
-        scrollToFirstError(errors);
-        return;
-      }
+      setCurrentStep((s) => s + 1);
+      setFormErrors({});
+      setSubmitError(null);
+      setTimeout(scrollToFormTop, 0);
+      return;
     }
 
-    if (currentStep === 4) {
+    // Step 4 = Submit: validate EVERYTHING. If anything required is missing,
+    // jump to the first step (by hierarchy) that has an error and focus the
+    // first invalid field there.
+    {
+      const errors = validateEventForm(formData);
       setFormErrors(errors);
       setSubmitError(null);
       setSubmitSuccess(null);
@@ -389,11 +373,6 @@ const EventPage: React.FC<EventPageProps> = ({
       setSubmitSuccess("Form submitted.");
       return;
     }
-
-    setCurrentStep((s) => s + 1);
-    setFormErrors({});
-    setSubmitError(null);
-    setTimeout(scrollToFormTop, 0);
   };
 
   const handlePrevious = () => {
