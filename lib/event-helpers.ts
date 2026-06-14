@@ -119,6 +119,7 @@ export function toEventCardData(event: EventSummary): EventData {
     sponsors: sponsorNames[0] || undefined,
     eventTime: "All ages welcome",
     status: computeEventStatus(event),
+    cancelled: Boolean(event.cancelledAt),
     highlights:
       highlights.length > 0
         ? highlights

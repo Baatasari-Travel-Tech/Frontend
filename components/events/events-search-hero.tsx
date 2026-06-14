@@ -36,6 +36,7 @@ export function EventsSearchHero() {
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [when, setWhen] = useState(searchParams.get("when") ?? "anytime");
   const [budget, setBudget] = useState(searchParams.get("budget") ?? "any");
+  const [where, setWhere] = useState(searchParams.get("where") ?? "");
   // Real "currently exploring" count from the presence service. The visitor
   // heartbeats with a stable id; the count is the live global active total.
   const [activeCount, setActiveCount] = useState<number | null>(null);
@@ -124,15 +125,17 @@ export function EventsSearchHero() {
     }
   }, []);
 
-  const applyFilters = (next?: Partial<{ q: string; category: string; when: string; budget: string }>) => {
+  const applyFilters = (next?: Partial<{ q: string; category: string; when: string; budget: string; where: string }>) => {
     const merged = {
       q: next?.q ?? query,
       category: next?.category ?? activeCategory,
       when: next?.when ?? when,
       budget: next?.budget ?? budget,
+      where: next?.where ?? where,
     };
     const params = new URLSearchParams();
     if (merged.q.trim()) params.set("q", merged.q.trim());
+    if (merged.where.trim()) params.set("where", merged.where.trim());
     if (merged.category && merged.category !== "All") params.set("category", merged.category);
     if (merged.when && merged.when !== "anytime") params.set("when", merged.when);
     if (merged.budget && merged.budget !== "any") params.set("budget", merged.budget);
@@ -255,8 +258,14 @@ export function EventsSearchHero() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
                   Where
                 </span>
-                {/* Fixed to Visakhapatnam for now (single-city launch). */}
-                <span className="text-sm font-semibold text-(--gray-800)">Visakhapatnam</span>
+                <input
+                  type="text"
+                  value={where}
+                  onChange={(e) => setWhere(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder="City or venue"
+                  className="w-full min-w-0 bg-transparent text-sm font-semibold text-(--gray-800) outline-none placeholder:text-(--gray-400)"
+                />
               </div>
             </div>
 

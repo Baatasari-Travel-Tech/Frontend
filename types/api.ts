@@ -215,6 +215,7 @@ export type EventSummary = {
   discounts: Record<string, unknown>;
   guidelines: EventGuidelines;
   published: boolean;
+  cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
   startingPrice?: number;
@@ -224,7 +225,15 @@ export type EventSummary = {
 
 export type EventDetail = EventSummary & {
   ticketTiers: OrganizerEventTicketTier[];
-  cancelledAt: string | null;
+};
+
+export type GstThresholdStatus = {
+  turnover: number;
+  threshold: number;
+  remindThreshold: number;
+  hasGstin: boolean;
+  salesBlocked: boolean;
+  stage: "ok" | "approaching" | "blocked";
 };
 
 export type OrganizerAnalytics = {
@@ -233,6 +242,20 @@ export type OrganizerAnalytics = {
   nextEventDate: string | null;
   paidOrders: number;
   grossRevenue: number;
+  gstThreshold?: GstThresholdStatus;
+};
+
+export type EventFunnelPoint = {
+  date: string;
+  views: number;
+  purchases: number;
+};
+
+export type EventFunnel = {
+  series: EventFunnelPoint[];
+  totalViews: number;
+  totalPurchases: number;
+  conversionRate: number;
 };
 
 
@@ -258,9 +281,43 @@ export type TicketRecord = {
   ticketCode: string;
   qrPayload: string | null;
   ticketStatus: string;
+  orderStatus: string;
   totalAmount: number;
+  refundedAmount: number;
   currency: string;
   paidAt: string | null;
+};
+
+export type TaxInvoice = {
+  invoiceNumber: string;
+  invoiceDate: string | null;
+  orderNumber: string;
+  supplier: {
+    gstin: string;
+    legalName: string;
+    tradeName: string;
+    address: string;
+    stateName: string;
+    stateCode: string;
+  };
+  buyer: { name: string | null; email: string | null; gstin: string | null };
+  sac: string;
+  placeOfSupplyStateCode: string;
+  intraState: boolean;
+  eventTitle: string;
+  quantity: number;
+  currency: string;
+  ticketSubtotal: string;
+  platformFee: {
+    ratePct: number;
+    inclusive: string;
+    taxable: string;
+    cgst: string;
+    sgst: string;
+    igst: string;
+    tax: string;
+  };
+  grandTotal: string;
 };
 
 export type TalentProfile = {
@@ -301,6 +358,9 @@ export type AdminLoginPayload = {
 
 export type AdminVerifyPayload = {
   token: string;
+  // Pending-2FA session id from /admin/login — binds this TOTP step to the
+  // password step so 2FA is a true second factor.
+  pending: string;
 };
 
 export type AdminDashboardResponse = {

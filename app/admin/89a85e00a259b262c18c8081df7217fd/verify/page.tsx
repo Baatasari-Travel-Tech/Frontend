@@ -22,8 +22,19 @@ export default function AdminVerifyPage() {
     setLoading(true)
     setError(null)
 
+    const pending = sessionStorage.getItem("admin_pending_2fa")
+    if (!pending) {
+      // No pending-2FA session (came here directly / it expired) — send the
+      // admin back to the password step. TOTP alone can no longer sign in.
+      setError("Your login session expired. Please sign in again.")
+      setLoading(false)
+      router.replace(ADMIN_ROUTES.login)
+      return
+    }
+
     try {
-      const response = await adminVerifyOtp({ token: rawToken })
+      const response = await adminVerifyOtp({ token: rawToken, pending })
+      sessionStorage.removeItem("admin_pending_2fa")
       setAdminToken(response.token)
       router.push(ADMIN_ROUTES.dashboard)
     } catch (requestError) {

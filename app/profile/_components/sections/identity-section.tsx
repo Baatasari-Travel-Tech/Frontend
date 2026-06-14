@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useAuth } from "@/app/providers"
 import { USER_MIN_AGE } from "@/lib/profile-validation"
 import { FieldShell, FormSection } from "../field-primitives"
+import { LocationAutocomplete } from "@/components/common/location-autocomplete"
 import type { ProfileFormValues } from "../profile-schema"
 
 export function IdentitySection() {
@@ -202,15 +203,18 @@ export function IdentitySection() {
           accent="emerald"
         >
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <FieldShell label="Location" required>
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-(--brand-navy) focus-within:ring-4 focus-within:ring-(--brand-navy)/10">
-                <MapPin className="h-4 w-4 text-slate-400" />
-                <input
-                  className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                  placeholder="City, State"
-                  {...register("location")}
-                />
-              </div>
+            <FieldShell label="Location" required hint="Search your area or city and pick from the list.">
+              <Controller
+                control={control}
+                name="location"
+                render={({ field }) => (
+                  <LocationAutocomplete
+                    value={field.value}
+                    onSelect={(loc) => field.onChange(loc.label)}
+                    placeholder="Search your area or city"
+                  />
+                )}
+              />
               {errors.location ? (
                 <p className="mt-1 text-[11px] text-rose-600">{errors.location.message}</p>
               ) : null}

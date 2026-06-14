@@ -9,6 +9,7 @@ import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { LocationAutocomplete } from "@/components/common/location-autocomplete"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
 import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
@@ -385,6 +386,19 @@ export default function OrganizerProfilePage() {
                 <input className={inputClassName} {...form.register("address")} />
                 <p className="mt-1 text-xs text-rose-600">{form.formState.errors.address?.message ?? ""}</p>
               </label>
+              <div className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                Search location <span className="font-normal text-slate-400">(auto-fills city, state &amp; pincode)</span>
+                <div className="mt-2">
+                  <LocationAutocomplete
+                    onSelect={(loc) => {
+                      if (loc.city) form.setValue("city", loc.city, { shouldValidate: true })
+                      if (loc.state) form.setValue("state", loc.state, { shouldValidate: true })
+                      if (loc.pincode) form.setValue("pincode", loc.pincode, { shouldValidate: true })
+                    }}
+                    placeholder="Search your area or city"
+                  />
+                </div>
+              </div>
               <label className="block text-sm font-semibold text-slate-700">
                 City *
                 <input className={inputClassName} {...form.register("city")} />

@@ -54,12 +54,20 @@ function matchesBudget(event: EventSummary, budget: string): boolean {
   return true
 }
 
+// "Where" filter — matches the typed city/venue against the event's venue text.
+function matchesLocation(event: EventSummary, where: string): boolean {
+  if (!where.trim()) return true
+  const needle = where.trim().toLowerCase()
+  return typeof event.venue === "string" && event.venue.toLowerCase().includes(needle)
+}
+
 function EventsPageContent() {
   const searchParams = useSearchParams()
   const query = searchParams.get("q") ?? ""
   const category = searchParams.get("category") ?? ""
   const when = searchParams.get("when") ?? ""
   const budget = searchParams.get("budget") ?? ""
+  const where = searchParams.get("where") ?? ""
 
   const eventsQuery = useQuery({
     queryKey: ["public-events"],
@@ -76,7 +84,8 @@ function EventsPageContent() {
         matchesQuery(event, query) &&
         matchesCategory(event, category) &&
         matchesWhen(event, when) &&
-        matchesBudget(event, budget),
+        matchesBudget(event, budget) &&
+        matchesLocation(event, where),
     )
 
     // Live/ongoing first, then upcoming (soonest first), then recently
@@ -90,7 +99,7 @@ function EventsPageContent() {
         return a.phase === "recent" ? b.sort - a.sort : a.sort - b.sort
       })
       .map((item) => toEventCardData(item.event))
-  }, [data, query, category, when, budget])
+  }, [data, query, category, when, budget, where])
 
   return (
     <main className="min-h-screen bg-(--white)">
@@ -162,6 +171,12 @@ function EventsPageContent() {
                 </a>
                 <a className="transition hover:text-white" href="/privacy-policy">
                   Privacy Policy
+                </a>
+                <a className="transition hover:text-white" href="/refund-policy">
+                  Refund &amp; Cancellation
+                </a>
+                <a className="transition hover:text-white" href="/grievance">
+                  Grievance Redressal
                 </a>
               </div>
             </div>

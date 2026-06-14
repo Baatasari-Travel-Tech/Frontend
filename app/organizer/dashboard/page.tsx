@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route"
 import { StatsGrid } from "@/components/event-org/stats-grid"
 import { UpcomingEventHighlights } from "@/components/event-org/upcoming-event-highlights"
 import { AnalyticsChart } from "@/components/event-org/analytics-chart"
+import { GstThresholdBanner } from "@/components/event-org/gst-threshold-banner"
 import { toUpcomingManageEvents } from "@/components/event-org/manage-events/manage-events"
 import { apiRequest } from "@/lib/api/client"
 import type { EventDetail, OrganizerAnalytics } from "@/types/api"
@@ -57,6 +58,8 @@ export default function Home() {
           <h1 className="text-3xl font-bold text-upcoming-primary-700">Hello {greetingName}!</h1>
           <p className="text-black">Track, update, and grow your events the smart way.</p>
         </div>
+
+        <GstThresholdBanner />
 
         <StatsGrid
           analytics={dashboardQuery.data?.analytics ?? null}

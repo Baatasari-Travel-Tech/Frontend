@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/app/providers"
 import { useAuthModal } from "@/components/auth/auth-modal-context"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
+import { apiRequest } from "@/lib/api/client"
 import { formatCurrency, formatDate } from "@/lib/format"
 import type { EventDetail } from "@/types/api"
 import { Button } from "@/components/ui/button"
@@ -51,6 +52,21 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   const isLoggedIn = Boolean(session?.user)
 
   const [coverImageSrc, setCoverImageSrc] = useState(getEventCoverImageUrl(event.id, event.updatedAt))
+
+  // J1 — record a unique daily view of this event page (fire-and-forget). The
+  // backend dedups per visitor/day; reuses the same stable visitor id as presence.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    let visitorId = localStorage.getItem("baatasari-visitor-id") || ""
+    if (!visitorId) {
+      visitorId = crypto.randomUUID()
+      localStorage.setItem("baatasari-visitor-id", visitorId)
+    }
+    void apiRequest(`/events/${event.id}/view`, {
+      method: "POST",
+      body: JSON.stringify({ visitorId }),
+    }).catch(() => undefined)
+  }, [event.id])
 
   const tiers = event.ticketTiers ?? []
   const [selectedTierId, setSelectedTierId] = useState<string>(() => tiers[0]?.id ?? "")
@@ -102,7 +118,10 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     { icon: <Users className="h-4 w-4" />, label: "Audience", value: ageRange },
   ]
 
+  const isCancelled = Boolean(event.cancelledAt)
+
   const goToCheckout = () => {
+    if (isCancelled) return
     const tierParam = selectedTierId ? `&tierId=${encodeURIComponent(selectedTierId)}` : ""
     const target = `/checkout?eventId=${event.id}${tierParam}`
     if (!isLoggedIn) {
@@ -286,22 +305,36 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   </div>
                 ) : null}
 
-                {/* Get Tickets CTA */}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={goToCheckout}
-                  className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-(--brand-navy) px-6 py-4 font-poppins text-base font-bold text-white shadow-lg shadow-(--brand-navy)/20 transition-all hover:shadow-xl"
-                >
-                  <span className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                  <Ticket className="relative h-5 w-5" />
-                  <span className="relative">Get Tickets</span>
-                  <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </motion.button>
+                {/* Get Tickets CTA — replaced by a cancelled state if cancelled */}
+                {isCancelled ? (
+                  <>
+                    <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 font-poppins text-base font-bold text-rose-700">
+                      <CalendarX2 className="h-5 w-5" />
+                      <span>Event cancelled</span>
+                    </div>
+                    <p className="mt-3 text-center text-[11px] text-rose-500">
+                      This event has been cancelled. If you booked, you’ll be refunded.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={goToCheckout}
+                      className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-(--brand-navy) px-6 py-4 font-poppins text-base font-bold text-white shadow-lg shadow-(--brand-navy)/20 transition-all hover:shadow-xl"
+                    >
+                      <span className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                      <Ticket className="relative h-5 w-5" />
+                      <span className="relative">Get Tickets</span>
+                      <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </motion.button>
 
-                <p className="mt-3 text-center text-[11px] text-(--gray-500)">
-                  Secure checkout · Instant e-tickets
-                </p>
+                    <p className="mt-3 text-center text-[11px] text-(--gray-500)">
+                      Secure checkout · Instant e-tickets
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

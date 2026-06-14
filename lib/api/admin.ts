@@ -83,7 +83,7 @@ export const isAdminAuthFailure = (error: unknown): boolean => {
 }
 
 export const adminLogin = (payload: AdminLoginPayload) =>
-  requestAdmin<{ success: boolean }>("/admin/login", {
+  requestAdmin<{ pending: string }>("/admin/login", {
     method: "POST",
     body: JSON.stringify(payload),
   })
@@ -241,11 +241,21 @@ export type AdminEventPayment = {
   phone: string | null
   quantity: number
   totalAmount: number
+  refundedAmount: number
   status: string
   provider: string
   providerPaymentId: string | null
   paidAt: string | null
   createdAt: string
+}
+
+export type AdminRefund = {
+  id: string
+  orderId: string
+  amount: string
+  reason: string
+  status: string
+  providerRefundId: string | null
 }
 
 export const listAdminEvents = () => requestAdmin<{ events: AdminEventListItem[] }>("/admin/events")
@@ -260,6 +270,46 @@ export const updateAdminEvent = (id: string, payload: Record<string, unknown>) =
 
 export const listAdminEventPayments = (id: string) =>
   requestAdmin<{ payments: AdminEventPayment[] }>(`/admin/events/${id}/payments`)
+
+// Admin cancels an event (marks it cancelled — no auto-refund; refunds manual).
+export const cancelAdminEvent = (id: string) =>
+  requestAdmin<{ cancelledAt: string }>(`/admin/events/${id}/cancel`, {
+    method: "POST",
+  })
+
+export type AdminEventPayout = {
+  ticketRevenue: number
+  platformFeeRetained: number
+  gatewayCollected: number
+  refundsIssued: number
+  ordersCount: number
+  tdsRatePct: number
+  tcsRatePct: number
+  tds: number
+  tcs: number
+  netPayable: number
+  bank: {
+    accountName: string | null
+    accountNumber: string | null
+    ifsc: string | null
+    bankName: string | null
+  } | null
+}
+
+// How much the organizer is owed for an event (manual payout helper).
+export const getAdminEventPayout = (id: string) =>
+  requestAdmin<{ payout: AdminEventPayout }>(`/admin/events/${id}/payout`)
+
+// Manual refund of one order. `amount` (rupees) optional — omit for the
+// policy default (full minus retained fees), provide for a partial.
+export const refundAdminOrder = (
+  orderId: string,
+  payload: { amount?: number; notes?: string },
+) =>
+  requestAdmin<{ refund: AdminRefund }>(`/admin/orders/${orderId}/refund`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
 
 export const uploadAdminEventCover = async (id: string, file: File) => {
   const token = getAdminToken()

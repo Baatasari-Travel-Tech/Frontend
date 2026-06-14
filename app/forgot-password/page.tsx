@@ -14,6 +14,8 @@ type Values = z.infer<typeof schema>
 
 export default function ForgotPasswordPage() {
   const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { email: "" },
@@ -21,11 +23,19 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setMessage(null)
-    await apiRequest("/auth/forgot-password", {
-      method: "POST",
-      body: JSON.stringify(values),
-    })
-    setMessage("If that email exists, a reset link has been sent.")
+    setError(null)
+    setLoading(true)
+    try {
+      await apiRequest("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify(values),
+      })
+      setMessage("If that email exists, a reset link has been sent.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   })
 
   return (
@@ -45,14 +55,22 @@ export default function ForgotPasswordPage() {
             />
             <p className="mt-1 text-xs text-rose-600">{form.formState.errors.email?.message}</p>
           </div>
-          <button className="w-full rounded-full bg-brand-900 px-6 py-3 text-sm font-semibold text-white">
-            Send reset link
+          <button
+            className="w-full rounded-full bg-brand-900 px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
+            disabled={loading}
+          >
+            {loading ? "Sending…" : "Send reset link"}
           </button>
         </form>
 
         {message ? (
           <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             {message}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {error}
           </div>
         ) : null}
       </div>

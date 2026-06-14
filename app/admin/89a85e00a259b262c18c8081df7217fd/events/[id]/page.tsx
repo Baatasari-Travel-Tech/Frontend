@@ -7,15 +7,19 @@ import {
   getAdminEvent,
   updateAdminEvent,
   listAdminEventPayments,
+  getAdminEventPayout,
+  cancelAdminEvent,
   uploadAdminEventCover,
   isAdminAuthFailure,
   type AdminEventPayment,
+  type AdminEventPayout,
 } from "@/lib/api/admin"
 import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { getAdminToken } from "@/lib/admin/session"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { EVENT_CATEGORY_GROUPS } from "@/lib/event-categories"
 import CoverImageCropper from "@/components/event-org/CoverImageCropper"
+import { ShareEventButton } from "@/components/event-org/share-event-button"
 import type { EventDetail } from "@/types/api"
 
 const isoToLocalInput = (iso: string) => {
@@ -38,6 +42,8 @@ export default function AdminEventDetailPage() {
 
   const [event, setEvent] = useState<EventDetail | null>(null)
   const [payments, setPayments] = useState<AdminEventPayment[]>([])
+  const [payout, setPayout] = useState<AdminEventPayout | null>(null)
+  const [cancelling, setCancelling] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -85,9 +91,14 @@ export default function AdminEventDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [eventRes, paymentsRes] = await Promise.all([getAdminEvent(id), listAdminEventPayments(id)])
+      const [eventRes, paymentsRes, payoutRes] = await Promise.all([
+        getAdminEvent(id),
+        listAdminEventPayments(id),
+        getAdminEventPayout(id),
+      ])
       hydrate(eventRes.event)
       setPayments(paymentsRes.payments)
+      setPayout(payoutRes.payout)
     } catch (err) {
       if (isAdminAuthFailure(err)) {
         router.replace(ADMIN_ROUTES.login)
@@ -164,6 +175,32 @@ export default function AdminEventDetailPage() {
     reader.readAsDataURL(file)
   }
 
+  const handleCancelEvent = async () => {
+    if (!event) return
+    if (
+      !window.confirm(
+        "Cancel this event?\n\nIt will show as CANCELLED to everyone and stop selling tickets. Refunds are handled manually in Razorpay. This can't be undone.",
+      )
+    )
+      return
+    setCancelling(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const res = await cancelAdminEvent(id)
+      setEvent((prev) => (prev ? { ...prev, cancelledAt: res.cancelledAt } : prev))
+      setSuccess("Event cancelled. Remember to refund any paid attendees in Razorpay.")
+    } catch (err) {
+      if (isAdminAuthFailure(err)) {
+        router.replace(ADMIN_ROUTES.login)
+        return
+      }
+      setError(err instanceof Error ? err.message : "Couldn't cancel the event.")
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   const handleCover = async (file: File, previewUrl: string) => {
     setCoverPreview(previewUrl)
     setUploading(true)
@@ -186,12 +223,31 @@ export default function AdminEventDetailPage() {
       <div className="mx-auto w-full max-w-5xl">
         <div className="mb-6 flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-slate-900">{event?.title ?? "Event"}</h1>
-          <Link
-            href={ADMIN_ROUTES.events}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            ← All events
-          </Link>
+          <div className="flex items-center gap-2">
+            {event && event.published && !event.cancelledAt ? (
+              <ShareEventButton eventId={event.id} slug={event.slug} title={event.title} />
+            ) : null}
+            {event && event.cancelledAt ? (
+              <span className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+                Cancelled
+              </span>
+            ) : event ? (
+              <button
+                type="button"
+                onClick={() => void handleCancelEvent()}
+                disabled={cancelling}
+                className="rounded-lg border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+              >
+                {cancelling ? "Cancelling…" : "Cancel event"}
+              </button>
+            ) : null}
+            <Link
+              href={ADMIN_ROUTES.events}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              ← All events
+            </Link>
+          </div>
         </div>
 
         {error ? <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
@@ -313,6 +369,67 @@ export default function AdminEventDetailPage() {
         {/* Payments */}
         {!loading && event ? (
           <div className="mt-8">
+            {/* Organizer payout (manual settlement) */}
+            {payout ? (
+              <div className="mb-8 rounded-xl border border-slate-200 bg-white p-5">
+                <h2 className="mb-1 text-lg font-bold text-slate-900">Organizer payout (manual)</h2>
+                <p className="mb-4 text-xs text-slate-500">
+                  Refunds &amp; payouts are handled manually. Pay the organizer the net amount below.
+                </p>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Ticket sales (organizer's share)</span>
+                      <span className="font-semibold text-slate-800">₹{payout.ticketRevenue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>− TDS u/s 194-O ({payout.tdsRatePct}%)</span>
+                      <span>−₹{payout.tds.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>− GST TCS u/s 52 ({payout.tcsRatePct}%)</span>
+                      <span>−₹{payout.tcs.toFixed(2)}</span>
+                    </div>
+                    <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 text-base font-bold text-emerald-700">
+                      <span>Net payable to organizer</span>
+                      <span>₹{payout.netPayable.toFixed(2)}</span>
+                    </div>
+                    {payout.refundsIssued > 0 ? (
+                      <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                        ⚠️ ₹{payout.refundsIssued.toFixed(2)} has been refunded to buyers for this event — deduct any
+                        refunds you've issued from the amount above.
+                      </p>
+                    ) : null}
+                    <p className="pt-1 text-[11px] text-slate-400">
+                      Platform fee retained: ₹{payout.platformFeeRetained.toFixed(2)} · gateway (passed through):
+                      ₹{payout.gatewayCollected.toFixed(2)} · {payout.ordersCount} paid orders. TDS/TCS are to be
+                      deposited to the government, not paid to the organizer.
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-sm">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Organizer bank details
+                    </p>
+                    {payout.bank && payout.bank.accountNumber ? (
+                      <dl className="grid grid-cols-[110px_1fr] gap-y-1">
+                        <dt className="text-slate-500">A/c name</dt>
+                        <dd className="font-medium text-slate-800">{payout.bank.accountName || "—"}</dd>
+                        <dt className="text-slate-500">A/c number</dt>
+                        <dd className="font-mono text-slate-800">{payout.bank.accountNumber}</dd>
+                        <dt className="text-slate-500">IFSC</dt>
+                        <dd className="font-mono text-slate-800">{payout.bank.ifsc || "—"}</dd>
+                        <dt className="text-slate-500">Bank</dt>
+                        <dd className="text-slate-800">{payout.bank.bankName || "—"}</dd>
+                      </dl>
+                    ) : (
+                      <p className="text-slate-400">No bank details on file for this organizer.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <h2 className="mb-3 text-lg font-bold text-slate-900">Payments ({payments.length})</h2>
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
               <div className="overflow-x-auto">
@@ -335,26 +452,37 @@ export default function AdminEventDetailPage() {
                         <td colSpan={8} className="px-4 py-8 text-center text-slate-500">No payments yet.</td>
                       </tr>
                     ) : (
-                      payments.map((p) => (
+                      payments.map((p) => {
+                        const statusClass =
+                          p.status === "PAID"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : p.status === "REFUNDED"
+                              ? "bg-rose-100 text-rose-700"
+                              : p.status === "PARTIALLY_REFUNDED"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-slate-100 text-slate-600"
+                        return (
                         <tr key={p.id} className="border-t border-slate-100">
                           <td className="px-4 py-3 font-mono text-xs text-slate-600">{p.orderNumber}</td>
                           <td className="px-4 py-3 text-slate-700">{p.name || "—"}</td>
                           <td className="px-4 py-3 text-slate-700">{p.email || "—"}</td>
                           <td className="px-4 py-3 text-slate-700">{p.phone || "—"}</td>
                           <td className="px-4 py-3 text-slate-700">{p.quantity}</td>
-                          <td className="px-4 py-3 font-semibold text-slate-800">₹{p.totalAmount.toFixed(2)}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-800">
+                            ₹{p.totalAmount.toFixed(2)}
+                            {p.refundedAmount > 0 ? (
+                              <span className="block text-xs font-normal text-rose-600">−₹{p.refundedAmount.toFixed(2)} refunded</span>
+                            ) : null}
+                          </td>
                           <td className="px-4 py-3">
-                            <span
-                              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                p.status === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
-                              }`}
-                            >
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}>
                               {p.status}
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatDateTime(p.paidAt)}</td>
                         </tr>
-                      ))
+                        )
+                      })
                     )}
                   </tbody>
                 </table>

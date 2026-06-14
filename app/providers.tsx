@@ -63,7 +63,7 @@ type AuthCtx = {
   updateUserPreferences: (payload: Partial<SimplePreferences>) => Promise<void>
   completeRoleOnboarding: (role: AppRole, payload?: Record<string, unknown>) => Promise<void>
   login: (payload: { email: string; password: string }) => Promise<void>
-  register: (payload: { email: string; password: string; role: "USER" | "ORGANIZER" }) => Promise<void>
+  register: (payload: { email: string; password: string; role: "USER" | "ORGANIZER"; acceptedTerms: boolean }) => Promise<void>
   googleAuth: (idToken: string, role?: "USER" | "ORGANIZER") => Promise<void>
   logout: () => Promise<void>
   bootstrap: () => Promise<void>
@@ -353,7 +353,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     await hydrateForUser(response.data.user)
   }
 
-  const register = async (payload: { email: string; password: string; role: "USER" | "ORGANIZER" }) => {
+  const register = async (payload: { email: string; password: string; role: "USER" | "ORGANIZER"; acceptedTerms: boolean }) => {
     const response = await apiRequest<AuthResponse>("/auth/register", {
       method: "POST",
       body: JSON.stringify(payload),

@@ -46,6 +46,7 @@ const EventForm: React.FC<EventFormProps> = ({
   const [showStartTimePicker, setShowStartTimePicker] = useState(false)
   const [showEndTimePicker, setShowEndTimePicker] = useState(false)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [endDatePickerOpen, setEndDatePickerOpen] = useState(false)
   const [activeSlotPicker, setActiveSlotPicker] = useState<{ index: number; field: "startTime" | "endTime" } | null>(null)
 
   return (
@@ -236,6 +237,46 @@ const EventForm: React.FC<EventFormProps> = ({
                   </Popover>
                   <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Start Date *</span>
                   {formErrors.date ? <span className="text-danger-red text-xs">{formErrors.date}</span> : null}
+                </div>
+
+                {/* End Date — optional; for multi-day events */}
+                <div className="relative min-w-37.5 flex-[1_1_200px]">
+                  <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-14 px-4 py-1 border rounded text-base bg-transparent w-full justify-start text-left font-normal relative border-ring",
+                          formData.endDate ? "text-gray-800" : "text-muted-foreground"
+                        )}
+                      >
+                        {formData.endDate && !Number.isNaN(new Date(formData.endDate).getTime())
+                          ? format(new Date(formData.endDate), "dd/MM/yyyy")
+                          : <span>Same day</span>}
+                        <CalendarIcon className="absolute right-4 top-4 w-6 h-6 text-gray-500 opacity-75" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.endDate && !Number.isNaN(new Date(formData.endDate).getTime()) ? new Date(formData.endDate) : undefined}
+                        onSelect={(date) => {
+                          setFormData((prev) => ({ ...prev, endDate: date ? format(date, "yyyy-MM-dd") : "" }))
+                          setEndDatePickerOpen(false)
+                        }}
+                        startMonth={new Date()}
+                        endMonth={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
+                        disabled={(date) => {
+                          // End date can't be before the start date.
+                          const start = formData.date ? new Date(formData.date) : new Date()
+                          start.setHours(0, 0, 0, 0)
+                          return date < start
+                        }}
+                        autoFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">End Date (optional)</span>
                 </div>
 
                 <div className="relative min-w-37.5 flex-[1_1_200px]">

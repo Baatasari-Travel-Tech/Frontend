@@ -16,7 +16,10 @@ export default function AdminLoginPage() {
     setError(null)
 
     try {
-      await adminLogin(form)
+      const { pending } = await adminLogin(form)
+      // Hand the pending-2FA session to the verify step (short-lived, cleared
+      // after a successful verify). sessionStorage keeps it tab-scoped.
+      sessionStorage.setItem("admin_pending_2fa", pending)
       router.push(ADMIN_ROUTES.verify)
     } catch (requestError) {
       setError(

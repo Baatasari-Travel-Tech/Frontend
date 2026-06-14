@@ -17,5 +17,5 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { name: "Home", icon: Home, href: "/organizer/dashboard" },
   { name: "Create event", icon: PlusCircle, href: "/organizer/create-event" },
   { name: "Manage Events", icon: Calendar, href: "/organizer/manage-events" },
-  { name: "Analytics", icon: BarChart2, href: "/organizer/analytics", comingSoon: true },
+  { name: "Analytics", icon: BarChart2, href: "/organizer/analytics" },
 ];

@@ -13,6 +13,7 @@ import {
   PROFESSION_OPTIONS,
 } from "@/lib/profile-validation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { LocationAutocomplete } from "@/components/common/location-autocomplete"
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
@@ -365,15 +366,16 @@ export default function OnboardingPage() {
                   </p>
                 </div>
 
-                <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                <div className="block text-sm font-semibold text-slate-700 md:col-span-2">
                   Location *
-                  <input
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
-                    placeholder="City, State"
-                    value={location}
-                    onChange={(event) => setLocation(event.target.value)}
-                  />
-                </label>
+                  <div className="mt-2">
+                    <LocationAutocomplete
+                      value={location}
+                      onSelect={(loc) => setLocation(loc.label)}
+                      placeholder="Search your area or city"
+                    />
+                  </div>
+                </div>
 
                 <label className="block text-sm font-semibold text-slate-700">
                   Gender *

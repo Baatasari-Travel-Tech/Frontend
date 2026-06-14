@@ -289,6 +289,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const selectedRole: 'USER' | 'ORGANIZER' = role === 'organizer' ? 'ORGANIZER' : 'USER'
 
@@ -309,6 +310,11 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       return
     }
 
+    if (!acceptedTerms) {
+      setError('Please accept the Terms & Privacy Policy to continue.')
+      return
+    }
+
     setLoading(true)
     setError(null)
     setIsAuthenticating(true)
@@ -319,6 +325,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
         email: normalizedEmail,
         password,
         role: selectedRole,
+        acceptedTerms: true,
       })
       closeModal()
       router.replace(resolveAuthDestination(searchParams))
@@ -479,6 +486,26 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
         />
       </div>
 
+      <label className="flex items-start gap-2 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={acceptedTerms}
+          onChange={(e) => setAcceptedTerms(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-slate-300"
+        />
+        <span>
+          I am <strong>18 years or older</strong> and agree to the{" "}
+          <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-700 underline">
+            Terms &amp; Conditions
+          </a>{" "}
+          and{" "}
+          <a href="/privacy-policy" target="_blank" className="font-semibold text-brand-700 underline">
+            Privacy Policy
+          </a>
+          .
+        </span>
+      </label>
+
       {error && (
         pendingDeletion ? (
           <PendingDeletionBanner message={error} />
@@ -491,7 +518,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
       <button
         onClick={() => void handleRegister()}
-        disabled={loading || !email || !password || !confirm}
+        disabled={loading || !email || !password || !confirm || !acceptedTerms}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-900 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-60"
       >
         {loading && <InlineSpinner />}

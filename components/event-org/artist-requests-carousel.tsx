@@ -45,7 +45,7 @@ export function ArtistRequestsCarousel() {
         }
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(formData))
-        router.push("/create-event?startDirectly=true")
+        router.push("/organizer/create-event?startDirectly=true")
     }
 
     const navigate = (direction: "left" | "right") => {

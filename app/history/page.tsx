@@ -49,8 +49,23 @@ const formatDate = (dateStr: string) => {
 const statusStyles: Record<string, string> = {
   CONFIRMED: "bg-emerald-50 text-emerald-700 border-emerald-200",
   PAID: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
   PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+  PARTIALLY_REFUNDED: "bg-amber-50 text-amber-700 border-amber-200",
   CANCELLED: "bg-rose-50 text-rose-700 border-rose-200",
+  REFUNDED: "bg-rose-50 text-rose-700 border-rose-200",
+  VOID: "bg-slate-100 text-slate-500 border-slate-200",
+}
+
+// A ticket is "refunded" for display if the ticket was voided OR the order
+// carries a (partial/full) refund.
+const refundLabel = (t: TicketRecord | null): string | null => {
+  if (!t) return null
+  if (t.ticketStatus === "REFUNDED") return "Refunded"
+  if (t.orderStatus === "REFUNDED") return "Refunded"
+  if (t.orderStatus === "PARTIALLY_REFUNDED" || (t.refundedAmount ?? 0) > 0)
+    return `Partially refunded (₹${(t.refundedAmount ?? 0).toFixed(2)})`
+  return null
 }
 
 export default function HistoryPage() {
@@ -132,6 +147,7 @@ export default function HistoryPage() {
                 const t = item.ticket
                 const status = t?.ticketStatus ?? "PENDING"
                 const statusClass = statusStyles[status] ?? statusStyles.PENDING
+                const refund = refundLabel(t)
 
                 return (
                   <article
@@ -149,9 +165,16 @@ export default function HistoryPage() {
                         )}
                       </div>
                       {!item.isLoading && (
-                        <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusClass}`}>
-                          {status.charAt(0) + status.slice(1).toLowerCase()}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {refund && status !== "REFUNDED" ? (
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                              {refund}
+                            </span>
+                          ) : null}
+                          <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusClass}`}>
+                            {status.charAt(0) + status.slice(1).toLowerCase()}
+                          </span>
+                        </div>
                       )}
                     </div>
 
@@ -206,12 +229,20 @@ export default function HistoryPage() {
                                 </span>
                               )}
                             </div>
-                            <Link
-                              href={`/history/${item.ticketId}`}
-                              className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 active:scale-[0.97]"
-                            >
-                              View ticket
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/invoice/${item.ticketId}`}
+                                className="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                              >
+                                Tax invoice
+                              </Link>
+                              <Link
+                                href={`/history/${item.ticketId}`}
+                                className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 active:scale-[0.97]"
+                              >
+                                View ticket
+                              </Link>
+                            </div>
                           </div>
                         </>
                       )}

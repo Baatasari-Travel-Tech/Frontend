@@ -2,8 +2,9 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { Download } from "lucide-react"
+import { Download, ScanLine } from "lucide-react"
 
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { apiRequest } from "@/lib/api/client"
@@ -14,6 +15,8 @@ import { EventOverview } from "@/components/event-org/analytics/event-overview"
 import { EventStats } from "@/components/event-org/analytics/event-stats"
 import { RevenueStats } from "@/components/event-org/analytics/revenue-stats"
 import { DateReviewsSection } from "@/components/event-org/analytics/date-reviews"
+import { ViewsVsPurchases } from "@/components/event-org/analytics/views-vs-purchases"
+import { GstThresholdBanner } from "@/components/event-org/gst-threshold-banner"
 
 function AnalyticsContent() {
   const router = useRouter()
@@ -127,12 +130,14 @@ function AnalyticsContent() {
 
   return (
     <div className="w-full px-0 sm:px-6 lg:px-8 pt-0 pb-6 flex flex-col gap-6">
+      <GstThresholdBanner />
       <EventOverview event={event} isLoading={isLoading} onEdit={handleEdit} />
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
         <div className="lg:col-span-12">
           <EventStats event={event} isLoading={isLoading} />
         </div>
       </div>
+      <ViewsVsPurchases eventId={event?.id} />
       <RevenueStats event={event} isLoading={isLoading} />
       <DateReviewsSection eventId={event?.id} />
 
@@ -140,15 +145,26 @@ function AnalyticsContent() {
         {exportError && (
           <p className="text-sm text-rose-600">{exportError}</p>
         )}
-        <Button
-          variant="outline"
-          className="w-fit gap-2 rounded-full"
-          onClick={() => void handleExportCsv()}
-          disabled={exportLoading || !event}
-        >
-          <Download className="h-4 w-4" />
-          {exportLoading ? "Exporting..." : "Export Attendees CSV"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {event ? (
+            <Button asChild variant="outline" className="w-fit gap-2 rounded-full">
+              <Link href={`/organizer/events/${eventId}/scan`}>
+                <ScanLine className="h-4 w-4" />
+                Scan tickets at the door
+              </Link>
+            </Button>
+          ) : null}
+
+          <Button
+            variant="outline"
+            className="w-fit gap-2 rounded-full"
+            onClick={() => void handleExportCsv()}
+            disabled={exportLoading || !event}
+          >
+            <Download className="h-4 w-4" />
+            {exportLoading ? "Exporting..." : "Export Attendees CSV"}
+          </Button>
+        </div>
       </div>
     </div>
   )

@@ -1,7 +1,27 @@
 import type { Metadata } from "next"
 import { StateBlock } from "@/components/platform/state-block"
+import { getEventCoverImageUrl } from "@/lib/event-cover"
 import type { EventDetail } from "@/types/api"
 import EventDetailClient from "./event-detail-client"
+
+// Build a share-preview description: tagline/description + date + venue.
+const buildShareDescription = (event: EventDetail): string => {
+  const parts: string[] = []
+  const lead = (event.tagline?.trim() || event.description?.trim() || "").replace(/\s+/g, " ")
+  if (lead) parts.push(lead.slice(0, 120))
+  try {
+    const when = new Date(event.date).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
+    if (when) parts.push(when)
+  } catch {
+    /* ignore bad date */
+  }
+  if (event.venue?.trim()) parts.push(event.venue.trim())
+  return parts.join(" · ").slice(0, 200) || "Event details"
+}
 
 async function fetchEvent(id: string): Promise<EventDetail | null> {
   try {
@@ -25,12 +45,25 @@ export async function generateMetadata({
   const { id } = await params
   const event = await fetchEvent(id)
   if (!event) return { title: "Event Not Found" }
+
+  const description = buildShareDescription(event)
+  // Absolute, public S3 URL of the event cover — used as the link-preview image.
+  const coverUrl = getEventCoverImageUrl(event.id, event.updatedAt)
+
   return {
     title: event.title,
-    description: event.description?.slice(0, 160) ?? "Event details",
+    description,
     openGraph: {
+      type: "website",
       title: event.title,
-      description: event.description?.slice(0, 160) ?? "Event details",
+      description,
+      images: [{ url: coverUrl, alt: event.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: event.title,
+      description,
+      images: [coverUrl],
     },
   }
 }

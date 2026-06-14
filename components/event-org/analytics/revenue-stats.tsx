@@ -87,22 +87,14 @@ const AnalyticsChartBlock = ({
         </p>
       </div>
 
-      <ChartContainer config={config} className="h-full w-full">
-        <AreaChart data={data} margin={{ left: 0, right: 0, top: 40, bottom: 10 }}>
-          <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={4} interval={4} />
-          <YAxis hide domain={[0, "auto"]} />
-          <CartesianGrid vertical horizontal={false} strokeDasharray="4 4" strokeOpacity={0.2} />
-          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
-          <Area
-            dataKey={dataKey}
-            type="natural"
-            fill="var(--upcoming-primary-800)"
-            fillOpacity={1}
-            stroke="var(--upcoming-primary-800)"
-            strokeWidth={2}
-          />
-        </AreaChart>
-      </ChartContainer>
+      {/* The big number above is real (from sold tickets). Day-by-day trends
+          live in the real "Visitors vs Purchases" chart on this page — we no
+          longer show a placeholder trend line here. */}
+      <div className="flex h-full w-full items-end justify-end p-2">
+        <p className="text-xs text-muted-foreground">
+          Daily trends: see the Visitors vs Purchases chart above.
+        </p>
+      </div>
     </div>
   </div>
 )

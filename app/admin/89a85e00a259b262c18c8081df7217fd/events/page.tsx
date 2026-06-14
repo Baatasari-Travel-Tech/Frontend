@@ -7,6 +7,7 @@ import { RefreshCw, Search } from "lucide-react"
 import { listAdminEvents, isAdminAuthFailure, type AdminEventListItem } from "@/lib/api/admin"
 import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { getAdminToken } from "@/lib/admin/session"
+import { ShareEventButton } from "@/components/event-org/share-event-button"
 
 const formatDate = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso))
@@ -135,13 +136,18 @@ export default function AdminEventsPage() {
                           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">Draft</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`${ADMIN_ROUTES.events}/${e.id}`}
-                          className="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                        >
-                          Open
-                        </Link>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          {e.published && !e.cancelledAt ? (
+                            <ShareEventButton eventId={e.id} title={e.title} />
+                          ) : null}
+                          <Link
+                            href={`${ADMIN_ROUTES.events}/${e.id}`}
+                            className="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                          >
+                            Open
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))

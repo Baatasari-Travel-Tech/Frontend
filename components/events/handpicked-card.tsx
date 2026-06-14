@@ -25,6 +25,7 @@ interface HandpickedEventCardProps {
     gridMode?: boolean
     compact?: boolean
     status?: EventStatus
+    cancelled?: boolean
 }
 
 export function HandpickedEventCard({
@@ -37,6 +38,7 @@ export function HandpickedEventCard({
     gridMode = false,
     compact = false,
     status,
+    cancelled = false,
 }: HandpickedEventCardProps) {
     const [errored, setErrored] = useState(false)
 
@@ -66,14 +68,26 @@ export function HandpickedEventCard({
                                     alt={title}
                                     fill
                                     sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
-                                    className="object-cover transition-transform duration-500 hover:scale-105"
+                                    className={`object-cover transition-transform duration-500 hover:scale-105 ${
+                                        cancelled ? "grayscale opacity-60" : ""
+                                    }`}
                                     onError={() => setErrored(true)}
                                 />
                             ) : (
                                 <div className="absolute inset-0 bg-slate-100" />
                             )}
 
-                            {status === "live" || status === "upcoming" ? (
+                            {cancelled ? (
+                                <div
+                                    className={`absolute left-2 top-2 z-10 rounded-full bg-rose-600 px-2.5 py-1 font-poppins font-bold uppercase tracking-wider text-white ${
+                                        compact ? "text-[9px]" : "text-[10px]"
+                                    }`}
+                                >
+                                    Cancelled
+                                </div>
+                            ) : null}
+
+                            {!cancelled && (status === "live" || status === "upcoming") ? (
                                 <div
                                     className={`absolute right-2 top-2 z-10 flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 font-poppins font-bold uppercase tracking-wider text-white backdrop-blur-md ${
                                         compact ? "text-[9px]" : "text-[10px]"

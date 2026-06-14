@@ -30,10 +30,13 @@ import type { TicketRecord } from "@/types/api"
 //   3.1 – 3.7   Tick (SVG stroke) draws under the ball
 //   3.4 – 4.1   "Order Confirmed" wordmark fades in
 //   4.0 –       Details card slides in
-const BALL_END = 2.4
-const TICK_START = 3.1
-const HEADLINE_START = 3.4
-const CARD_START = 4.0
+// Compressed celebratory intro — the ticket + QR must appear fast (was 4.0s,
+// which left buyers staring at an animation and could produce a QR-less PDF if
+// they hit download early).
+const BALL_END = 0.9
+const TICK_START = 1.05
+const HEADLINE_START = 1.2
+const CARD_START = 1.5
 
 function Intro() {
   return (
@@ -225,6 +228,14 @@ function OrderConfirmedContent() {
   const handleDownload = async () => {
     if (!ticket) return
     try {
+      // Ensure the QR is available even if the user downloads immediately
+      // (before the render-time generation finishes) — otherwise the PDF would
+      // be missing its QR code.
+      const qr =
+        qrDataUrl ??
+        (ticket.qrPayload
+          ? await QRCode.toDataURL(ticket.qrPayload, { width: 180, margin: 2 }).catch(() => null)
+          : null)
       const { jsPDF } = await import("jspdf")
       const pdf = new jsPDF({ unit: "pt", format: "a4" })
       const pageWidth = pdf.internal.pageSize.getWidth()
@@ -252,9 +263,9 @@ function OrderConfirmedContent() {
       y += titleLines.length * 22
 
       // QR (top right) — draw if we have a data url
-      if (qrDataUrl) {
+      if (qr) {
         try {
-          pdf.addImage(qrDataUrl, "PNG", pageWidth - margin - 140, 100, 140, 140)
+          pdf.addImage(qr, "PNG", pageWidth - margin - 140, 100, 140, 140)
           pdf.setFontSize(8)
           pdf.setTextColor(120, 120, 120)
           pdf.text("Scan at entry", pageWidth - margin - 90, 256)

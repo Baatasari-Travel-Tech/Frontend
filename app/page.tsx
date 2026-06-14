@@ -48,11 +48,13 @@ export default function AboutPage() {
         }
     }, [isLoading, session?.user, homeHref, router])
 
-    if (isLoading) {
-        return null
-    }
-
-    if (session?.user) {
+    // Only logged-in users are blanked (they're being redirected to their
+    // dashboard — avoids a marketing-page flash). Everyone else — logged-out
+    // visitors AND anyone while auth is still resolving — gets the marketing
+    // content IMMEDIATELY. Previously this returned null during `isLoading`,
+    // which left marketing links blank until the client-side auth check
+    // round-tripped to the API. That was the main "site is slow" complaint.
+    if (session?.user && homeHref !== '/') {
         return null
     }
 
@@ -111,6 +113,8 @@ export default function AboutPage() {
                     <div className="grid gap-2 text-slate-300">
                       <a className="hover:text-white transition" href="/terms&conditions">Terms & Conditions</a>
                       <a className="hover:text-white transition" href="/privacy-policy">Privacy Policy</a>
+                      <a className="hover:text-white transition" href="/refund-policy">Refund & Cancellation</a>
+                      <a className="hover:text-white transition" href="/grievance">Grievance Redressal</a>
                     </div>
                   </div>
 

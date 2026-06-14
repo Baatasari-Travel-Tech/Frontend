@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react"
-import html2canvas from "html2canvas"
-import { jsPDF } from "jspdf"
+// html2canvas + jsPDF are ~550 KB combined and only needed when the organizer
+// actually generates the agreement PDF — dynamically imported inside
+// buildAgreementPdf() so they don't bloat this route's initial load.
 import { useRouter } from "next/navigation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
@@ -334,6 +335,10 @@ export default function OrganizerDocumentUploadPage() {
     if (!agreementRef.current) {
       throw new Error("Agreement view is not ready yet.")
     }
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ])
     const renderScale = Math.min(window.devicePixelRatio || 1, 1.5)
     const canvas = await html2canvas(agreementRef.current, {
       scale: renderScale,

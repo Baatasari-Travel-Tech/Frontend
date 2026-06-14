@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
@@ -91,6 +91,11 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutSuccess, setCheckoutSuccess] = useState<string | null>(null)
+  // Idempotency key for order creation; reused across retries of the same
+  // tier/quantity selection so a resubmit doesn't create a duplicate order.
+  const idempotencyRef = useRef<{ sig: string; key: string } | null>(null)
+  // Optional buyer GSTIN for a B2B tax invoice on the platform fee.
+  const [buyerGstin, setBuyerGstin] = useState("")
   const [coverImageSrc, setCoverImageSrc] = useState(getEventCoverImageUrl(event.id, event.updatedAt))
 
   const {
@@ -224,6 +229,15 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     setCheckoutLoading(true)
 
     try {
+      // Idempotency: reuse one key across retries of the SAME selection (e.g.
+      // user dismisses the Razorpay modal and resubmits) so the backend returns
+      // the original order instead of creating a duplicate. Changing tier or
+      // quantity rotates the key so a genuinely different order is created.
+      const selectionSig = `${values.selectedTierId}:${values.quantity}`
+      if (idempotencyRef.current?.sig !== selectionSig) {
+        idempotencyRef.current = { sig: selectionSig, key: crypto.randomUUID() }
+      }
+
       // BE `createEventOrderSchema` is .strict() — bookingFor and sendCopyToMe
       // are FE-only UI state; deliberately NOT in the request body.
       const orderResponse = await apiRequest<ApiEnvelope<{ order: CreateOrderResponse }>>(
@@ -237,6 +251,10 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
             guestName: values.guestName.trim(),
             guestEmail: values.guestEmail.trim(),
             guestPhone: values.guestPhone.trim(),
+            idempotencyKey: idempotencyRef.current.key,
+            ...(buyerGstin.trim().length === 15
+              ? { buyerGstin: buyerGstin.trim().toUpperCase() }
+              : {}),
           }),
         }
       )
@@ -596,6 +614,20 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                         {errors.guestPhone ? (
                           <p className="mt-1 text-xs text-rose-600">{errors.guestPhone.message}</p>
                         ) : null}
+                      </div>
+
+                      {/* Optional GSTIN for a business tax invoice on the platform fee */}
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-(--gray-600)">
+                          GSTIN (optional — for a business invoice)
+                        </label>
+                        <Input
+                          value={buyerGstin}
+                          onChange={(e) => setBuyerGstin(e.target.value.toUpperCase())}
+                          placeholder="e.g. 37ABCDE1234F1Z5"
+                          maxLength={15}
+                          className="w-full rounded-lg border border-(--gray-300) py-2 px-3 text-sm uppercase sm:py-3 sm:text-base"
+                        />
                       </div>
 
                       {/* Send a copy to my email */}
