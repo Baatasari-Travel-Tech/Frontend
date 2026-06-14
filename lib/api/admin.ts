@@ -204,6 +204,7 @@ const DEFAULT_SITE_CONFIG: SiteConfig = {
   linkedin: "#",
   twitter: "#",
   contactEmail: "contact-us@baatasari.com",
+  maintenanceMode: false,
 }
 
 // Public site config doesn't require admin auth. Uses the unified client

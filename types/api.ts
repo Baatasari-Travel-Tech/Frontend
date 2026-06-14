@@ -392,6 +392,7 @@ export type SiteConfig = {
   linkedin: string;
   twitter: string;
   contactEmail: string;
+  maintenanceMode: boolean;
 };
 
 export type GstinVerifyResult = {

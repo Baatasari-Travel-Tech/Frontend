@@ -16,6 +16,7 @@ const DEFAULT_CONFIG: SiteConfig = {
   linkedin: "#",
   twitter: "#",
   contactEmail: "contact-us@baatasari.com",
+  maintenanceMode: false,
 }
 
 const RESPONSE_NOTE =

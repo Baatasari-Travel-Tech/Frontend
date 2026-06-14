@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { CheckCircle, Pencil, RefreshCw, X, XCircle } from "lucide-react"
+import MaintenanceToggle from "@/components/admin/maintenance-toggle"
 import {
   bulkDeleteAdminUsers,
   deleteAdminUser,
@@ -707,6 +708,9 @@ export default function AdminDashboardPage() {
         {error ? (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         ) : null}
+
+        {/* Site maintenance toggle */}
+        <MaintenanceToggle />
 
         {/* Stat cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -369,6 +369,11 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     return <main className="min-h-dvh bg-slate-100">{children}</main>
   }
 
+  // Maintenance page stands alone — no site nav/footer chrome.
+  if (pathname === '/maintenance') {
+    return <>{children}</>
+  }
+
   if (isOrderConfirmed) {
     return <main className="min-h-dvh bg-white">{children}</main>
   }

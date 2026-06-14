@@ -72,6 +72,20 @@ export function LocationAutocomplete({
           }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
+          // Suppress the browser's saved-address / autofill dropdown — we render
+          // our own results. The mix of attributes covers Chrome/Safari/Firefox
+          // plus the common password managers (LastPass / 1Password / Dashlane).
+          name="baatasari-place-search"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
           className="w-full bg-transparent py-2.5 text-sm text-slate-900 outline-none"
         />
       </div>
