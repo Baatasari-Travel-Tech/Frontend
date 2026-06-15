@@ -24,7 +24,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const whiteShell = pathname === "/organizer/create-event";
 
   return (
-    <div className={`min-h-screen flex flex-col overflow-x-hidden ${whiteShell ? "bg-white" : "bg-stone-50"}`}>
+    <div className={`min-h-screen flex flex-col overflow-x-hidden ${whiteShell ? "bg-background" : "bg-background"}`}>
       <div className="flex flex-1 relative">
         {!hideSidebar ? (
           <Sidebar

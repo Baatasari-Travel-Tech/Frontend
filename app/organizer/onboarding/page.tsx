@@ -342,13 +342,13 @@ const BANK_NAME_OPTIONS = [
 ]
 
 const inputClassName =
-  "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
+  "mt-2 w-full rounded-xl border border-slate-200 bg-background px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
 
 const readOnlyInputClassName =
   "mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-700 shadow-sm"
 
 const textareaClassName =
-  "mt-2 min-h-32 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
+  "mt-2 min-h-32 w-full rounded-xl border border-slate-200 bg-background px-4 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
 
 const getDraft = () => {
   if (typeof window === "undefined") return null
@@ -1115,7 +1115,7 @@ export default function OrganizerOnboardingPage() {
   return (
     <ProtectedRoute requireOnboarding={false}>
       <main className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-3 sm:py-4 lg:px-4">
-        <div className="rounded-[2rem] border border-white/60 bg-white/90 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur md:p-5">
+        <div className="rounded-[2rem] border border-white/60 bg-background/90 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur md:p-5">
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">Organizer Onboarding</h1>
             <p className="max-w-3xl text-sm leading-6 text-slate-500">
@@ -1146,7 +1146,7 @@ export default function OrganizerOnboardingPage() {
                         ? "border-brand-900 bg-brand-900/5 shadow-sm"
                         : isDone
                           ? "border-emerald-200 bg-emerald-50/70"
-                          : "border-slate-200 bg-white"
+                          : "border-slate-200 bg-background"
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -1175,7 +1175,7 @@ export default function OrganizerOnboardingPage() {
           <form className="mt-6 grid gap-6" onSubmit={onSubmit}>
             {step === 0 ? (
               <section className="grid gap-4 rounded-3xl border border-slate-200/80 bg-slate-50/60 p-5 md:grid-cols-[36%_64%]">
-                <div className="flex h-full flex-col items-center justify-between gap-5 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+                <div className="flex h-full flex-col items-center justify-between gap-5 rounded-3xl border border-slate-200/80 bg-background p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                   <div className="w-full">
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Profile picture</p>
                   </div>
@@ -1195,7 +1195,7 @@ export default function OrganizerOnboardingPage() {
                   <label className="w-full text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                     Upload image
                     <input
-                      className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-900/10 file:px-3 file:py-1.5 file:text-[10px] file:font-semibold file:text-brand-800 hover:file:bg-brand-900/20"
+                      className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 bg-background px-3 py-2 text-xs text-slate-500 shadow-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-900/10 file:px-3 file:py-1.5 file:text-[10px] file:font-semibold file:text-brand-800 hover:file:bg-brand-900/20"
                       type="file"
                       accept="image/jpeg,image/png,image/webp,image/gif"
                       onChange={(event) => handleAvatarChange(event.target.files?.[0] ?? null)}
@@ -1218,7 +1218,7 @@ export default function OrganizerOnboardingPage() {
 
                   <label className="block text-sm font-semibold text-slate-700">
                     Personal phone number *
-                    <div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-brand-900 focus-within:ring-4 focus-within:ring-brand-900/10">
+                    <div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-background px-3 py-2.5 shadow-sm focus-within:border-brand-900 focus-within:ring-4 focus-within:ring-brand-900/10">
                       <span className="text-sm font-semibold text-slate-500">+91</span>
                       <input
                         className="ml-2 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
@@ -1312,7 +1312,7 @@ export default function OrganizerOnboardingPage() {
 
                   <div className="md:col-span-2">
                     <p className="text-sm font-semibold text-slate-700">Onboarding type</p>
-                    <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-white p-1">
+                    <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-background p-1">
                       <button
                         type="button"
                         onClick={() => form.setValue("entityType", "ORGANIZATION", { shouldValidate: true })}
@@ -1338,7 +1338,7 @@ export default function OrganizerOnboardingPage() {
             ) : null}
 
             {step === 1 && showOrganizationStep ? (
-              <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+              <section className="rounded-3xl border border-slate-200/80 bg-background p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                 <div className="flex items-start gap-3">
                   <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
                     <Building2 className="h-5 w-5" />
@@ -1472,7 +1472,7 @@ export default function OrganizerOnboardingPage() {
             ) : null}
 
             {step === 2 ? (
-              <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+              <section className="rounded-3xl border border-slate-200/80 bg-background p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                 <div className="flex items-start gap-3 mb-5">
                   <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
                     <Landmark className="h-5 w-5" />
@@ -1540,7 +1540,7 @@ export default function OrganizerOnboardingPage() {
                         {hasGstin === "yes" ? (
                           <div className="mt-4 space-y-3">
                             {gstinRows.map((row, index) => (
-                              <div key={index} className="rounded-2xl border border-slate-200 bg-white p-3">
+                              <div key={index} className="rounded-2xl border border-slate-200 bg-background p-3">
                                 <div className="grid gap-3 sm:grid-cols-2">
                                   <div>
                                     <label className="block text-xs font-semibold text-slate-600">GSTIN Number</label>
@@ -1836,7 +1836,7 @@ export default function OrganizerOnboardingPage() {
 
         {isCropOpen ? (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 px-4">
-            <div className="w-full max-w-xl rounded-3xl border border-white/20 bg-white p-5 shadow-[0_30px_70px_rgba(15,23,42,0.3)]">
+            <div className="w-full max-w-xl rounded-3xl border border-white/20 bg-background p-5 shadow-[0_30px_70px_rgba(15,23,42,0.3)]">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Adjust image</p>
@@ -1855,7 +1855,7 @@ export default function OrganizerOnboardingPage() {
                 <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div
                     ref={cropContainerRef}
-                    className="relative h-60 w-60 overflow-hidden rounded-full border border-slate-200 bg-white shadow-[0_12px_24px_rgba(15,23,42,0.12)]"
+                    className="relative h-60 w-60 overflow-hidden rounded-full border border-slate-200 bg-background shadow-[0_12px_24px_rgba(15,23,42,0.12)]"
                     onPointerDown={(event) => {
                       event.currentTarget.setPointerCapture(event.pointerId)
                       setDragStart({ x: event.clientX, y: event.clientY })
@@ -1919,7 +1919,7 @@ export default function OrganizerOnboardingPage() {
 
         {showGstModal ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-            <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-white/20 bg-white shadow-[0_30px_70px_rgba(15,23,42,0.3)]">
+            <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-white/20 bg-background shadow-[0_30px_70px_rgba(15,23,42,0.3)]">
               <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">GST Undertaking / Declaration</h2>

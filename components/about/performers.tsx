@@ -48,7 +48,7 @@ export default function Performers() {
   };
 
   return (
-    <section id="performers" className="py-24 bg-(--white) overflow-hidden relative">
+    <section id="performers" className="py-24 bg-background overflow-hidden relative">
       <div className="container mx-auto px-4 relative">
         {/* Heading */}
         <h2 className="font-bricolage font-bold text-[54px] leading-18 tracking-[0] text-(--brand-blue) mb-20">

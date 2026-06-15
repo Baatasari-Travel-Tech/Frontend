@@ -36,7 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, positionMode = "fi
           {/* Toggle Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="absolute -right-3 top-6 bg-white rounded-full p-1 shadow-sm hover:shadow-md transition-all z-40"
+            className="absolute -right-3 top-6 bg-background rounded-full p-1 shadow-sm hover:shadow-md transition-all z-40"
           >
             {isOpen ? (
               <ChevronLeft className="w-4 h-4 text-gray-600" />

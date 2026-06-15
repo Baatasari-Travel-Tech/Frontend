@@ -3,6 +3,7 @@ import Features from "@/components/about/features"
 import EventOrganizer from "@/components/about/organizer"
 import RestaurantOwner from "@/components/about/restaurant-owner"
 import Performers from "@/components/about/performers"
+import CampusAmbassador from "@/components/about/campus-ambassador"
 
 export default function AboutPage() {
     return (
@@ -12,6 +13,7 @@ export default function AboutPage() {
             <EventOrganizer />
             <RestaurantOwner />
             <Performers />
+            <CampusAmbassador />
         </main>
     )
 }

@@ -55,7 +55,7 @@ export default function OrganizerPendingPage() {
         description="All required onboarding steps are complete. Our team is now reviewing your profile and documents."
       >
         <div className="mx-auto w-full max-w-3xl">
-          <SectionCard className="border-slate-200 bg-white">
+          <SectionCard className="border-slate-200 bg-background">
             <div className="grid gap-6">
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 sm:px-5">
                 Status: Pending manual verification by the onboarding team.

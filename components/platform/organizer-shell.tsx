@@ -18,7 +18,7 @@ export function OrganizerShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="page-x grid min-h-[calc(100dvh-96px)] gap-6 py-6 lg:grid-cols-[280px_1fr]">
-      <aside className="self-start rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(12,29,55,0.05)] lg:sticky lg:top-28">
+      <aside className="self-start rounded-[2rem] border border-slate-200 bg-background p-5 shadow-[0_20px_60px_rgba(12,29,55,0.05)] lg:sticky lg:top-28">
         <div className="rounded-[1.5rem] bg-[linear-gradient(135deg,_rgba(12,29,55,0.96),_rgba(59,95,143,0.86))] p-5 text-white">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">Organizer space</p>
           <h2 className="mt-3 font-bricolage text-3xl">Operate events with clarity.</h2>

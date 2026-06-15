@@ -102,7 +102,7 @@ function EventsPageContent() {
   }, [data, query, category, when, budget, where])
 
   return (
-    <main className="min-h-screen bg-(--white)">
+    <main className="min-h-screen bg-background">
       <div className="pt-16">
         {eventsQuery.isError ? (
           <section className="flex flex-col items-center justify-center py-32 text-center">

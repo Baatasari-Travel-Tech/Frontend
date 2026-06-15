@@ -97,7 +97,7 @@ function AnalyticsContent() {
     if (eventsQuery.isLoading || (eventsQuery.data && eventsQuery.data.length > 0)) {
       return (
         <div className="w-full px-0 sm:px-6 lg:px-8 py-4">
-          <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center">
+          <div className="rounded-2xl border border-slate-200 bg-background px-6 py-10 text-center">
             <p className="text-slate-500 text-sm">Loading events...</p>
           </div>
         </div>
@@ -105,7 +105,7 @@ function AnalyticsContent() {
     }
     return (
       <div className="w-full px-0 sm:px-6 lg:px-8 py-4">
-        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center flex flex-col items-center gap-3">
+        <div className="rounded-2xl border border-slate-200 bg-background px-6 py-10 text-center flex flex-col items-center gap-3">
           <p className="text-slate-500 text-sm">No events yet. Create your first event to view analytics.</p>
           <button
             className="rounded-full bg-slate-900 text-white px-5 py-2 text-sm font-semibold hover:bg-slate-800 transition"

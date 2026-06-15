@@ -46,7 +46,7 @@ export default function OrganizerEmailVerificationPage() {
         description="Finish this step to unlock organizer document upload and move your account into approval review."
       >
         <div className="mx-auto w-full max-w-3xl">
-          <SectionCard className="border-slate-200 bg-white">
+          <SectionCard className="border-slate-200 bg-background">
             <div className="grid gap-6">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-900 sm:px-5">
                 A verification link has been sent to your registered email address.

@@ -78,7 +78,7 @@ const AnalyticsChartBlock = ({
       <div className="absolute top-6 left-6 z-10">
         <div className="flex items-center gap-2">
           <span className="text-3xl font-bold">{amount}</span>
-          <div className="rounded-full border border-(--blue-200) bg-white p-0.5">
+          <div className="rounded-full border border-(--blue-200) bg-background p-0.5">
             <ArrowUp className="h-4 w-4 text-(--blue-500)" />
           </div>
         </div>
@@ -180,7 +180,7 @@ export function RevenueStats({ event, isLoading }: Props) {
         <div className="flex bg-muted/50 p-1 rounded-full">
           <button
             className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${viewMode === "revenue"
-              ? "bg-white text-black shadow-sm"
+              ? "bg-background text-black shadow-sm"
               : "text-muted-foreground"
               }`}
             onClick={() => setViewMode("revenue")}
@@ -189,7 +189,7 @@ export function RevenueStats({ event, isLoading }: Props) {
           </button>
           <button
             className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${viewMode === "tickets"
-              ? "bg-white text-black shadow-sm"
+              ? "bg-background text-black shadow-sm"
               : "text-muted-foreground"
               }`}
             onClick={() => setViewMode("tickets")}

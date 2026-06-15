@@ -12,7 +12,7 @@ export default function RestaurantOwner() {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       viewport={{ once: true }}
-      className="py-20 bg-(--white)"
+      className="py-20 bg-background"
     >
       <div className="container mx-auto px-4">
         <div className="flex flex-col lg:flex-row-reverse items-center gap-12 max-w-6xl mx-auto">

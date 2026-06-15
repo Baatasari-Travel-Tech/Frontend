@@ -36,7 +36,7 @@ export function StallDetails({ title, subtitle, items = [], onClose, onApprove, 
                     {items.map((item, index) => (
                         <div
                             key={index}
-                            className="flex justify-between items-center border rounded-[15px] px-5 py-3 bg-white border-(--stall-item-border)"
+                            className="flex justify-between items-center border rounded-[15px] px-5 py-3 bg-background border-(--stall-item-border)"
                         >
                             <span className="font-medium font-poppins text-sm text-(--stall-item-text)">
                                 {item.name}

@@ -807,7 +807,7 @@ export default function OrganizerDocumentUploadPage() {
                     void handlePanUpload(nextFile)
                   }}
                   disabled={isUploadingPan}
-                  className="min-w-0 w-full max-w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                  className="min-w-0 w-full max-w-full rounded-lg border border-slate-200 bg-background px-3 py-2 text-sm"
                 />
               </label>
             </div>
@@ -902,7 +902,7 @@ export default function OrganizerDocumentUploadPage() {
           <div className="flex min-h-full items-start justify-center py-1 sm:items-center sm:py-4">
             <div
               tabIndex={-1}
-              className="min-w-0 max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white p-4 shadow-2xl sm:p-6"
+              className="min-w-0 max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-background p-4 shadow-2xl sm:p-6"
             >
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-xl font-semibold text-slate-900">Agreement</h3>
@@ -914,7 +914,7 @@ export default function OrganizerDocumentUploadPage() {
                 Close
               </button>
             </div>
-            <div className="mt-4 min-w-0 overflow-x-hidden rounded-xl border border-slate-200 bg-white p-2">
+            <div className="mt-4 min-w-0 overflow-x-hidden rounded-xl border border-slate-200 bg-background p-2">
               <div className="mx-auto min-w-0">{renderAgreementContainer(false, true)}</div>
             </div>
             <div className="mt-4 flex justify-end">
@@ -934,7 +934,7 @@ export default function OrganizerDocumentUploadPage() {
       {signatureModalOpen ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 px-3 py-4 sm:px-4 sm:py-5">
           <div className="flex min-h-full items-start justify-center py-1 sm:items-center sm:py-4">
-            <div className="min-w-0 w-full max-w-3xl rounded-2xl bg-white p-4 shadow-2xl sm:p-5">
+            <div className="min-w-0 w-full max-w-3xl rounded-2xl bg-background p-4 shadow-2xl sm:p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold text-slate-900">Organizer Signature</h3>
               <button
@@ -1015,7 +1015,7 @@ export default function OrganizerDocumentUploadPage() {
                   ref={drawCanvasRef}
                   width={900}
                   height={280}
-                  className="touch-none select-none w-full max-w-full rounded-lg border border-slate-200 bg-white"
+                  className="touch-none select-none w-full max-w-full rounded-lg border border-slate-200 bg-background"
                   onPointerDown={beginDraw}
                   onPointerMove={continueDraw}
                   onPointerUp={endDraw}
