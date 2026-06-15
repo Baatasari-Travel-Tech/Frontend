@@ -7,15 +7,8 @@ import { animate, stagger } from "animejs";
 import Image from "next/image";
 import {
   Search,
-  Sparkles,
-  Music,
-  Mic2,
-  Laptop,
-  Ticket,
-  Flame,
   MapPin,
   Calendar as CalendarIcon,
-  Users,
 } from "lucide-react";
 import {
   Select,
@@ -24,25 +17,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { apiRequest } from "@/lib/api/client";
+import { EVENT_CATEGORY_NAMES } from "@/lib/event-categories";
 
 const ROTATING_WORDS = ["Mood", "Crew", "Vibe", "Weekend"];
 
 // Friendly category chips (NewDesign look). The label IS the filter value —
 // eventMatchesCategoryGroup does a substring match for non-group labels, so
 // "Music" catches "Live Music", "Workshops" catches "* Workshops", etc.
-const CATEGORIES = [
-  { name: "All", icon: <Flame size={14} /> },
-  { name: "Music", icon: <Music size={14} /> },
-  { name: "Comedy", icon: <Mic2 size={14} /> },
-  { name: "Workshops", icon: <Laptop size={14} /> },
-  { name: "Festival", icon: <Sparkles size={14} /> },
-  { name: "Movies", icon: <Ticket size={14} /> },
-];
+// Full category set under the Discover hero: "All" + every real category group.
+// Filtering matches exactly (these ARE the group names eventMatchesCategoryGroup knows).
+const CATEGORIES = ["All", ...EVENT_CATEGORY_NAMES];
 
 // "Where" options — values are the literal city text matched against an event's
 // venue. "all" clears the filter.
-const CITIES = ["Visakhapatnam", "Hyderabad", "Bangalore", "Chennai"];
+const CITIES = ["Visakhapatnam"];
 
 export function EventsSearchHero() {
   const router = useRouter();
@@ -57,50 +45,6 @@ export function EventsSearchHero() {
   const [when, setWhen] = useState(searchParams.get("when") ?? "anytime");
   const [budget, setBudget] = useState(searchParams.get("budget") ?? "any");
   const [where, setWhere] = useState(searchParams.get("where") ?? "");
-  // Real "currently exploring" count from the presence service.
-  const [activeCount, setActiveCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    let visitorId = "";
-    try {
-      visitorId = localStorage.getItem("baatasari-visitor-id") || "";
-      if (!visitorId) {
-        visitorId = crypto.randomUUID();
-        localStorage.setItem("baatasari-visitor-id", visitorId);
-      }
-    } catch {
-      visitorId = "";
-    }
-
-    const ping = async () => {
-      try {
-        const res = await apiRequest<{ data: { count: number } }>("/presence/ping", {
-          method: "POST",
-          body: JSON.stringify({ visitorId }),
-        });
-        if (!cancelled && typeof res?.data?.count === "number") setActiveCount(res.data.count);
-      } catch {
-        // ignore — keep the last known count
-      }
-    };
-
-    void ping();
-    const id = setInterval(ping, 25_000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
-
-  const explorerText =
-    activeCount === null
-      ? "Exploring right now"
-      : activeCount <= 1
-        ? "You are only exploring right now"
-        : activeCount - 1 > 999
-          ? "999+ exploring right now"
-          : `You and ${activeCount - 1} are exploring right now`;
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -186,23 +130,6 @@ export function EventsSearchHero() {
       </div>
 
       <div className="mx-auto w-full max-w-[1400px] px-4 pt-10 pb-6 md:px-6 md:pt-16 md:pb-10 lg:px-10">
-        {/* Badge — real presence count */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mx-auto flex w-fit items-center gap-2 rounded-full border border-(--blue-100) bg-white/80 px-4 py-2 shadow-sm backdrop-blur-md"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-(--blue-500) opacity-70" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-(--blue-600)" />
-          </span>
-          <Users size={14} className="text-(--brand-blue)" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--brand-blue)">
-            {explorerText}
-          </span>
-        </motion.div>
-
         {/* Title with anime.js stagger */}
         <h1
           ref={titleRef}
@@ -355,15 +282,15 @@ export function EventsSearchHero() {
           className="mx-auto mt-8 flex max-w-4xl flex-wrap justify-center gap-2 md:gap-3"
         >
           {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.name;
+            const isActive = activeCategory === cat;
             return (
               <motion.button
-                key={cat.name}
+                key={cat}
                 whileHover={{ y: -3, scale: 1.04 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
-                  setActiveCategory(cat.name);
-                  applyFilters({ category: cat.name });
+                  setActiveCategory(cat);
+                  applyFilters({ category: cat });
                 }}
                 className={`pill flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
                   isActive
@@ -372,8 +299,7 @@ export function EventsSearchHero() {
                 }`}
                 style={{ opacity: 0 }}
               >
-                {cat.icon}
-                {cat.name}
+                {cat}
               </motion.button>
             );
           })}

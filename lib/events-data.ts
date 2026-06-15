@@ -17,6 +17,9 @@ export interface EventData {
     highlights?: string[];
     status?: EventStatus;
     cancelled?: boolean;
+    time?: string;
+    day?: string;
+    ageRange?: string;
 }
 
 export const HANDPICKED_DATA: EventData[] = [

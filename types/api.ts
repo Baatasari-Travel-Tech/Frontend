@@ -221,6 +221,7 @@ export type EventSummary = {
   startingPrice?: number;
   bookedCount?: number;
   ticketTierCount?: number;
+  organizerDisplayName?: string | null;
 };
 
 export type EventDetail = EventSummary & {

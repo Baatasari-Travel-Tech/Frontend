@@ -2,18 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
-import { motion } from "framer-motion"
+import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   CalendarDays,
   Clock,
   MapPin,
-  Ticket,
   Users,
-  Sparkles,
+  Ticket,
+  ArrowRight,
   CalendarX2,
   CalendarPlus,
-  ArrowRight,
+  Navigation,
+  Bus,
+  Sparkles,
+  BadgeCheck,
+  ShieldCheck,
+  Phone,
+  ScrollText,
 } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import { useAuthModal } from "@/components/auth/auth-modal-context"
@@ -24,12 +30,6 @@ import { apiRequest } from "@/lib/api/client"
 import { formatCurrency, formatDate } from "@/lib/format"
 import type { EventDetail } from "@/types/api"
 import { Button } from "@/components/ui/button"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,15 @@ const asRecord = (value: unknown): Record<string, unknown> =>
 const asStringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean) : []
 
+// "publicTransport" / "ample_parking" → "Public Transport" / "Ample Parking"
+const humanize = (key: string): string =>
+  key
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+
 export default function EventDetailClient({ event }: { event: EventDetail }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -54,9 +63,9 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   const isLoggedIn = Boolean(session?.user)
 
   const [coverImageSrc, setCoverImageSrc] = useState(getEventCoverImageUrl(event.id, event.updatedAt))
+  const [aboutExpanded, setAboutExpanded] = useState(false)
 
-  // J1 — record a unique daily view of this event page (fire-and-forget). The
-  // backend dedups per visitor/day; reuses the same stable visitor id as presence.
+  // J1 — record a unique daily view of this event page (fire-and-forget).
   useEffect(() => {
     if (typeof window === "undefined") return
     let visitorId = localStorage.getItem("baatasari-visitor-id") || ""
@@ -77,13 +86,14 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     if (tiers.length === 0) return null
     return Math.min(...tiers.map((t) => Number(t.price ?? 0)))
   }, [tiers])
+  const priceDisplay = isFreeEvent ? "Free" : minPrice !== null ? formatCurrency(minPrice) : "—"
 
   const eventHighlights = useMemo(() => {
     const requirements = asRecord(event.requirements)
     const requirementHighlights = asStringArray(requirements.highlights)
     const artistHighlights = (event.artists ?? []).map((artist) => artist.name).filter(Boolean)
-    const combined = [...requirementHighlights, ...artistHighlights]
-    return [...new Set(combined)].slice(0, 6)
+    const combined = [event.tagline ?? "", ...requirementHighlights, ...artistHighlights].filter(Boolean)
+    return [...new Set(combined)].slice(0, 8)
   }, [event])
 
   const guidelineItems = useMemo(() => {
@@ -93,38 +103,39 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   }, [event])
 
-  type TimeSlot = { name: string; startTime: string; endTime: string }
-  const timeSlots = useMemo(() => {
-    const requirements = asRecord(event.requirements)
-    const slots = requirements.timeSlots
-    if (!Array.isArray(slots)) return []
-    return slots.filter((s): s is TimeSlot => s && typeof s === "object" && typeof s.name === "string")
-  }, [event])
+  const transportItems = useMemo(() => {
+    const opts = (event.transportOptions ?? {}) as Record<string, unknown>
+    return Object.entries(opts)
+      .filter(([, v]) => v === true)
+      .map(([k]) => humanize(k))
+  }, [event.transportOptions])
 
   const ageRange = (() => {
     const range = event.audienceRange
     if (range && typeof range.min === "number" && typeof range.max === "number") {
+      if (range.min <= 0 && range.max >= 100) return "All Ages"
       return `${range.min}–${range.max} yrs`
     }
-    return "All ages"
+    return "All Ages"
   })()
 
-  const summaryItems: Array<{ icon: React.ReactNode; label: string; value: string }> = [
+  const timeLabel = `${event.startTime ?? "TBA"}${event.endTime ? ` – ${event.endTime}` : ""}`
+  const contact = (event.contactInfo ?? {}) as { mobile?: string; email?: string; website?: string }
+  const organizerName = event.organizerDisplayName ?? null
+
+  const facts = [
     { icon: <CalendarDays className="h-4 w-4" />, label: "Date", value: formatDate(event.date) },
-    {
-      icon: <Clock className="h-4 w-4" />,
-      label: "Time",
-      value: `${event.startTime ?? "8 AM"}${event.endTime ? ` – ${event.endTime}` : " Onwards"}`,
-    },
+    { icon: <Clock className="h-4 w-4" />, label: "Time", value: timeLabel },
     { icon: <MapPin className="h-4 w-4" />, label: "Venue", value: event.venue ?? "TBA" },
-    { icon: <Users className="h-4 w-4" />, label: "Audience", value: ageRange },
+    { icon: <Users className="h-4 w-4" />, label: "Age", value: ageRange },
   ]
 
   const isCancelled = Boolean(event.cancelledAt)
   const isPast = isEventPast(event)
+  const unavailable = isCancelled || isPast
 
   const goToCheckout = () => {
-    if (isCancelled || isPast) return
+    if (unavailable) return
     const tierParam = selectedTierId ? `&tierId=${encodeURIComponent(selectedTierId)}` : ""
     const target = `/checkout?eventId=${event.id}${tierParam}`
     if (!isLoggedIn) {
@@ -137,343 +148,272 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     router.push(target)
   }
 
+  const aboutLong = (event.description ?? "").length > 260
+
   return (
-    <div className="min-h-screen bg-linear-to-b from-(--white) via-(--blue-50)/30 to-(--white)">
-      <main className="flex-1 w-full px-4 py-8 md:py-12 max-w-6xl mx-auto">
-        {/* Image + Right card */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12 items-stretch mb-12 w-full">
-          {/* Image */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="space-y-6 sm:space-y-8"
-          >
-            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-3xl shadow-2xl group">
-              <Image
-                src={coverImageSrc}
-                alt={event.title}
-                fill
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                className="object-cover object-center transition-transform duration-[1200ms] ease-out group-hover:scale-105"
-                priority
-                onError={() => setCoverImageSrc("/e1.png")}
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-(--brand-navy)/85 via-(--brand-navy)/20 to-transparent" />
+    <div className="min-h-screen bg-background pb-24 lg:pb-12">
+      <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
+        {/* ── Hero: cover + ticket card ─────────────────────────────── */}
+        <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
+          {/* Cover */}
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl shadow-xl sm:aspect-[16/10] lg:aspect-[3/4]">
+            <Image
+              src={coverImageSrc}
+              alt={event.title}
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className={`object-cover object-center ${unavailable ? "grayscale-[0.3]" : ""}`}
+              priority
+              onError={() => setCoverImageSrc("/an2.png")}
+            />
+            {event.category ? (
+              <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/35 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5" />
+                {event.category}
+              </span>
+            ) : null}
+            {isCancelled ? (
+              <span className="absolute right-4 top-4 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
+                Cancelled
+              </span>
+            ) : isPast ? (
+              <span className="absolute right-4 top-4 rounded-full bg-(--brand-navy) px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
+                Completed
+              </span>
+            ) : null}
+          </div>
 
-              {/* Floating category chip */}
-              {event.category ? (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="absolute top-5 left-5 flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur-md"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {event.category}
-                </motion.div>
-              ) : null}
-
-              {/* Bottom title */}
-              <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-200/90"
-                >
-                  {isPast ? "Event Ended" : "Live Event"}
-                </motion.p>
-                <motion.h2
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.55 }}
-                  className="mt-2 font-bricolage text-2xl font-bold leading-tight text-white md:text-3xl"
-                >
-                  {event.title}
-                </motion.h2>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Right card — details + Get Tickets */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="lg:sticky lg:top-4 self-start"
-          >
-            <div className="mb-6 flex items-start justify-between gap-3">
-              <h1 className="text-left font-bricolage text-3xl font-bold text-(--brand-blue) md:text-4xl">
-                {event.title}
-              </h1>
-              <ShareEventButton
-                eventId={event.id}
-                slug={event.slug}
-                title={event.title}
-                className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-(--brand-blue)/30 px-3 py-1.5 text-xs font-semibold text-(--brand-blue) transition hover:bg-(--blue-50)"
-              />
-            </div>
-
-            <div className="relative overflow-hidden rounded-3xl border border-(--gray-200) bg-white shadow-xl">
-              {/* Soft top gradient */}
-              <div className="pointer-events-none absolute -top-40 -right-40 h-80 w-80 rounded-full bg-(--blue-100)/60 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-32 -left-24 h-64 w-64 rounded-full bg-(--blue-50) blur-3xl" />
-
-              <div className="relative p-6 md:p-8">
-                {/* Price block */}
-                <div className="mb-6 flex items-end justify-between">
-                  <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-(--gray-400)">
-                      Starts from
-                    </p>
-                    <div className="mt-1 flex items-baseline gap-2">
-                      <span className="font-bricolage text-4xl font-bold text-(--brand-navy)">
-                        {isFreeEvent
-                          ? "Free"
-                          : minPrice !== null
-                            ? formatCurrency(minPrice)
-                            : "—"}
-                      </span>
-                      {!isFreeEvent && minPrice !== null ? (
-                        <span className="text-sm font-medium text-(--gray-500)">/ ticket</span>
-                      ) : null}
-                    </div>
-                  </div>
-                  {tiers.length > 0 ? (
-                    <div className="flex items-center gap-1.5 rounded-full border border-(--blue-100) bg-(--blue-50) px-3 py-1 text-[11px] font-semibold text-(--brand-blue)">
-                      <Ticket className="h-3.5 w-3.5" />
-                      {tiers.length} tier{tiers.length > 1 ? "s" : ""}
-                    </div>
+          {/* Ticket card */}
+          <div className="lg:sticky lg:top-4 lg:self-start">
+            <div className="rounded-3xl border border-(--gray-200) bg-(--white) p-5 shadow-lg sm:p-6">
+              {/* Title + share */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="font-bricolage text-2xl font-bold leading-tight text-(--brand-navy) sm:text-3xl">
+                    {event.title}
+                  </h1>
+                  {event.tagline ? (
+                    <p className="mt-1 text-sm font-medium text-(--brand-blue)">{event.tagline}</p>
                   ) : null}
                 </div>
+                <ShareEventButton
+                  eventId={event.id}
+                  slug={event.slug}
+                  title={event.title}
+                  iconOnly
+                  className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-(--gray-200) text-(--brand-blue) transition hover:bg-(--blue-50)"
+                />
+              </div>
 
-                {/* Summary grid */}
-                <motion.div
-                  initial="hidden"
-                  animate="show"
-                  variants={{
-                    hidden: {},
-                    show: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } },
-                  }}
-                  className="mb-7 grid grid-cols-2 gap-3"
-                >
-                  {summaryItems.map((item) => (
-                    <motion.div
-                      key={item.label}
-                      variants={{
-                        hidden: { opacity: 0, y: 10 },
-                        show: { opacity: 1, y: 0 },
-                      }}
-                      className="rounded-2xl border border-(--gray-100) bg-(--gray-50)/60 p-3 transition-colors hover:border-(--blue-200) hover:bg-(--blue-50)/50"
-                    >
-                      <div className="flex items-center gap-2 text-(--gray-500)">
-                        {item.icon}
-                        <span className="text-[10px] font-bold uppercase tracking-[0.14em]">
-                          {item.label}
-                        </span>
-                      </div>
-                      <p className="mt-1.5 truncate text-sm font-semibold text-(--brand-navy)">
-                        {item.value}
-                      </p>
-                    </motion.div>
-                  ))}
-                </motion.div>
-
-                {/* Tier list — selectable */}
+              {/* Price */}
+              <div className="mt-4 flex items-end justify-between border-y border-(--gray-100) py-4">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-(--gray-400)">Starting from</p>
+                  <p className="mt-0.5 flex items-baseline gap-1.5">
+                    <span className="font-bricolage text-3xl font-bold text-(--brand-navy)">{priceDisplay}</span>
+                    {!isFreeEvent && minPrice !== null ? (
+                      <span className="text-sm font-medium text-(--gray-500)">/ ticket</span>
+                    ) : null}
+                  </p>
+                </div>
                 {tiers.length > 0 ? (
-                  <div className="mb-7 space-y-2">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-(--gray-400)">
-                      Pick your ticket
-                    </p>
-                    <div className="space-y-2">
-                      {tiers.slice(0, 3).map((tier) => {
-                        const isSelected = tier.id === selectedTierId
-                        return (
-                          <button
-                            type="button"
-                            key={tier.id ?? tier.name}
-                            onClick={() => setSelectedTierId(tier.id ?? "")}
-                            aria-pressed={isSelected}
-                            className={`flex w-full items-center justify-between rounded-xl border px-4 py-2.5 text-left transition ${
-                              isSelected
-                                ? "border-(--brand-navy) bg-(--brand-navy)/5 ring-2 ring-(--brand-navy)/30"
-                                : "border-(--gray-100) bg-white hover:border-(--brand-blue)/40 hover:bg-(--blue-50)/40"
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-(--brand-navy)">{tier.name}</p>
-                              {tier.description ? (
-                                <p className="truncate text-xs text-(--gray-500)">{tier.description}</p>
-                              ) : null}
-                            </div>
-                            <p className="ml-3 shrink-0 text-sm font-bold text-(--brand-blue)">
-                              {Number(tier.price) === 0 ? "Free" : formatCurrency(Number(tier.price))}
-                            </p>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-(--blue-100) bg-(--blue-50) px-3 py-1 text-[11px] font-semibold text-(--brand-blue)">
+                    <Ticket className="h-3.5 w-3.5" />
+                    {tiers.length} tier{tiers.length > 1 ? "s" : ""}
+                  </span>
                 ) : null}
+              </div>
 
-                {/* Get Tickets CTA — replaced by a cancelled / ended state when unavailable */}
+              {/* Facts */}
+              <div className="mt-4 grid grid-cols-2 gap-2.5">
+                {facts.map((f) => (
+                  <div key={f.label} className="rounded-2xl border border-(--gray-100) bg-(--gray-50)/60 p-3">
+                    <div className="flex items-center gap-1.5 text-(--brand-blue)">
+                      {f.icon}
+                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-(--gray-400)">{f.label}</span>
+                    </div>
+                    <p className="mt-1 truncate text-sm font-semibold text-(--brand-navy)">{f.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tier selection */}
+              {tiers.length > 0 && !unavailable ? (
+                <div className="mt-4 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-(--gray-400)">Pick your ticket</p>
+                  {tiers.slice(0, 4).map((tier) => {
+                    const isSelected = tier.id === selectedTierId
+                    return (
+                      <button
+                        type="button"
+                        key={tier.id ?? tier.name}
+                        onClick={() => setSelectedTierId(tier.id ?? "")}
+                        aria-pressed={isSelected}
+                        className={`flex w-full items-center justify-between rounded-xl border px-4 py-2.5 text-left transition ${
+                          isSelected
+                            ? "border-(--brand-navy) bg-(--brand-navy)/5 ring-2 ring-(--brand-navy)/25"
+                            : "border-(--gray-100) bg-(--white) hover:border-(--brand-blue)/40 hover:bg-(--blue-50)/40"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-(--brand-navy)">{tier.name}</p>
+                          {tier.description ? (
+                            <p className="truncate text-xs text-(--gray-500)">{tier.description}</p>
+                          ) : null}
+                        </div>
+                        <p className="ml-3 shrink-0 text-sm font-bold text-(--brand-blue)">
+                          {Number(tier.price) === 0 ? "Free" : formatCurrency(Number(tier.price))}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
+
+              {/* CTA */}
+              <div className="mt-5">
                 {isCancelled ? (
-                  <>
-                    <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 font-poppins text-base font-bold text-rose-700">
-                      <CalendarX2 className="h-5 w-5" />
-                      <span>Event cancelled</span>
-                    </div>
-                    <p className="mt-3 text-center text-[11px] text-rose-500">
-                      This event has been cancelled. If you booked, you’ll be refunded.
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 text-center">
+                    <p className="flex items-center justify-center gap-2 font-poppins text-base font-bold text-rose-700">
+                      <CalendarX2 className="h-5 w-5" /> Event cancelled
                     </p>
-                  </>
+                    <p className="mt-1 text-[11px] text-rose-500">If you booked, you’ll be refunded.</p>
+                  </div>
                 ) : isPast ? (
-                  <>
-                    <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 px-6 py-4 font-poppins text-base font-bold text-slate-600">
-                      <CalendarX2 className="h-5 w-5" />
-                      <span>Event ended</span>
-                    </div>
-                    <p className="mt-3 text-center text-[11px] text-slate-400">
-                      This event has already taken place — tickets are no longer available.
+                  <div className="rounded-2xl border border-slate-200 bg-slate-100 px-6 py-4 text-center">
+                    <p className="flex items-center justify-center gap-2 font-poppins text-base font-bold text-slate-600">
+                      <CalendarX2 className="h-5 w-5" /> Event ended
                     </p>
-                  </>
+                    <p className="mt-1 text-[11px] text-slate-400">Tickets are no longer available.</p>
+                  </div>
                 ) : (
                   <>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
+                    <button
+                      type="button"
                       onClick={goToCheckout}
-                      className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-(--brand-navy) px-6 py-4 font-poppins text-base font-bold text-white shadow-lg shadow-(--brand-navy)/20 transition-all hover:shadow-xl"
+                      className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-(--brand-navy) px-6 py-3.5 font-poppins text-base font-bold text-white shadow-lg shadow-(--brand-navy)/20 transition hover:bg-(--brand-navy)/90"
                     >
-                      <span className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                      <Ticket className="relative h-5 w-5" />
-                      <span className="relative">Get Tickets</span>
-                      <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </motion.button>
-
-                    <p className="mt-3 text-center text-[11px] text-(--gray-500)">
-                      Secure checkout · Instant e-tickets
-                    </p>
+                      <Ticket className="h-5 w-5" />
+                      Book Tickets
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </button>
+                    <p className="mt-2.5 text-center text-[11px] text-(--gray-500)">Secure checkout · Instant e-tickets</p>
                   </>
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
-        {/* Quick stats row */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mb-12 grid w-full grid-cols-1 gap-y-6 gap-x-12 md:grid-cols-2 lg:grid-cols-3"
-        >
-          <div>
-            <p className="mb-1 text-lg font-semibold text-(--black)">Date: {formatDate(event.date)}</p>
-          </div>
-          <div>
-            <p className="mb-1 text-lg font-semibold text-(--black)">
-              Time: {event.startTime ?? "8 AM"} {event.endTime ? `- ${event.endTime}` : "Onwards"}
-            </p>
-          </div>
-          <div>
-            <p className="mb-1 text-lg font-semibold text-(--black)">
-              Venue:{" "}
-              {event.googleMapsUrl ? (
-                <a
-                  href={event.googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline decoration-1 underline-offset-4 hover:text-(--brand-blue)"
-                >
-                  {event.venue}
-                </a>
-              ) : (
-                <span className="underline decoration-1 underline-offset-4">{event.venue}</span>
-              )}
-            </p>
-          </div>
-          <div>
-            <p className="mb-1 text-lg font-semibold text-(--black)">Age Eligibility: {ageRange}</p>
-          </div>
-          <div>
-            <p className="mb-1 text-lg font-semibold text-(--black)">
-              Tickets:{" "}
-              {tiers.length > 0
-                ? tiers
-                    .map((t) => `${t.name} (${Number(t.price) === 0 ? "Free" : formatCurrency(Number(t.price))})`)
-                    .join(", ")
-                : "—"}
-            </p>
-          </div>
-          <div>
-            <p className="mb-1 text-lg font-semibold text-(--black)">
-              Entry Time: {event.startTime ?? "As per event"}
-            </p>
-          </div>
-        </motion.div>
-
-        {/* About / Highlights */}
-        <div className="w-full space-y-8">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.6 }}
-            className="rounded-2xl border border-(--gray-200) bg-(--white) p-8 shadow-sm"
-          >
-            <h3 className="mb-4 text-lg font-bold text-(--black)">About the Event</h3>
-            <p className="mb-6 leading-relaxed text-(--gray-600)">{event.description}</p>
-
-            {timeSlots.length > 0 ? (
-              <>
-                <h3 className="mb-3 text-lg font-bold text-(--black)">Event Schedule</h3>
-                <div className="mb-6 flex flex-col gap-2">
-                  {timeSlots.map((slot, i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-lg border border-(--gray-200) bg-(--gray-50) px-4 py-2.5">
-                      <span className="min-w-36 shrink-0 text-sm font-semibold text-(--brand-blue)">
-                        {slot.startTime} – {slot.endTime}
-                      </span>
-                      <span className="text-sm text-(--gray-700)">{slot.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : null}
-
-            <h3 className="mb-4 text-lg font-bold text-(--black)">Event Highlights</h3>
-            <ul className="list-disc space-y-2 pl-5 text-(--gray-600)">
-              {event.tagline ? <li>{event.tagline}</li> : null}
-              {eventHighlights.length > 0 ? (
-                eventHighlights.map((highlight) => <li key={highlight}>{highlight}</li>)
-              ) : (
-                <li>{event.category ?? "Live Event"}</li>
-              )}
-              {event.transportToEvent ? <li>{event.transportToEvent}</li> : null}
-            </ul>
-          </motion.div>
-
-          {isLoggedIn ? (
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.6 }}
-              className="rounded-2xl border border-(--gray-200) bg-(--white) p-8 text-center shadow-sm"
+        {/* ── Sections ──────────────────────────────────────────────── */}
+        <div className="mt-10 space-y-6 lg:max-w-3xl">
+          {/* About */}
+          <section className="rounded-3xl border border-(--gray-200) bg-(--white) p-6 shadow-sm md:p-7">
+            <h2 className="mb-3 text-lg font-bold text-(--brand-navy)">About Event</h2>
+            <p
+              className={`whitespace-pre-line leading-relaxed text-(--gray-600) ${
+                aboutLong && !aboutExpanded ? "line-clamp-4" : ""
+              }`}
             >
-              <div className="mb-4 flex justify-center">
-                <CalendarX2 className="h-10 w-10 text-(--black)" />
-              </div>
-              <h3 className="mb-2 text-lg font-bold text-(--black)">Can&apos;t make it this time?</h3>
-              <p className="mx-auto mb-6 max-w-lg text-(--gray-600)">
-                It would have been better to have this event some other time of the year
-              </p>
+              {event.description}
+            </p>
+            {aboutLong ? (
+              <button
+                type="button"
+                onClick={() => setAboutExpanded((v) => !v)}
+                className="mt-2 text-sm font-semibold text-(--brand-blue) hover:underline"
+              >
+                {aboutExpanded ? "Read less" : "Read more"}
+              </button>
+            ) : null}
+          </section>
 
+          {/* Highlights */}
+          {eventHighlights.length > 0 ? (
+            <section className="rounded-3xl border border-(--gray-200) bg-(--white) p-6 shadow-sm md:p-7">
+              <h2 className="mb-4 text-lg font-bold text-(--brand-navy)">Event Highlights</h2>
+              <div className="flex flex-wrap gap-2">
+                {eventHighlights.map((h) => (
+                  <span
+                    key={h}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-(--blue-100) bg-(--blue-50) px-3.5 py-1.5 text-sm font-semibold text-(--brand-blue)"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {h}
+                  </span>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* Venue & Transport */}
+          <section className="rounded-3xl border border-(--gray-200) bg-(--white) p-6 shadow-sm md:p-7">
+            <h2 className="mb-4 text-lg font-bold text-(--brand-navy)">Venue &amp; Transport</h2>
+            <div className="flex items-start gap-3">
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-(--brand-blue)" />
+              <div className="min-w-0">
+                <p className="font-semibold text-(--brand-navy)">{event.venue ?? "TBA"}</p>
+                {event.googleMapsUrl ? (
+                  <a
+                    href={event.googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-(--brand-navy) px-4 py-2 text-sm font-semibold text-white transition hover:bg-(--brand-navy)/90"
+                  >
+                    <Navigation className="h-4 w-4" /> Get Directions
+                  </a>
+                ) : null}
+              </div>
+            </div>
+
+            {transportItems.length > 0 || event.transportToEvent ? (
+              <div className="mt-5 space-y-2 border-t border-(--gray-100) pt-4">
+                {transportItems.map((t) => (
+                  <div key={t} className="flex items-center gap-2.5 text-sm text-(--gray-600)">
+                    <Bus className="h-4 w-4 shrink-0 text-(--brand-blue)" />
+                    {t}
+                  </div>
+                ))}
+                {event.transportToEvent ? (
+                  <div className="flex items-start gap-2.5 text-sm text-(--gray-600)">
+                    <Bus className="mt-0.5 h-4 w-4 shrink-0 text-(--brand-blue)" />
+                    {event.transportToEvent}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+
+          {/* Hosted By */}
+          {organizerName ? (
+            <section className="rounded-3xl border border-(--gray-200) bg-(--white) p-6 shadow-sm md:p-7">
+              <h2 className="mb-4 text-lg font-bold text-(--brand-navy)">Hosted By</h2>
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-(--brand-navy) text-base font-bold text-white">
+                  {organizerName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 font-semibold text-(--brand-navy)">
+                    {organizerName}
+                    <BadgeCheck className="h-4 w-4 text-(--brand-blue)" />
+                  </p>
+                  <p className="text-xs text-(--gray-500)">Event Host</p>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {/* Request a new date (logged-in only) */}
+          {isLoggedIn ? (
+            <section className="rounded-3xl border border-(--gray-200) bg-(--white) p-6 text-center shadow-sm md:p-7">
+              <CalendarPlus className="mx-auto mb-3 h-9 w-9 text-(--brand-blue)" />
+              <h3 className="mb-1 text-base font-bold text-(--brand-navy)">Can&apos;t make it this time?</h3>
+              <p className="mx-auto mb-5 max-w-md text-sm text-(--gray-600)">
+                Let the organizer know which date would work better for you.
+              </p>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button className="rounded-full bg-brand-900 px-6 text-(--white) hover:bg-(--black)/90">
+                  <Button className="rounded-full bg-(--brand-navy) px-6 text-white hover:bg-(--brand-navy)/90">
                     <CalendarPlus className="mr-2 h-4 w-4" /> Request a New Date
                   </Button>
                 </DialogTrigger>
@@ -486,43 +426,101 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   </div>
                 </DialogContent>
               </Dialog>
-            </motion.div>
+            </section>
           ) : null}
 
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.6 }}
-            className="space-y-8"
-          >
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem
-                value="item-1"
-                className="rounded-xl border border-(--gray-200) bg-(--white) px-6 last:border-b data-[state=open]:pb-4"
-              >
-                <AccordionTrigger className="py-6 text-lg font-bold text-(--black) hover:no-underline">
-                  Terms & Conditions
-                </AccordionTrigger>
-                <AccordionContent className="text-(--gray-600)">
-                  <ul className="list-disc space-y-2 pl-5">
-                    {guidelineItems.length > 0 ? (
-                      guidelineItems.map((item) => <li key={item}>{item}</li>)
-                    ) : (
-                      <>
-                        <li>Tickets once booked cannot be exchanged or refunded.</li>
-                        <li>An internet handling fee per ticket may be levied. Please check the final amount before payment.</li>
-                        <li>We recommend arriving at least 20 minutes before event start time.</li>
-                        <li>Rights of admission reserved.</li>
-                      </>
-                    )}
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </motion.div>
+          {/* Quick links — Refund · Guidelines · Contact */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Link
+              href="/refund-policy"
+              className="flex items-center gap-3 rounded-2xl border border-(--gray-200) bg-(--white) p-4 shadow-sm transition hover:border-(--brand-blue)/40 hover:bg-(--blue-50)/40"
+            >
+              <ShieldCheck className="h-5 w-5 shrink-0 text-(--brand-blue)" />
+              <span className="text-sm font-semibold text-(--brand-navy)">Refund Policy</span>
+            </Link>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 rounded-2xl border border-(--gray-200) bg-(--white) p-4 text-left shadow-sm transition hover:border-(--brand-blue)/40 hover:bg-(--blue-50)/40"
+                >
+                  <ScrollText className="h-5 w-5 shrink-0 text-(--brand-blue)" />
+                  <span className="text-sm font-semibold text-(--brand-navy)">Guidelines &amp; Rules</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[80vh] w-[95vw] max-w-lg overflow-y-auto rounded-3xl border border-(--gray-200) bg-(--white) p-6">
+                <DialogTitle className="mb-3 text-lg font-bold text-(--brand-navy)">Guidelines &amp; Rules</DialogTitle>
+                <ul className="list-disc space-y-2 pl-5 text-sm text-(--gray-600)">
+                  {guidelineItems.length > 0 ? (
+                    guidelineItems.map((item) => <li key={item}>{item}</li>)
+                  ) : (
+                    <>
+                      <li>Tickets once booked cannot be exchanged or refunded.</li>
+                      <li>Please arrive at least 20 minutes before the event start time.</li>
+                      <li>Carry a valid ID; rights of admission reserved.</li>
+                    </>
+                  )}
+                </ul>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 rounded-2xl border border-(--gray-200) bg-(--white) p-4 text-left shadow-sm transition hover:border-(--brand-blue)/40 hover:bg-(--blue-50)/40"
+                >
+                  <Phone className="h-5 w-5 shrink-0 text-(--brand-blue)" />
+                  <span className="text-sm font-semibold text-(--brand-navy)">Contact Information</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="w-[95vw] max-w-md rounded-3xl border border-(--gray-200) bg-(--white) p-6">
+                <DialogTitle className="mb-3 text-lg font-bold text-(--brand-navy)">Contact Information</DialogTitle>
+                <div className="space-y-2 text-sm text-(--gray-600)">
+                  {contact.mobile ? (
+                    <a href={`tel:${contact.mobile}`} className="flex items-center gap-2 hover:text-(--brand-blue)">
+                      <Phone className="h-4 w-4" /> {contact.mobile}
+                    </a>
+                  ) : null}
+                  {contact.email ? (
+                    <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:text-(--brand-blue)">
+                      <ScrollText className="h-4 w-4" /> {contact.email}
+                    </a>
+                  ) : null}
+                  {contact.website ? (
+                    <a href={contact.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-(--brand-blue)">
+                      <Navigation className="h-4 w-4" /> {contact.website}
+                    </a>
+                  ) : null}
+                  {!contact.mobile && !contact.email && !contact.website ? (
+                    <p>Reach us at <a href="mailto:contact-us@baatasari.com" className="font-semibold text-(--brand-blue)">contact-us@baatasari.com</a></p>
+                  ) : null}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </main>
+
+      {/* ── Sticky bottom bar (mobile) ────────────────────────────── */}
+      {!unavailable ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-(--gray-200) bg-(--white) px-4 py-3 shadow-[0_-8px_24px_rgba(12,29,55,0.08)] lg:hidden">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--gray-400)">Starting from</p>
+              <p className="font-bricolage text-xl font-bold text-(--brand-navy)">{priceDisplay}</p>
+            </div>
+            <button
+              type="button"
+              onClick={goToCheckout}
+              className="flex items-center gap-2 rounded-full bg-(--brand-navy) px-7 py-3 font-poppins text-sm font-bold text-white transition hover:bg-(--brand-navy)/90"
+            >
+              <Ticket className="h-4 w-4" /> Book Tickets
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

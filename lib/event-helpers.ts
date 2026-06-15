@@ -68,6 +68,44 @@ export function isEventPast(
   return Date.now() > endMs
 }
 
+// Short weekday for the card date row, e.g. "Sun".
+export function formatWeekday(date: string): string {
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return ""
+  return new Intl.DateTimeFormat("en-GB", { weekday: "short" }).format(d)
+}
+
+// Normalize a stored start time ("6:30 PM" / "18:30" / null) for display.
+export function formatEventTime(startTime: string | null | undefined): string {
+  const raw = (startTime ?? "").trim()
+  if (!raw) return ""
+  // 24h "HH:MM" → 12h "h:MM AM/PM"
+  const m = raw.match(/^(\d{1,2}):(\d{2})$/)
+  if (m) {
+    let h = Number(m[1])
+    const min = m[2]
+    const period = h >= 12 ? "PM" : "AM"
+    h = h % 12 || 12
+    return `${h}:${min} ${period}`
+  }
+  // Already has AM/PM or is free text — just tidy spacing/case.
+  return raw.replace(/\s*(am|pm)$/i, (s) => ` ${s.trim().toUpperCase()}`)
+}
+
+// Audience range → friendly label: "All Ages" when it spans everyone, else "13–25 yrs" / "18+".
+export function formatAgeRange(
+  range: { min?: number; max?: number } | null | undefined
+): string {
+  const min = range?.min
+  const max = range?.max
+  if (min == null && max == null) return "All Ages"
+  const lo = min ?? 0
+  const hi = max ?? 100
+  if (lo <= 0 && hi >= 100) return "All Ages"
+  if (hi >= 100) return `${lo}+`
+  return `${lo}–${hi} yrs`
+}
+
 export function formatCardDate(date: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -128,6 +166,9 @@ export function toEventCardData(event: EventSummary): EventData {
     chiefGuest: event.artists?.[0]?.name || undefined,
     sponsors: sponsorNames[0] || undefined,
     eventTime: "All ages welcome",
+    time: formatEventTime(event.startTime),
+    day: formatWeekday(event.date),
+    ageRange: formatAgeRange(event.audienceRange),
     status: computeEventStatus(event),
     cancelled: Boolean(event.cancelledAt),
     highlights:
