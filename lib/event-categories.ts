@@ -182,8 +182,11 @@ export function eventMatchesCategoryGroup(eventCategory: string | null | undefin
   if (!eventCategory) return false
   const target = EVENT_CATEGORY_GROUPS.find((g) => g.category === group)
   if (!target) {
-    // Allow matching against a sub-category name directly too.
-    return eventCategory.toLowerCase() === group.toLowerCase()
+    // Not a known group name → treat as a free label (e.g. the events-hero
+    // chips: "Music", "Comedy", "Workshops"…). Substring match so "Music"
+    // catches "Live Music"/"Music & Performance", "Workshops" catches any
+    // "* Workshops", etc.
+    return eventCategory.toLowerCase().includes(group.toLowerCase())
   }
   const value = eventCategory.toLowerCase()
   return target.subcategories.some((sub) => sub.toLowerCase() === value)

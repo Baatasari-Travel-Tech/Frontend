@@ -11,6 +11,7 @@ import Image from "next/image";
 import EventOrganizer from "@/components/about/organizer"
 import RestaurantOwner from "@/components/about/restaurant-owner"
 import Performers from "@/components/about/performers"
+import CampusAmbassador from "@/components/about/campus-ambassador"
 
 export default function AboutPage() {
     const router = useRouter()
@@ -64,6 +65,7 @@ export default function AboutPage() {
             <Features />
             <EventOrganizer />
             <RestaurantOwner />
+            <CampusAmbassador />
             <Performers />
             <footer className="text-white border-t border-slate-200 bg-slate-900">
               <div className="mx-auto w-full max-w-screen-2xl px-4 py-10 sm:px-6 md:px-10 lg:px-16">

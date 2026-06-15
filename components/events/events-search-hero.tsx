@@ -4,8 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { animate, stagger } from "animejs";
+import Image from "next/image";
 import {
   Search,
+  Sparkles,
+  Music,
+  Mic2,
+  Laptop,
+  Ticket,
+  Flame,
   MapPin,
   Calendar as CalendarIcon,
   Users,
@@ -18,11 +25,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api/client";
-import { EVENT_CATEGORY_NAMES } from "@/lib/event-categories";
 
 const ROTATING_WORDS = ["Mood", "Crew", "Vibe", "Weekend"];
 
-const CATEGORIES = ["All", ...EVENT_CATEGORY_NAMES];
+// Friendly category chips (NewDesign look). The label IS the filter value —
+// eventMatchesCategoryGroup does a substring match for non-group labels, so
+// "Music" catches "Live Music", "Workshops" catches "* Workshops", etc.
+const CATEGORIES = [
+  { name: "All", icon: <Flame size={14} /> },
+  { name: "Music", icon: <Music size={14} /> },
+  { name: "Comedy", icon: <Mic2 size={14} /> },
+  { name: "Workshops", icon: <Laptop size={14} /> },
+  { name: "Festival", icon: <Sparkles size={14} /> },
+  { name: "Movies", icon: <Ticket size={14} /> },
+];
+
+// "Where" options — values are the literal city text matched against an event's
+// venue. "all" clears the filter.
+const CITIES = ["Visakhapatnam", "Hyderabad", "Bangalore", "Chennai"];
 
 export function EventsSearchHero() {
   const router = useRouter();
@@ -37,8 +57,7 @@ export function EventsSearchHero() {
   const [when, setWhen] = useState(searchParams.get("when") ?? "anytime");
   const [budget, setBudget] = useState(searchParams.get("budget") ?? "any");
   const [where, setWhere] = useState(searchParams.get("where") ?? "");
-  // Real "currently exploring" count from the presence service. The visitor
-  // heartbeats with a stable id; the count is the live global active total.
+  // Real "currently exploring" count from the presence service.
   const [activeCount, setActiveCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -125,7 +144,9 @@ export function EventsSearchHero() {
     }
   }, []);
 
-  const applyFilters = (next?: Partial<{ q: string; category: string; when: string; budget: string; where: string }>) => {
+  const applyFilters = (
+    next?: Partial<{ q: string; category: string; when: string; budget: string; where: string }>,
+  ) => {
     const merged = {
       q: next?.q ?? query,
       category: next?.category ?? activeCategory,
@@ -148,28 +169,24 @@ export function EventsSearchHero() {
   const titleText = "Find your perfect event";
 
   return (
-    <section className="relative w-full overflow-hidden">
+    <section className="relative isolate flex min-h-[88vh] w-full flex-col justify-center overflow-hidden">
       {/* Ambient backdrop */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <motion.div
-          animate={{ x: [0, 60, 0], y: [0, 30, 0], scale: [1, 1.15, 1] }}
-          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-(--blue-200)/60 blur-[120px]"
+        {/* Background image */}
+        <Image
+          src="/events-hero.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
         />
-        <motion.div
-          animate={{ x: [0, -50, 0], y: [0, -20, 0], scale: [1, 1.2, 1] }}
-          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -bottom-40 -right-32 h-[30rem] w-[30rem] rounded-full bg-(--blue-100)/70 blur-[120px]"
-        />
-        <motion.div
-          animate={{ rotate: [0, 360] }}
-          transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-          className="absolute left-1/2 top-1/3 h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-[conic-gradient(from_0deg,rgba(31,79,216,0.08),transparent_40%,rgba(186,215,255,0.12),transparent_70%)] blur-2xl"
-        />
+        {/* Cream overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
       </div>
 
       <div className="mx-auto w-full max-w-[1400px] px-4 pt-10 pb-6 md:px-6 md:pt-16 md:pb-10 lg:px-10">
-        {/* Badge */}
+        {/* Badge — real presence count */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -228,10 +245,7 @@ export function EventsSearchHero() {
         </motion.p>
 
         {/* Search bar */}
-        <div
-          ref={searchRef}
-          className="mx-auto mt-10 w-full max-w-5xl opacity-0"
-        >
+        <div ref={searchRef} className="mx-auto mt-10 w-full max-w-5xl opacity-0">
           <div className="flex flex-col gap-0 rounded-[2rem] border border-(--gray-200) bg-white/85 p-2 shadow-[0_20px_60px_-20px_rgba(12,29,55,0.18)] backdrop-blur-xl md:flex-row md:flex-wrap md:items-stretch md:rounded-3xl lg:flex-nowrap lg:rounded-full">
             {/* Search input */}
             <div className="group flex min-w-0 flex-1 items-center gap-2 rounded-2xl px-4 py-3 transition-colors hover:bg-(--gray-50) md:basis-[calc(50%-1px)] md:gap-3 md:px-5 lg:basis-0 lg:rounded-l-full lg:rounded-r-none lg:border-r lg:border-(--gray-100)">
@@ -258,14 +272,22 @@ export function EventsSearchHero() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
                   Where
                 </span>
-                <input
-                  type="text"
-                  value={where}
-                  onChange={(e) => setWhere(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  placeholder="City or venue"
-                  className="w-full min-w-0 bg-transparent text-sm font-semibold text-(--gray-800) outline-none placeholder:text-(--gray-400)"
-                />
+                <Select
+                  value={where || "all"}
+                  onValueChange={(v) => setWhere(v === "all" ? "" : v)}
+                >
+                  <SelectTrigger className="h-auto w-full border-0 bg-transparent p-0 text-sm font-semibold text-(--gray-800) shadow-none focus:ring-0">
+                    <SelectValue placeholder="City" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All cities</SelectItem>
+                    {CITIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -276,7 +298,7 @@ export function EventsSearchHero() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
                   When
                 </span>
-                <Select value={when} onValueChange={(v) => { setWhen(v); applyFilters({ when: v }); }}>
+                <Select value={when} onValueChange={setWhen}>
                   <SelectTrigger className="h-auto w-full border-0 bg-transparent p-0 text-sm font-semibold text-(--gray-800) shadow-none focus:ring-0">
                     <SelectValue placeholder="Anytime" />
                   </SelectTrigger>
@@ -297,7 +319,7 @@ export function EventsSearchHero() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
                   Budget
                 </span>
-                <Select value={budget} onValueChange={(v) => { setBudget(v); applyFilters({ budget: v }); }}>
+                <Select value={budget} onValueChange={setBudget}>
                   <SelectTrigger className="h-auto w-full border-0 bg-transparent p-0 text-sm font-semibold text-(--gray-800) shadow-none focus:ring-0">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
@@ -321,25 +343,28 @@ export function EventsSearchHero() {
               >
                 <span className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
                 <Search size={18} className="relative shrink-0" />
-                <span className="relative">Search</span>
+                <span className="relative">Discover</span>
               </motion.button>
             </div>
           </div>
         </div>
 
-        {/* Category pills */}
+        {/* Category pills — click filters immediately */}
         <div
           ref={pillsRef}
           className="mx-auto mt-8 flex max-w-4xl flex-wrap justify-center gap-2 md:gap-3"
         >
           {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat;
+            const isActive = activeCategory === cat.name;
             return (
               <motion.button
-                key={cat}
+                key={cat.name}
                 whileHover={{ y: -3, scale: 1.04 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => { setActiveCategory(cat); applyFilters({ category: cat }); }}
+                onClick={() => {
+                  setActiveCategory(cat.name);
+                  applyFilters({ category: cat.name });
+                }}
                 className={`pill flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
                   isActive
                     ? "border-(--brand-navy) bg-(--brand-navy) text-white shadow-md"
@@ -347,7 +372,8 @@ export function EventsSearchHero() {
                 }`}
                 style={{ opacity: 0 }}
               >
-                {cat}
+                {cat.icon}
+                {cat.name}
               </motion.button>
             );
           })}
