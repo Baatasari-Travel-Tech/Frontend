@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { StateBlock } from "@/components/platform/state-block"
 import type { EventDetail } from "@/types/api"
+import { isEventPast } from "@/lib/event-helpers"
 import CheckoutClient from "./checkout-client"
 
 export const metadata: Metadata = {
@@ -50,6 +51,32 @@ export default async function CheckoutPage({
           tone="error"
           title="Event unavailable"
           description="This event could not be loaded. It may have been unpublished or the request failed."
+        />
+      </main>
+    )
+  }
+
+  // Guard checkout (incl. direct URL access) — cancelled or finished events
+  // can't be bought. The backend enforces this too; this is the UI gate.
+  if (event.cancelledAt) {
+    return (
+      <main className="page-x py-20">
+        <StateBlock
+          tone="error"
+          title="Event cancelled"
+          description="This event has been cancelled, so checkout is closed. If you already booked, you'll be refunded."
+        />
+      </main>
+    )
+  }
+
+  if (isEventPast(event)) {
+    return (
+      <main className="page-x py-20">
+        <StateBlock
+          tone="error"
+          title="Event ended"
+          description="This event has already taken place — tickets are no longer available."
         />
       </main>
     )

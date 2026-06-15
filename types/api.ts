@@ -251,11 +251,44 @@ export type EventFunnelPoint = {
   purchases: number;
 };
 
+// 3-stage funnel (unique people): page views → reached checkout → bought.
+export type EventFunnelStages = {
+  views: number;
+  checkouts: number;
+  purchases: number;
+};
+
 export type EventFunnel = {
   series: EventFunnelPoint[];
   totalViews: number;
   totalPurchases: number;
   conversionRate: number;
+  stages: EventFunnelStages;
+};
+
+// Admin-only: funnel counts PLUS who is at each stage.
+export type FunnelActor = {
+  visitorId: string;
+  userId: string | null;
+  fullName: string | null;
+  email: string | null;
+  at: string;
+};
+
+export type FunnelBuyer = {
+  userId: string | null;
+  fullName: string | null;
+  email: string | null;
+  tickets: number;
+  amount: number;
+  at: string | null;
+};
+
+export type AdminEventFunnel = {
+  stats: EventFunnelStages;
+  viewers: FunnelActor[];
+  checkouts: FunnelActor[];
+  buyers: FunnelBuyer[];
 };
 
 

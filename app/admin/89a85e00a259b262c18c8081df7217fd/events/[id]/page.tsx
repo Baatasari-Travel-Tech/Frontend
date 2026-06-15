@@ -8,12 +8,14 @@ import {
   updateAdminEvent,
   listAdminEventPayments,
   getAdminEventPayout,
+  getAdminEventFunnel,
   cancelAdminEvent,
   uploadAdminEventCover,
   isAdminAuthFailure,
   type AdminEventPayment,
   type AdminEventPayout,
 } from "@/lib/api/admin"
+import type { AdminEventFunnel } from "@/types/api"
 import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import { getAdminToken } from "@/lib/admin/session"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
@@ -43,6 +45,7 @@ export default function AdminEventDetailPage() {
   const [event, setEvent] = useState<EventDetail | null>(null)
   const [payments, setPayments] = useState<AdminEventPayment[]>([])
   const [payout, setPayout] = useState<AdminEventPayout | null>(null)
+  const [funnel, setFunnel] = useState<AdminEventFunnel | null>(null)
   const [cancelling, setCancelling] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -91,14 +94,16 @@ export default function AdminEventDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [eventRes, paymentsRes, payoutRes] = await Promise.all([
+      const [eventRes, paymentsRes, payoutRes, funnelRes] = await Promise.all([
         getAdminEvent(id),
         listAdminEventPayments(id),
         getAdminEventPayout(id),
+        getAdminEventFunnel(id),
       ])
       hydrate(eventRes.event)
       setPayments(paymentsRes.payments)
       setPayout(payoutRes.payout)
+      setFunnel(funnelRes.funnel)
     } catch (err) {
       if (isAdminAuthFailure(err)) {
         router.replace(ADMIN_ROUTES.login)
@@ -369,6 +374,9 @@ export default function AdminEventDetailPage() {
         {/* Payments */}
         {!loading && event ? (
           <div className="mt-8">
+            {/* Conversion funnel — counts + who (admin only) */}
+            {funnel ? <AdminFunnelCard funnel={funnel} /> : null}
+
             {/* Organizer payout (manual settlement) */}
             {payout ? (
               <div className="mb-8 rounded-xl border border-slate-200 bg-white p-5">
@@ -504,4 +512,131 @@ export default function AdminEventDetailPage() {
       ) : null}
     </main>
   )
+}
+
+// ─── Admin conversion funnel (numbers + who) ──────────────────────────────
+
+function funnelRate(value: number, base: number): string {
+  if (base <= 0) return "—"
+  return `${Math.round((value / base) * 100)}%`
+}
+
+function actorLabel(a: { fullName: string | null; email: string | null; visitorId: string }) {
+  if (a.fullName || a.email) return a.fullName ?? a.email
+  return `Guest · ${a.visitorId.slice(0, 8)}`
+}
+
+function AdminFunnelCard({ funnel }: { funnel: AdminEventFunnel }) {
+  const { stats, viewers, checkouts, buyers } = funnel
+  return (
+    <div className="mb-8 rounded-xl border border-slate-200 bg-white p-5">
+      <h2 className="mb-1 text-lg font-bold text-slate-900">Conversion funnel</h2>
+      <p className="mb-4 text-xs text-slate-500">
+        Unique people at each stage — and exactly who. Page view → reached checkout → bought.
+      </p>
+
+      {/* Stage counts */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <FunnelStat label="Visited page" value={stats.views} tone="blue" />
+        <FunnelStat
+          label="Reached checkout"
+          value={stats.checkouts}
+          tone="amber"
+          sub={`${funnelRate(stats.checkouts, stats.views)} of visitors`}
+        />
+        <FunnelStat
+          label="Bought"
+          value={stats.purchases}
+          tone="emerald"
+          sub={`${funnelRate(stats.purchases, stats.checkouts)} of checkout`}
+        />
+      </div>
+
+      {/* Who, per stage */}
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <FunnelPeople title={`Visitors (${viewers.length})`}>
+          {viewers.length === 0 ? (
+            <EmptyRow />
+          ) : (
+            viewers.map((v) => (
+              <li key={`v-${v.visitorId}`} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="truncate text-slate-700">{actorLabel(v)}</span>
+                {v.email && v.fullName ? <span className="shrink-0 text-[11px] text-slate-400">{v.email}</span> : null}
+              </li>
+            ))
+          )}
+        </FunnelPeople>
+
+        <FunnelPeople title={`Reached checkout (${checkouts.length})`}>
+          {checkouts.length === 0 ? (
+            <EmptyRow />
+          ) : (
+            checkouts.map((c) => (
+              <li key={`c-${c.visitorId}`} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="truncate text-slate-700">{actorLabel(c)}</span>
+                {c.email && c.fullName ? <span className="shrink-0 text-[11px] text-slate-400">{c.email}</span> : null}
+              </li>
+            ))
+          )}
+        </FunnelPeople>
+
+        <FunnelPeople title={`Buyers (${buyers.length})`}>
+          {buyers.length === 0 ? (
+            <EmptyRow />
+          ) : (
+            buyers.map((b, i) => (
+              <li key={`b-${b.userId ?? i}`} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="min-w-0 truncate text-slate-700">
+                  {b.fullName ?? b.email ?? "Unknown"}
+                  {b.email && b.fullName ? <span className="ml-1 text-[11px] text-slate-400">{b.email}</span> : null}
+                </span>
+                <span className="shrink-0 text-[11px] font-medium text-slate-500">
+                  {b.tickets} tkt · ₹{b.amount.toFixed(0)}
+                </span>
+              </li>
+            ))
+          )}
+        </FunnelPeople>
+      </div>
+    </div>
+  )
+}
+
+const FUNNEL_TONES = {
+  blue: "border-blue-200 bg-blue-50 text-blue-700",
+  amber: "border-amber-200 bg-amber-50 text-amber-700",
+  emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
+} as const
+
+function FunnelStat({
+  label,
+  value,
+  tone,
+  sub,
+}: {
+  label: string
+  value: number
+  tone: keyof typeof FUNNEL_TONES
+  sub?: string
+}) {
+  return (
+    <div className={`rounded-xl border px-3 py-3 text-center ${FUNNEL_TONES[tone]}`}>
+      <p className="text-2xl font-bold leading-none">{value}</p>
+      <p className="mt-1 text-[11px] font-medium uppercase tracking-wide opacity-80">{label}</p>
+      <p className="mt-0.5 h-3.5 text-[10px] opacity-70">{sub ?? ""}</p>
+    </div>
+  )
+}
+
+function FunnelPeople({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-slate-200">
+      <p className="border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">{title}</p>
+      <ul className="max-h-56 divide-y divide-slate-50 overflow-y-auto px-3 py-1 text-sm">{children}</ul>
+    </div>
+  )
+}
+
+function EmptyRow() {
+  return <li className="py-2 text-xs text-slate-400">No one yet.</li>
 }

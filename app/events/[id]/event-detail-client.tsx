@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/app/providers"
 import { useAuthModal } from "@/components/auth/auth-modal-context"
 import { ShareEventButton } from "@/components/event-org/share-event-button"
+import { isEventPast } from "@/lib/event-helpers"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
 import { apiRequest } from "@/lib/api/client"
 import { formatCurrency, formatDate } from "@/lib/format"
@@ -120,9 +121,10 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   ]
 
   const isCancelled = Boolean(event.cancelledAt)
+  const isPast = isEventPast(event)
 
   const goToCheckout = () => {
-    if (isCancelled) return
+    if (isCancelled || isPast) return
     const tierParam = selectedTierId ? `&tierId=${encodeURIComponent(selectedTierId)}` : ""
     const target = `/checkout?eventId=${event.id}${tierParam}`
     if (!isLoggedIn) {
@@ -147,11 +149,12 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             className="space-y-6 sm:space-y-8"
           >
-            <div className="relative overflow-hidden rounded-3xl shadow-2xl h-[calc(100dvh-9rem)] w-full group">
+            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-3xl shadow-2xl group">
               <Image
                 src={coverImageSrc}
                 alt={event.title}
                 fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
                 className="object-cover object-center transition-transform duration-[1200ms] ease-out group-hover:scale-105"
                 priority
                 onError={() => setCoverImageSrc("/e1.png")}
@@ -179,7 +182,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   transition={{ delay: 0.5 }}
                   className="text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-200/90"
                 >
-                  Live Event
+                  {isPast ? "Event Ended" : "Live Event"}
                 </motion.p>
                 <motion.h2
                   initial={{ opacity: 0, y: 14 }}
@@ -314,7 +317,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   </div>
                 ) : null}
 
-                {/* Get Tickets CTA — replaced by a cancelled state if cancelled */}
+                {/* Get Tickets CTA — replaced by a cancelled / ended state when unavailable */}
                 {isCancelled ? (
                   <>
                     <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 font-poppins text-base font-bold text-rose-700">
@@ -323,6 +326,16 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                     </div>
                     <p className="mt-3 text-center text-[11px] text-rose-500">
                       This event has been cancelled. If you booked, you’ll be refunded.
+                    </p>
+                  </>
+                ) : isPast ? (
+                  <>
+                    <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 px-6 py-4 font-poppins text-base font-bold text-slate-600">
+                      <CalendarX2 className="h-5 w-5" />
+                      <span>Event ended</span>
+                    </div>
+                    <p className="mt-3 text-center text-[11px] text-slate-400">
+                      This event has already taken place — tickets are no longer available.
                     </p>
                   </>
                 ) : (

@@ -80,6 +80,23 @@ export function ViewsVsPurchases({ eventId }: { eventId?: string }) {
           </div>
         </div>
 
+        {/* 3-stage funnel — numbers only (unique people at each step) */}
+        <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
+          <FunnelStep label="Visited page" value={data?.stages.views ?? 0} tone="blue" />
+          <FunnelStep
+            label="Reached checkout"
+            value={data?.stages.checkouts ?? 0}
+            tone="amber"
+            sub={stepRate(data?.stages.checkouts, data?.stages.views)}
+          />
+          <FunnelStep
+            label="Bought"
+            value={data?.stages.purchases ?? 0}
+            tone="emerald"
+            sub={stepRate(data?.stages.purchases, data?.stages.checkouts)}
+          />
+        </div>
+
         <div className="mt-6 h-72 w-full">
           {isLoading ? (
             <div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -138,6 +155,38 @@ export function ViewsVsPurchases({ eventId }: { eventId?: string }) {
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+// "% of previous stage" — the share of people who advanced to this step.
+function stepRate(value?: number, base?: number): string | undefined {
+  if (!base || base <= 0 || value === undefined) return undefined
+  return `${Math.round((value / base) * 100)}% of prev`
+}
+
+const STEP_TONES = {
+  blue: "border-blue-200 bg-blue-50 text-blue-700",
+  amber: "border-amber-200 bg-amber-50 text-amber-700",
+  emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
+} as const
+
+function FunnelStep({
+  label,
+  value,
+  tone,
+  sub,
+}: {
+  label: string
+  value: number
+  tone: keyof typeof STEP_TONES
+  sub?: string
+}) {
+  return (
+    <div className={`rounded-xl border px-3 py-3 text-center ${STEP_TONES[tone]}`}>
+      <p className="text-2xl font-bold leading-none">{value}</p>
+      <p className="mt-1 text-[11px] font-medium uppercase tracking-wide opacity-80">{label}</p>
+      <p className="mt-0.5 h-3.5 text-[10px] opacity-70">{sub ?? ""}</p>
+    </div>
   )
 }
 

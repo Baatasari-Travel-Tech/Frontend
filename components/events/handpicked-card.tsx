@@ -46,6 +46,10 @@ export function HandpickedEventCard({
         setErrored(false)
     }, [image])
 
+    const isPast = status === "past"
+    // Both cancelled and completed events render dimmed/greyed.
+    const dimmed = cancelled || isPast
+
     return (
         <div className={gridMode ? "h-full w-full" : "flex flex-col md:flex-row items-center h-full mr-4 mb-4"}>
             <Link href={`/events/${id}`} className="block relative z-20 h-full w-full">
@@ -69,7 +73,7 @@ export function HandpickedEventCard({
                                     fill
                                     sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
                                     className={`object-cover transition-transform duration-500 hover:scale-105 ${
-                                        cancelled ? "grayscale opacity-60" : ""
+                                        dimmed ? "grayscale opacity-60" : ""
                                     }`}
                                     onError={() => setErrored(true)}
                                 />
@@ -85,9 +89,17 @@ export function HandpickedEventCard({
                                 >
                                     Cancelled
                                 </div>
+                            ) : isPast ? (
+                                <div
+                                    className={`absolute left-2 top-2 z-10 rounded-full bg-slate-600 px-2.5 py-1 font-poppins font-bold uppercase tracking-wider text-white ${
+                                        compact ? "text-[9px]" : "text-[10px]"
+                                    }`}
+                                >
+                                    Completed
+                                </div>
                             ) : null}
 
-                            {!cancelled && (status === "live" || status === "upcoming") ? (
+                            {!dimmed && (status === "live" || status === "upcoming") ? (
                                 <div
                                     className={`absolute right-2 top-2 z-10 flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 font-poppins font-bold uppercase tracking-wider text-white backdrop-blur-md ${
                                         compact ? "text-[9px]" : "text-[10px]"

@@ -120,6 +120,25 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     },
   })
 
+  // Funnel stage 2 — record that this visitor reached checkout (fire-and-forget,
+  // once per session per event). The auth cookie (credentials: include) lets the
+  // backend tag the logged-in user; the visitor id matches the view-stage id.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const sessionKey = `checkout-tracked:${event.id}`
+    if (sessionStorage.getItem(sessionKey)) return
+    let visitorId = localStorage.getItem("baatasari-visitor-id") || ""
+    if (!visitorId) {
+      visitorId = crypto.randomUUID()
+      localStorage.setItem("baatasari-visitor-id", visitorId)
+    }
+    sessionStorage.setItem(sessionKey, "1")
+    void apiRequest(`/events/${event.id}/checkout-reached`, {
+      method: "POST",
+      body: JSON.stringify({ visitorId }),
+    }).catch(() => undefined)
+  }, [event.id])
+
   // Reactive form values — derived totals + UI branching depend on these.
   const bookingFor = useWatch({ control, name: "bookingFor" })
   const quantity = useWatch({ control, name: "quantity" })

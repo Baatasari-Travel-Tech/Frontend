@@ -20,6 +20,7 @@ import type {
   SiteConfig,
   UserProfile,
   EventDetail,
+  AdminEventFunnel,
 } from "@/types/api"
 
 // Admin auth is Bearer-token, not refresh-cookie. We funnel every admin
@@ -300,6 +301,10 @@ export type AdminEventPayout = {
 // How much the organizer is owed for an event (manual payout helper).
 export const getAdminEventPayout = (id: string) =>
   requestAdmin<{ payout: AdminEventPayout }>(`/admin/events/${id}/payout`)
+
+// Conversion funnel for an event — counts + who is at each stage (admin only).
+export const getAdminEventFunnel = (id: string) =>
+  requestAdmin<{ funnel: AdminEventFunnel }>(`/admin/events/${id}/funnel`)
 
 // Manual refund of one order. `amount` (rupees) optional — omit for the
 // policy default (full minus retained fees), provide for a partial.

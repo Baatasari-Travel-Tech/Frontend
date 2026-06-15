@@ -58,6 +58,16 @@ export function getEventPhase(
   return { phase: "hidden", sort: endMs }
 }
 
+// True once an event has fully finished (now past the end of its last day).
+// Mirrors getEventPhase's cutoff — used to block checkout for past events.
+export function isEventPast(
+  event: Pick<EventSummary, "date" | "endDate">
+): boolean {
+  const endMs = endOfDayMs(event.endDate ?? event.date)
+  if (Number.isNaN(endMs)) return false
+  return Date.now() > endMs
+}
+
 export function formatCardDate(date: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
