@@ -103,7 +103,7 @@ function EventsPageContent() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="pt-16">
+      <div>
         {eventsQuery.isError ? (
           <section className="flex flex-col items-center justify-center py-32 text-center">
             <h2 className="text-2xl font-semibold text-(--brand-blue)">Unable to load events</h2>

@@ -15,7 +15,7 @@ export default function EventOrganizer() {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       viewport={{ once: true }}
-      className="py-20 bg-(--gray-50)"
+      className="py-20 bg-background overflow-hidden relative"
     >
       <div className="container mx-auto px-4">
         <div className="flex flex-col lg:flex-row items-center gap-12 max-w-6xl mx-auto">
@@ -30,12 +30,12 @@ export default function EventOrganizer() {
           >
             {/* Heading */}
             <h2 className="font-bricolage font-bold text-4xl md:text-5xl tracking-tight text-(--brand-blue) mb-4">
-              Are You an Event Organizer or Local Business?
+              For Event Organizers and Experience Hosts 
             </h2>
 
             <div className="relative w-full mb-8 lg:hidden h-72">
               <Image
-                src="/event-org.png"
+                src="/event.jpeg"
                 alt="Event Organizer Illustration"
                 fill
                 sizes="100vw"
@@ -45,23 +45,13 @@ export default function EventOrganizer() {
 
             {/* Subheading */}
             <p className="font-albert font-medium text-2xl md:text-3xl leading-tight tracking-tight text-(--about-heading-color) mb-6">
-              Reach the right audience – Effortlessly
+              Reach People Who Are Actually Interested
             </p>
 
             {/* Description */}
             <p className="font-albert text-lg leading-relaxed text-(--about-body-text) mb-8">
-              Baatasari isn&apos;t just for explorers.
-              It&apos;s built for creators, organizers, performers, cafes,
-              communities, and experience curators.
-              List your events.
-              Connect with people actively looking for things to
-              do.
-              Manage bookings and visibility – all in one place.
-              No noise.
-              Just meaningful reach.
-              Grow your audience.
-              Fill your events.
-              Build your presence.
+              Promote events, workshops, performances, meetups, and experiences to audiences based on their interests—not just broad advertising.
+               Increase visibility, improve attendance, and manage ticketing in one place. 
             </p>
 
             {/* CTA */}
@@ -69,7 +59,7 @@ export default function EventOrganizer() {
               className="font-albert font-medium text-lg leading-6 text-(--white) bg-brand-900 hover:bg-(--brand-navy)/90 px-8 py-3 rounded-full transition h-auto"
               onClick={() => router.push('/?auth=register&role=organizer')}
             >
-              Join as an Event Organizer
+              List Your Event 
             </Button>
           </motion.div>
 
@@ -83,7 +73,7 @@ export default function EventOrganizer() {
           >
             <div className="relative w-full h-96">
               <Image
-                src="/event-org.png"
+                src="/event.jpeg"
                 alt="Event Organizer Illustration"
                 fill
                 sizes="50vw"

@@ -56,7 +56,7 @@ export default function Performers() {
         </h2>
 
         {/* 3D Carousel Container */}
-        <div className="relative h-117.5 flex items-center justify-center">
+        <div className="relative h-[540px] flex items-center justify-center">
           {PERFORMERS_DATA.map((item, index) => {
             const position = getPosition(index);
             const isActive = position === 0;
@@ -72,40 +72,41 @@ export default function Performers() {
                 }}
                 className={`
                     absolute
-                    w-95 h-105
-                    rounded-[64px] bg-(--white) 
+                    w-[360px] h-[504px]
+                    rounded-[32px] bg-(--background) shadow-xl
                     cursor-pointer
                     transition-all duration-700 ease-out
                     border
+                    flex flex-col overflow-hidden
                     ${isActive
-                    ? "border-(--card-active-border) shadow-[0_25px_60px_rgba(37,99,235,0.35)]"
+                    ? "border-(--brand-blue) shadow-xl"
                     : "border-(--gray-200) shadow-xl"
                   }
                   `}
               >
-                {/* Image */}
-                <div className="relative w-full h-56 rounded-t-2xl overflow-hidden">
+                {/* Image — fills all space above the text */}
+                <div className="relative w-full flex-1 overflow-hidden">
                   <Image
                     src={item.image}
                     alt={item.title}
-                    width={380}
-                    height={240}
-                    className={`w-full h-full object-contain transition-transform duration-1000 ease-out ${isActive ? "scale-105" : "scale-100"}`}
+                    fill
+                    sizes="360px"
+                    className={`object-cover transition-transform duration-1000 ease-out ${isActive ? "scale-105" : "scale-100"}`}
                     onError={(e) => {
                       e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zNWVtIiBmaWxsPSIjOUI5QkE0IiBmb250LXNpemU9IjE0Ij5Ccm9rZW48L3RleHQ+Cjwvc3ZnPg==';
                     }}
                   />
                 </div>
 
-                {/* Content */}
-                <div className="p-6">
+                {/* Content — pinned to the bottom */}
+                <div className="px-6 py-5">
                   {/* Card Title */}
-                  <h3 className="font-albert font-medium text-[24px] leading-8 tracking-[0.0015em] text-(--about-card-text) mb-2">
+                  <h3 className="font-albert font-medium text-[22px] leading-7 tracking-[0.0015em] text-(--about-card-text) mb-1">
                     {item.title}
                   </h3>
 
                   {/* Card Description */}
-                  <p className="font-albert font-normal text-[16px] leading-6 tracking-[0.005em] text-(--about-card-text)">
+                  <p className="font-albert font-normal text-[15px] leading-6 tracking-[0.005em] text-(--about-card-text)">
                     {item.description}
                   </p>
                 </div>

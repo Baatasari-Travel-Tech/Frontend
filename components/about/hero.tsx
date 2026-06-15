@@ -2,12 +2,35 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Hero() {
   const titleText = "Discover the Best Things to Do in Your City!";
 
   return (
-    <section className="hero-section relative min-h-[85vh] flex items-center justify-center px-6 pt-30 pb-20 overflow-hidden">
+    <section className="hero-section relative min-h-[88vh] flex items-center justify-center px-6 pt-30 pb-20 overflow-hidden">
+      {/* Background image — desktop/landscape */}
+      <Image
+        src="/hero-bg.png"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="hidden md:block object-cover object-[center_30%] z-0 pointer-events-none"
+      />
+
+      {/* Background image — mobile/portrait */}
+      <Image
+        src="/hero-bg-mobile.png"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="md:hidden object-cover z-0 pointer-events-none"
+      />
+
+{/* Readability overlay */}
+<div className="absolute inset-0 z-1 bg-background/70 pointer-events-none" />
 
       {/* Film Grain */}
       <div className="absolute inset-0 z-1 opacity-[0.02] pointer-events-none" />

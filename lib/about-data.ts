@@ -12,39 +12,39 @@ export interface Performer {
 
 export const FEATURES_DATA: Feature[] = [
     {
-        title: "Inclusive events in seconds!",
+        title: "Personalized Recommendations for Things You'll Actually Enjoy",
         description:
-            "Discover Real Experiences in Seconds. Not just events or restaurants. But experiences that actually match what you feel like doing.",
-        image: "/e1.png",
+        "Skip generic suggestions and discover experiences tailored to your interests, preferences, and budget. ",
+        image: "/p2.png",
     },
     {
-        title: "Plan your day in minutes",
+        title: "Plan Your Weekend Without Switching Between Apps ",
         description:
-            "From live music and creative workshops to food spots, meetups, fitness sessions, and cultural happenings — Batasari helps you.",
-        image: "/e2.png",
+            "Explore local events, food spots, workshops, and activities happening around you with less searching and more doing.",
+        image: "/plan.png",
     },
     {
-        title: "Beyond travel!",
+        title: "Find Things to Do. Meet People. Explore Your City.",
         description:
-            "No endless searching. No scattered information. Just curated recommendations tailored to you.",
-        image: "/e3.png",
+            "Discover events, communities, restaurants, workshops, and experiences tailored to your interests. ",
+        image: "/last.png",
     },
 ];
 
 export const PERFORMERS_DATA: Performer[] = [
     {
-        title: "Dancers",
+        title: "Anchors",
         description: "Enchant your audience with your energizing moves",
-        image: "/a1.png",
+        image: "/an2.png",
     },
     {
-        title: "Singers",
+        title: "singers",
         description: "Captivate the crowd and let your voice be heard.",
-        image: "/a2.png",
+        image: "/as.png",
     },
     {
-        title: "Artists",
+        title: "Photographers",
         description: "Showcase your creativity and connect with your audience",
-        image: "/a3.png",
+        image: "/av.png",
     },
 ];

@@ -41,12 +41,12 @@ export default function CampusAmbassador() {
             </div>
 
             <p className="font-albert font-medium text-2xl md:text-3xl leading-tight tracking-tight text-(--about-heading-color) mb-6">
-              Lead Events. Build Communities. Create Impact.
+              Lead Events. Build Communities. Create Impact. 
             </p>
 
             <p className="font-albert text-lg leading-relaxed text-(--about-body-text) mb-8">
-              Represent Baatasari on your campus and help students discover events, communities, opportunities, and experiences. Gain leadership experience, certificates,
-              networking opportunities, mentorship, and access to an exclusive ambassador community.
+               Represent Baatasari on your campus and help students discover events, communities, opportunities, and experiences. Gain leadership experience, certificates, 
+               networking opportunities, mentorship, and access to an exclusive ambassador community. 
             </p>
 
             <Button
