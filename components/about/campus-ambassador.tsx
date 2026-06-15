@@ -14,8 +14,8 @@ export default function CampusAmbassador() {
       viewport={{ once: true }}
       className="py-20 bg-background overflow-hidden relative"
     >
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col lg:flex-row items-center lg:items-start gap-12 max-w-6xl mx-auto">
+      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10">
+        <div className="flex flex-col lg:flex-row items-center lg:items-start gap-12 lg:gap-16">
 
           {/* Text Content */}
           <motion.div

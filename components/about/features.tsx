@@ -47,7 +47,7 @@ export default function Features() {
 
   return (
     <section id="features" className="pt-16 pb-24 bg-background overflow-hidden relative">
-      <div className="container mx-auto px-4 relative">
+      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10 relative">
         {/* Section Heading */}
         <h2 className="font-bricolage font-bold text-[54px] leading-16 tracking-[0] text-(--brand-blue) mb-16">
           What makes us stand apart?

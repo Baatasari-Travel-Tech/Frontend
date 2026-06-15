@@ -56,7 +56,7 @@ export default function Hero() {
           duration: 1.2,
           ease: [0.22, 1, 0.36, 1],
         }}
-        className="relative z-10 w-full max-w-6xl text-center"
+        className="relative z-10 w-full max-w-7xl text-center"
       >
 
         {/* Badge */}
