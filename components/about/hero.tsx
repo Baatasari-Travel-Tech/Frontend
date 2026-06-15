@@ -8,7 +8,7 @@ export default function Hero() {
   const titleText = "Discover the Best Things to Do in Your City!";
 
   return (
-    <section className="hero-section relative min-h-[88vh] flex flex-col items-center justify-start px-6 pt-24 pb-20 overflow-hidden">
+    <section className="hero-section relative min-h-[calc(100dvh-72px)] flex flex-col items-center justify-center px-6 py-12 overflow-hidden">
       {/* Background image — desktop/landscape */}
       <Image
         src="/hero-bg.png"
