@@ -91,7 +91,7 @@ export function HandpickedEventCard({
                                 </div>
                             ) : isPast ? (
                                 <div
-                                    className={`absolute left-2 top-2 z-10 rounded-full bg-slate-600 px-2.5 py-1 font-poppins font-bold uppercase tracking-wider text-white ${
+                                    className={`absolute right-2 top-2 z-10 whitespace-nowrap rounded-full bg-slate-600 px-2.5 py-1 font-poppins font-bold uppercase tracking-wider text-white ${
                                         compact ? "text-[9px]" : "text-[10px]"
                                     }`}
                                 >
