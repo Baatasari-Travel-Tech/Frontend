@@ -46,13 +46,13 @@ const schema = z.object({
 type Values = z.infer<typeof schema>
 
 const inputClassName =
-  "mt-2 w-full rounded-xl border border-slate-200 bg-background px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
+  "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
 
 const readOnlyInputClassName =
   "mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-700 shadow-sm"
 
 const textareaClassName =
-  "mt-2 min-h-32 w-full rounded-xl border border-slate-200 bg-background px-4 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
+  "mt-2 min-h-32 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
 
 const stripIndianCode = (value: string | null | undefined) => (value ?? "").replace(/^\+91/, "")
 
@@ -271,7 +271,7 @@ export default function OrganizerProfilePage() {
               </label>
               <label className="block text-sm font-semibold text-slate-700">
                 Personal phone number *
-                <div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-background px-3 py-2.5 shadow-sm focus-within:border-brand-900 focus-within:ring-4 focus-within:ring-brand-900/10">
+                <div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-brand-900 focus-within:ring-4 focus-within:ring-brand-900/10">
                   <span className="text-sm font-semibold text-slate-500">+91</span>
                   <input
                     className="ml-2 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"

@@ -484,19 +484,19 @@ const EventPage: React.FC<EventPageProps> = ({
   return (
     <div
       ref={mainContainerRef}
-      className={`flex flex-col w-full bg-background ${isDashboardMode
+      className={`flex flex-col w-full bg-white ${isDashboardMode
           ? "h-auto overflow-y-visible bg-transparent!"
           : "h-screen overflow-y-auto"
         }`}
     >
       <div className="grow">
         <section
-          className={`flex flex-col items-center gap-13 w-full bg-background min-h-screen ${isDashboardMode ? "bg-transparent! min-h-0!" : ""
+          className={`flex flex-col items-center gap-13 w-full bg-white min-h-screen ${isDashboardMode ? "bg-transparent! min-h-0!" : ""
             }`}
         >
           <div className="flex flex-col items-start gap-13 w-full">
             {!startDirectly && (
-              <section className="flex flex-col items-start justify-center gap-6 py-15 px-25 w-full bg-background max-xl:py-10 max-xl:px-[4vw] max-[700px]:py-6 max-[700px]:px-[2vw] max-[700px]:min-h-0 max-[480px]:py-4 max-[480px]:px-2">
+              <section className="flex flex-col items-start justify-center gap-6 py-15 px-25 w-full bg-white max-xl:py-10 max-xl:px-[4vw] max-[700px]:py-6 max-[700px]:px-[2vw] max-[700px]:min-h-0 max-[480px]:py-4 max-[480px]:px-2">
                 <h1 className="font-semibold text-upcoming-primary-700 text-[52px] leading-[62.4px] m-0 font-[Poppins,Helvetica,sans-serif] max-[900px]:text-[32px] max-[900px]:leading-10 max-[700px]:text-[22px] max-[700px]:leading-7 max-[480px]:text-[32px] max-[480px]:leading-[1.2]">
                   Promote Your Event with Baatasari
                 </h1>
@@ -686,7 +686,7 @@ const EventPage: React.FC<EventPageProps> = ({
       </div>
 
       {showCreateEvent && (
-        <div className="flex justify-center py-2 px-[7%] bg-background">
+        <div className="flex justify-center py-2 px-[7%] bg-white">
           <div className="w-full max-w-200 mt-8 pb-25 max-[480px]:pb-20">
             {submitError ? (
               <p className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{submitError}</p>
@@ -698,7 +698,7 @@ const EventPage: React.FC<EventPageProps> = ({
             <button
               onClick={handlePrevious}
               disabled={currentStep === 1 || isSubmitting}
-              className={`flex items-center gap-2 py-3 px-6 rounded-full border border-border bg-background text-gray-700 cursor-pointer text-base font-medium ${currentStep === 1
+              className={`flex items-center gap-2 py-3 px-6 rounded-full border border-border bg-white text-gray-700 cursor-pointer text-base font-medium ${currentStep === 1
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed invisible"
                   : ""
                 }`}

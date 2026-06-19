@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PERFORMERS_DATA } from "@/lib/about-data";
@@ -10,6 +10,15 @@ import Image from "next/image";
 export default function Performers() {
   const [activeIndex, setActiveIndex] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
+  // Carousel spread — tighter on mobile so side cards peek instead of flying
+  // off-screen (otherwise it reads as a lone card and people scroll past).
+  const [offset, setOffset] = useState(420);
+  useEffect(() => {
+    const update = () => setOffset(window.innerWidth < 640 ? 230 : 420);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const totalCards = PERFORMERS_DATA.length;
 
@@ -48,15 +57,15 @@ export default function Performers() {
   };
 
   return (
-    <section id="performers" className="py-24 bg-background overflow-hidden relative">
+    <section id="performers" className="py-12 md:py-24 bg-background overflow-hidden relative">
       <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10 relative">
         {/* Heading */}
-        <h2 className="font-bricolage font-bold text-[54px] leading-18 tracking-[0] text-(--brand-blue) mb-20">
+        <h2 className="font-bricolage font-bold text-3xl sm:text-4xl md:text-[54px] leading-tight md:leading-18 tracking-[0] text-(--brand-blue) mb-8 md:mb-16">
           Calling All Performers!
         </h2>
 
         {/* 3D Carousel Container */}
-        <div className="relative h-[540px] flex items-center justify-center">
+        <div className="relative h-[440px] sm:h-[500px] md:h-[540px] flex items-center justify-center">
           {PERFORMERS_DATA.map((item, index) => {
             const position = getPosition(index);
             const isActive = position === 0;
@@ -66,13 +75,13 @@ export default function Performers() {
                 key={index}
                 onClick={() => handleCardClick(index)}
                 style={{
-                  transform: `translateX(${position * 420}px) scale(${isActive ? 1 : 0.85})`,
+                  transform: `translateX(${position * offset}px) scale(${isActive ? 1 : 0.85})`,
                   zIndex: isActive ? 30 : 20,
                   opacity: isActive ? 1 : 0.6,
                 }}
                 className={`
                     absolute
-                    w-[360px] h-[504px]
+                    w-[78vw] max-w-[300px] sm:w-[360px] sm:max-w-none h-[400px] sm:h-[470px] md:h-[504px]
                     rounded-[32px] bg-(--background) shadow-xl
                     cursor-pointer
                     transition-all duration-700 ease-out
@@ -116,8 +125,8 @@ export default function Performers() {
         </div>
 
 
-        {/* Navigation Arrows */}
-        <div className="absolute right-6 bottom-24 flex gap-4">
+        {/* Navigation Arrows — centered below on mobile, floating bottom-right on desktop */}
+        <div className="mt-6 flex justify-center gap-4 md:absolute md:right-6 md:bottom-24 md:mt-0">
           <Button
             variant="outline"
             onClick={() => navigate("left")}
@@ -136,9 +145,9 @@ export default function Performers() {
         </div>
 
         {/* CTA */}
-        <div className="flex justify-center mt-20">
+        <div className="flex justify-center mt-8 md:mt-16">
           <Link href="/talent">
-            <Button className="font-albert font-medium text-[18px] leading-6 tracking-[0] text-(--white) px-10 py-4 rounded-full bg-brand-900 hover:bg-(--brand-navy)/90 transition h-auto">
+            <Button className="font-albert font-medium text-base sm:text-[18px] leading-6 tracking-[0] text-(--white) px-8 sm:px-10 py-4 rounded-full bg-brand-900 hover:bg-(--brand-navy)/90 transition h-auto">
               Showcase your Talent
             </Button>
           </Link>

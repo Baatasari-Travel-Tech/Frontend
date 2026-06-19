@@ -60,7 +60,7 @@ export function HandpickedEventCard({
         <Link href={`/events/${id}`} className="group block h-full w-full">
             <Card className="flex h-full flex-col overflow-hidden rounded-3xl border-0 bg-(--white) shadow-sm transition-all duration-300 hover:shadow-md">
                 {/* Cover */}
-                <div className="relative aspect-[3/4] w-full shrink-0 overflow-hidden">
+                <div className="relative aspect-[4/5] w-full shrink-0 overflow-hidden">
                     {image && !errored ? (
                         <Image
                             src={image}
@@ -103,7 +103,7 @@ export function HandpickedEventCard({
                 </div>
 
                 {/* Body */}
-                <CardContent className="flex flex-1 flex-col gap-3 p-4">
+                <CardContent className="flex flex-1 flex-col gap-2 p-3.5">
                     {/* Date · day · time */}
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-(--brand-blue)">
@@ -124,7 +124,7 @@ export function HandpickedEventCard({
                     </div>
 
                     {/* Title */}
-                    <h3 className="font-poppins text-[22px] font-bold leading-tight text-(--brand-navy) line-clamp-2">
+                    <h3 className="font-poppins text-[18px] font-bold leading-tight text-(--brand-navy) line-clamp-2">
                         {title}
                     </h3>
 
@@ -151,18 +151,18 @@ export function HandpickedEventCard({
                     </div>
 
                     {/* Price + arrow */}
-                    <div className="mt-auto flex items-end justify-between border-t border-(--gray-100) pt-3">
+                    <div className="mt-auto flex items-end justify-between border-t border-(--gray-100) pt-2.5">
                         <div>
-                            <p className="text-[11px] font-medium text-(--gray-400)">Starting from</p>
-                            <p className="font-poppins text-[20px] font-bold text-(--brand-navy)">
+                            <p className="text-[10px] font-medium text-(--gray-400)">Starting from</p>
+                            <p className="font-poppins text-[17px] font-bold text-(--brand-navy)">
                                 {priceLabel}
                                 {numericPrice > 0 ? (
-                                    <span className="ml-1 text-[12px] font-medium text-(--gray-400)">onwards</span>
+                                    <span className="ml-1 text-[11px] font-medium text-(--gray-400)">onwards</span>
                                 ) : null}
                             </p>
                         </div>
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--brand-navy) text-white transition group-hover:bg-(--brand-navy)/90">
-                            <ArrowRight className="h-5 w-5" />
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--brand-navy) text-white transition group-hover:bg-(--brand-navy)/90">
+                            <ArrowRight className="h-4 w-4" />
                         </span>
                     </div>
                 </CardContent>

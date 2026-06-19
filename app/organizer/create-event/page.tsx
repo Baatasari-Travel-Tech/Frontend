@@ -301,7 +301,7 @@ function CreateEventContent() {
 
   if (isHydratingEvent) {
     return (
-      <div className="w-full rounded-xl border border-slate-200 bg-background px-5 py-6 text-sm text-slate-600">
+      <div className="w-full rounded-xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-600">
         Loading event details...
       </div>
     )

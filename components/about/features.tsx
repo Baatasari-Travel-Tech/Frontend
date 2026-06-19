@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FEATURES_DATA } from "@/lib/about-data";
@@ -9,6 +9,14 @@ import Image from "next/image";
 export default function Features() {
   const [activeIndex, setActiveIndex] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
+  // Tighter spread on mobile so side cards peek instead of flying off-screen.
+  const [offset, setOffset] = useState(420);
+  useEffect(() => {
+    const update = () => setOffset(window.innerWidth < 640 ? 230 : 420);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const totalCards = FEATURES_DATA.length;
 
@@ -46,15 +54,15 @@ export default function Features() {
   };
 
   return (
-    <section id="features" className="pt-16 pb-24 bg-background overflow-hidden relative">
+    <section id="features" className="pt-10 pb-16 md:pt-16 md:pb-24 bg-background overflow-hidden relative">
       <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10 relative">
         {/* Section Heading */}
-        <h2 className="font-bricolage font-bold text-[54px] leading-16 tracking-[0] text-(--brand-blue) mb-16">
+        <h2 className="font-bricolage font-bold text-3xl sm:text-4xl md:text-[54px] leading-tight md:leading-16 tracking-[0] text-(--brand-blue) mb-8 md:mb-16">
           What makes us stand apart?
         </h2>
 
         {/* 3D Carousel Container */}
-        <div className="relative h-135 flex items-center justify-center">
+        <div className="relative h-[440px] sm:h-[500px] md:h-135 flex items-center justify-center">
           {FEATURES_DATA.map((item, index) => {
             const position = getPosition(index);
             const isActive = position === 0;
@@ -64,13 +72,13 @@ export default function Features() {
                 key={index}
                 onClick={() => handleCardClick(index)}
                 style={{
-                  transform: `translateX(${position * 420}px) scale(${isActive ? 1 : 0.85})`,
+                  transform: `translateX(${position * offset}px) scale(${isActive ? 1 : 0.85})`,
                   zIndex: isActive ? 30 : 20,
                   opacity: isActive ? 1 : 0.6,
                 }}
                 className={`
                     absolute
-                    w-[360px] h-[504px]
+                    w-[78vw] max-w-[300px] sm:w-[360px] sm:max-w-none h-[400px] sm:h-[470px] md:h-[504px]
                     rounded-[32px] bg-(--background) shadow-xl
                     cursor-pointer
                     transition-all duration-700 ease-out
@@ -113,8 +121,8 @@ export default function Features() {
           })}
         </div>
 
-        {/* Arrows */}
-        <div className="absolute right-4 -bottom-8 flex gap-3">
+        {/* Arrows — centered below on mobile, floating bottom-right on desktop */}
+        <div className="mt-6 flex justify-center gap-3 md:absolute md:right-4 md:-bottom-8 md:mt-0">
           <Button
             variant="outline"
             onClick={() => navigate("left")}

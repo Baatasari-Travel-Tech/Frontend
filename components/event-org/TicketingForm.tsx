@@ -266,7 +266,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                       type="text"
                       value={tier.category || ""}
                       onChange={(e) => updateArrayField("audienceCategory", index, "category", e.target.value)}
-                      className={`w-full h-12 px-4 py-3 border rounded-md text-sm text-gray-800 bg-background ${formErrors[`audienceCategory.${index}.category`] ? "border-red-400" : "border-gray-400"}`}
+                      className={`w-full h-12 px-4 py-3 border rounded-md text-sm text-gray-800 bg-white ${formErrors[`audienceCategory.${index}.category`] ? "border-red-400" : "border-gray-400"}`}
                       placeholder="Ex: Gold Pass"
                     />
                     {formErrors[`audienceCategory.${index}.category`] ? (
@@ -299,7 +299,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                           min="1"
                           value={tier.numberOfTickets || ""}
                           onChange={(e) => updateArrayField("audienceCategory", index, "numberOfTickets", e.target.value)}
-                          className={`w-full h-12 px-4 py-3 border rounded-md text-sm text-gray-800 bg-background ${formErrors[`audienceCategory.${index}.numberOfTickets`] ? "border-red-400" : "border-gray-400"}`}
+                          className={`w-full h-12 px-4 py-3 border rounded-md text-sm text-gray-800 bg-white ${formErrors[`audienceCategory.${index}.numberOfTickets`] ? "border-red-400" : "border-gray-400"}`}
                           placeholder="Ex: 100"
                         />
                         {formErrors[`audienceCategory.${index}.numberOfTickets`] ? (
@@ -325,7 +325,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                             step="1"
                             value={tier.price || ""}
                             onChange={(e) => updateArrayField("audienceCategory", index, "price", e.target.value)}
-                            className={`w-full h-12 pl-8 pr-4 py-3 border rounded-md text-sm text-gray-800 bg-background ${formErrors[`audienceCategory.${index}.price`] ? "border-red-400" : "border-gray-400"}`}
+                            className={`w-full h-12 pl-8 pr-4 py-3 border rounded-md text-sm text-gray-800 bg-white ${formErrors[`audienceCategory.${index}.price`] ? "border-red-400" : "border-gray-400"}`}
                             placeholder="Min ₹10"
                           />
                         </div>
@@ -334,7 +334,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                         ) : null}
                       </div>
                     ) : (
-                      <div className="flex-1 h-12 flex items-center px-4 rounded-md border border-dashed border-gray-300 bg-background">
+                      <div className="flex-1 h-12 flex items-center px-4 rounded-md border border-dashed border-gray-300 bg-white">
                         <span className="text-sm text-gray-400 italic">Free ticket — no charge to attendee</span>
                       </div>
                     )}
@@ -385,7 +385,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                     <textarea
                       value={tier.description || ""}
                       onChange={(e) => updateArrayField("audienceCategory", index, "description", e.target.value)}
-                      className={`w-full min-h-20 px-4 py-3 border rounded-md text-sm text-gray-800 bg-background resize-y ${formErrors[`audienceCategory.${index}.description`] ? "border-red-400" : "border-gray-400"}`}
+                      className={`w-full min-h-20 px-4 py-3 border rounded-md text-sm text-gray-800 bg-white resize-y ${formErrors[`audienceCategory.${index}.description`] ? "border-red-400" : "border-gray-400"}`}
                       placeholder="Describe this ticket category"
                     />
                     {formErrors[`audienceCategory.${index}.description`] ? (
@@ -421,7 +421,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                 name="guidelines"
                 value={formData.guidelines || ""}
                 onChange={(e) => setFormData((prev) => ({ ...prev, guidelines: e.target.value }))}
-                className="w-full min-h-28 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-background resize-y"
+                className="w-full min-h-28 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-white resize-y"
                 placeholder="Add entry rules, restrictions, age policy, etc."
               />
               {formErrors.guidelines ? <span className="text-danger-red text-xs">{formErrors.guidelines}</span> : null}
@@ -457,7 +457,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                           addOns: { ...prev.addOns, [option.id]: !active },
                         }))
                       }
-                      className={`px-3 py-2 rounded-full border text-sm ${active ? "bg-blue-soft text-white border-blue-soft" : "bg-background border-gray-200 text-slate-700"}`}
+                      className={`px-3 py-2 rounded-full border text-sm ${active ? "bg-blue-soft text-white border-blue-soft" : "bg-white border-gray-200 text-slate-700"}`}
                     >
                       {option.label}
                     </button>
@@ -475,7 +475,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                         addOns: { ...prev.addOns, giftHampersDescription: e.target.value },
                       }))
                     }
-                    className="w-full min-h-20 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-background resize-y"
+                    className="w-full min-h-20 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-white resize-y"
                     placeholder="Describe gift hampers"
                   />
                   {formErrors["addOns.giftHampersDescription"] ? (
@@ -494,7 +494,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                         addOns: { ...prev.addOns, addOtherDescription: e.target.value },
                       }))
                     }
-                    className="w-full min-h-20 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-background resize-y"
+                    className="w-full min-h-20 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-white resize-y"
                     placeholder="Describe other add-ons"
                   />
                   {formErrors["addOns.addOtherDescription"] ? (
@@ -561,7 +561,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                       className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors duration-150 ${
                         isActive
                           ? "bg-blue-soft text-white border-blue-soft"
-                          : "bg-background border-gray-200 text-slate-700 hover:bg-gray-200"
+                          : "bg-white border-gray-200 text-slate-700 hover:bg-gray-200"
                       }`}
                     >
                       {preset.label}
@@ -581,7 +581,7 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                       className={`px-3 py-1.5 rounded-full border cursor-pointer transition-all duration-200 text-sm font-medium ${
                         active
                           ? "border-blue-soft bg-blue-soft text-white"
-                          : "border-gray-200 bg-background text-slate-700 hover:bg-gray-200"
+                          : "border-gray-200 bg-white text-slate-700 hover:bg-gray-200"
                       }`}
                       onClick={() => handleAudienceSelection(audience)}
                       onKeyDown={(e) => e.key === "Enter" && handleAudienceSelection(audience)}

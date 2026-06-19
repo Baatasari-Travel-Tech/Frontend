@@ -65,7 +65,7 @@ const EventForm: React.FC<EventFormProps> = ({
             <div className="flex flex-col lg:flex-row w-full gap-8 items-start">
               <div className="flex flex-col items-center gap-3 w-full lg:w-auto shrink-0">
                 <label htmlFor="eventPhoto" className="cursor-pointer block w-full max-w-[260px] mx-auto">
-                  <div className={`relative w-full aspect-[2/3] overflow-hidden flex flex-col items-center justify-center gap-2 bg-background rounded-2xl border border-dashed ${formErrors.eventPhoto ? "border-red-400" : "border-gray-400"}`}>
+                  <div className={`relative w-full aspect-[2/3] overflow-hidden flex flex-col items-center justify-center gap-2 bg-white rounded-2xl border border-dashed ${formErrors.eventPhoto ? "border-red-400" : "border-gray-400"}`}>
                     <input
                       id="eventPhoto"
                       type="file"
@@ -108,7 +108,7 @@ const EventForm: React.FC<EventFormProps> = ({
                 <div className="flex w-full flex-wrap gap-6 items-center">
                   <div className="relative w-full flex-1">
                     <input
-                      className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.eventName ? "border-red-400" : "border-ring"}`}
+                      className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.eventName ? "border-red-400" : "border-ring"}`}
                       placeholder="Enter event title"
                       name="eventName"
                       value={formData.eventName}
@@ -120,7 +120,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
                   <div className="relative w-full flex-1">
                     <select
-                      className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.category ? "border-red-400" : "border-ring"}`}
+                      className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.category ? "border-red-400" : "border-ring"}`}
                       name="category"
                       value={formData.category}
                       onChange={handleInputChange}
@@ -143,7 +143,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
                 <div className="relative w-full">
                   <textarea
-                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-background box-border min-h-16 resize-y"
+                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-white box-border min-h-16 resize-y"
                     placeholder='Write a catchy tagline, e.g., "Unleash Your Inner Techie!"'
                     name="tagline"
                     value={formData.tagline}
@@ -155,7 +155,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
                 <div className="relative w-full">
                   <textarea
-                    className={`w-full border rounded px-4 py-2 text-base text-gray-800 bg-background box-border min-h-30 resize-y ${formErrors.description ? "border-red-400" : "border-ring"}`}
+                    className={`w-full border rounded px-4 py-2 text-base text-gray-800 bg-white box-border min-h-30 resize-y ${formErrors.description ? "border-red-400" : "border-ring"}`}
                     placeholder="Describe the event purpose and attendee experience"
                     name="description"
                     value={formData.description}
@@ -167,7 +167,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
                 <div className="relative w-full">
                   <textarea
-                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-background box-border min-h-20 resize-y"
+                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-white box-border min-h-20 resize-y"
                     placeholder="List speakers, MCs, DJs, or custom personnel requirements"
                     name="personnel"
                     value={formData.personnel}
@@ -283,7 +283,7 @@ const EventForm: React.FC<EventFormProps> = ({
                   <input
                     type="text"
                     readOnly
-                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.time ? "border-red-400" : "border-ring"}`}
+                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.time ? "border-red-400" : "border-ring"}`}
                     value={formData.time || ""}
                     onClick={() => setShowStartTimePicker(true)}
                     placeholder="HH:MM AM/PM"
@@ -305,7 +305,7 @@ const EventForm: React.FC<EventFormProps> = ({
                   <input
                     type="text"
                     readOnly
-                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.endTime ? "border-red-400" : "border-ring"}`}
+                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.endTime ? "border-red-400" : "border-ring"}`}
                     value={formData.endTime || ""}
                     onClick={() => setShowEndTimePicker(true)}
                     placeholder="HH:MM AM/PM"
@@ -327,7 +327,7 @@ const EventForm: React.FC<EventFormProps> = ({
               <div className="flex w-full flex-wrap gap-6 items-start">
                 <div className="relative min-w-62.5 flex-[1_1_250px]">
                   <input
-                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.venue ? "border-red-400" : "border-ring"}`}
+                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.venue ? "border-red-400" : "border-ring"}`}
                     placeholder="Enter venue address or name"
                     name="venue"
                     value={formData.venue}
@@ -339,7 +339,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
                 <div className="relative min-w-62.5 flex-[1_1_250px]">
                   <input
-                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14 ${formErrors.googleMapsUrl ? "border-red-400" : "border-ring"}`}
+                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.googleMapsUrl ? "border-red-400" : "border-ring"}`}
                     placeholder="Paste Google Maps URL"
                     name="googleMapsUrl"
                     value={formData.googleMapsUrl}
@@ -353,7 +353,7 @@ const EventForm: React.FC<EventFormProps> = ({
               <div className="flex w-full flex-wrap gap-6 items-start">
                 <div className="relative min-w-62.5 flex-[1_1_250px]">
                   <input
-                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14"
+                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14"
                     placeholder="How attendees can reach the event"
                     name="transportToEvent"
                     value={formData.transportToEvent || ""}
@@ -364,7 +364,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
                 <div className="relative min-w-62.5 flex-[1_1_250px]">
                   <input
-                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-background box-border h-14"
+                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14"
                     placeholder="Entry gate/side details"
                     name="entrySide"
                     value={formData.entrySide || ""}
@@ -395,26 +395,26 @@ const EventForm: React.FC<EventFormProps> = ({
                 ) : (
                   <div className="flex flex-col gap-3">
                     {(formData.timeSlots ?? []).map((slot, index) => (
-                      <div key={index} className="flex flex-wrap items-start gap-3 p-3 rounded-xl border border-ring bg-background">
+                      <div key={index} className="flex flex-wrap items-start gap-3 p-3 rounded-xl border border-ring bg-white">
                         <div className="relative flex-[2_1_160px] min-w-36">
                           <input
-                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-background box-border h-10"
+                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-white box-border h-10"
                             placeholder="Slot name (e.g. Dance)"
                             value={slot.name}
                             onChange={(e) => updateArrayField("timeSlots", index, "name", e.target.value)}
                           />
-                          <span className="absolute -top-2.5 left-2 px-1 bg-background text-muted-foreground text-xs">Name</span>
+                          <span className="absolute -top-2.5 left-2 px-1 bg-white text-muted-foreground text-xs">Name</span>
                         </div>
                         <div className="relative flex-[1_1_120px] min-w-28">
                           <input
                             type="text"
                             readOnly
-                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-background box-border h-10 cursor-pointer pr-8"
+                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-white box-border h-10 cursor-pointer pr-8"
                             value={slot.startTime || ""}
                             onClick={() => setActiveSlotPicker({ index, field: "startTime" })}
                             placeholder="Start time"
                           />
-                          <span className="absolute -top-2.5 left-2 px-1 bg-background text-muted-foreground text-xs">From</span>
+                          <span className="absolute -top-2.5 left-2 px-1 bg-white text-muted-foreground text-xs">From</span>
                           <ClockIcon className="absolute right-2 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
                           {activeSlotPicker?.index === index && activeSlotPicker.field === "startTime" ? (
                             <TimePicker
@@ -428,12 +428,12 @@ const EventForm: React.FC<EventFormProps> = ({
                           <input
                             type="text"
                             readOnly
-                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-background box-border h-10 cursor-pointer pr-8"
+                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-white box-border h-10 cursor-pointer pr-8"
                             value={slot.endTime || ""}
                             onClick={() => setActiveSlotPicker({ index, field: "endTime" })}
                             placeholder="End time"
                           />
-                          <span className="absolute -top-2.5 left-2 px-1 bg-background text-muted-foreground text-xs">To</span>
+                          <span className="absolute -top-2.5 left-2 px-1 bg-white text-muted-foreground text-xs">To</span>
                           <ClockIcon className="absolute right-2 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
                           {activeSlotPicker?.index === index && activeSlotPicker.field === "endTime" ? (
                             <TimePicker
@@ -476,7 +476,7 @@ const EventForm: React.FC<EventFormProps> = ({
               {formData.artists.map((artist, index) => (
                 <div key={index} className="flex items-center gap-3">
                   <input
-                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-background box-border h-12"
+                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-white box-border h-12"
                     placeholder={`Highlight ${index + 1}`}
                     value={artist.name}
                     onChange={(e) => updateArrayField("artists", index, "name", e.target.value)}

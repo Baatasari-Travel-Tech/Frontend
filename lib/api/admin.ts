@@ -162,6 +162,29 @@ export const updateAdminUser = (
 export const getAdminUserDetails = (id: string) =>
   requestAdmin<AdminUserDetailsResponse>(`/admin/users/${id}`)
 
+export type AdminUserLookupResult = {
+  id: string
+  email: string
+  role: string
+  fullName: string | null
+  phone: string | null
+  organizerApproved: boolean
+  deletedAt: string | null
+  anonymized: boolean
+}
+
+// Fetch-details lookup by UID / email / phone.
+export const lookupAdminUsers = (q: string) =>
+  requestAdmin<{ results: AdminUserLookupResult[] }>(
+    `/admin/users/lookup?q=${encodeURIComponent(q)}`,
+  )
+
+// Immediate, irreversible hard delete (anonymizes the user; keeps their events/tickets).
+export const hardDeleteAdminUser = (id: string) =>
+  requestAdmin<{ id: string; anonymized: boolean }>(`/admin/users/${id}/hard-delete`, {
+    method: "POST",
+  })
+
 export const updateAdminUserProfile = (
   id: string,
   payload: Partial<Pick<UserProfile, "fullName" | "phone" | "dob" | "location" | "gender" | "profession">>,

@@ -533,7 +533,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
       <button
         onClick={() => void handleGoogle()}
-        disabled={loading || googleLoading}
+        disabled={loading || googleLoading || !acceptedTerms}
         className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
       >
         {googleLoading ? <InlineSpinner /> : <GoogleIcon />}

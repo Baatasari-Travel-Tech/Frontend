@@ -39,8 +39,10 @@ export default function AdminVerifyPage() {
       router.push(ADMIN_ROUTES.dashboard)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Invalid OTP")
-      // Reset the lastSubmitted gate so the user can retype the same
-      // (or different) code and trigger a fresh attempt.
+      // Wrong code → clear the field and ask for it again. Emptying the input
+      // (length 0) also stops the auto-submit effect from re-firing the same
+      // code in a loop; resetting the gate lets the fresh 6 digits submit.
+      setToken("")
       lastSubmittedRef.current = null
     } finally {
       setLoading(false)

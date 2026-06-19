@@ -56,7 +56,7 @@ export function DateReviewsSection({
     <div className="grid grid-cols-1 gap-8 xl:grid-cols-[520px_1fr] lg:grid-cols-[480px_1fr] w-full">
       {/* Calendar Card */}
       <div className="flex flex-col gap-6 h-full">
-        <div className="border border-border rounded-2xl p-6 md:p-8 bg-background shadow-sm flex flex-col overflow-hidden flex-1">
+        <div className="border border-border rounded-2xl p-6 md:p-8 bg-white shadow-sm flex flex-col overflow-hidden flex-1">
           <h2 className="text-2xl font-bold text-blue-soft mb-6 px-2">Date Change Requests</h2>
           <div className="flex items-center justify-between mb-6 px-2">
             <Button
@@ -108,7 +108,7 @@ export function DateReviewsSection({
                 const data = dateRequests.find((d) => isSameDay(d.date, dateObj))
                 const wrapperClass = data
                   ? "bg-[#dcfce7] text-gray-900 hover:bg-[#bbf7d0]"
-                  : "bg-background text-gray-900"
+                  : "bg-white text-gray-900"
 
                 return (
                   <button

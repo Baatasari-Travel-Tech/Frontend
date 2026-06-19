@@ -105,7 +105,7 @@ export function ArtistRequestsCarousel() {
                         >
                             {ARTIST_REQUESTS.map((item, index) => (
                                 <div key={index} className="w-full shrink-0 px-2">
-                                    <div className="rounded-2xl bg-background border-2 border-(--navy-900) shadow-2xl">
+                                    <div className="rounded-2xl bg-white border-2 border-(--navy-900) shadow-2xl">
                                         <div className="p-4">
                                             <div className="relative w-full h-80 rounded-xl overflow-hidden">
                                                 <Image
@@ -187,7 +187,7 @@ export function ArtistRequestsCarousel() {
                                         opacity: isActive ? 1 : 0.6,
                                     }}
                                     className={`
-                    absolute grid rounded-2xl bg-background overflow-hidden cursor-pointer
+                    absolute grid rounded-2xl bg-white overflow-hidden cursor-pointer
                     transition-[width,transform,opacity,box-shadow] duration-700 ease-out
 
                     ${isExpanded
@@ -202,7 +202,7 @@ export function ArtistRequestsCarousel() {
                   `}
                                 >
                                     <div className="p-4">
-                                        <div className="relative w-full h-90 rounded-xl overflow-hidden bg-background">
+                                        <div className="relative w-full h-90 rounded-xl overflow-hidden bg-white">
                                             <Image
                                                 src={item.image}
                                                 alt={item.title}

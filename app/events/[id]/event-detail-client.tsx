@@ -403,14 +403,14 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             </section>
           ) : null}
 
-          {/* Request a new date (logged-in only) */}
-          {isLoggedIn ? (
-            <section className="rounded-3xl border border-(--gray-200) bg-(--white) p-6 text-center shadow-sm md:p-7">
-              <CalendarPlus className="mx-auto mb-3 h-9 w-9 text-(--brand-blue)" />
-              <h3 className="mb-1 text-base font-bold text-(--brand-navy)">Can&apos;t make it this time?</h3>
-              <p className="mx-auto mb-5 max-w-md text-sm text-(--gray-600)">
-                Let the organizer know which date would work better for you.
-              </p>
+          {/* Request a new date — shown to everyone; guests are prompted to register */}
+          <section className="rounded-3xl border border-(--gray-200) bg-(--white) p-6 text-center shadow-sm md:p-7">
+            <CalendarPlus className="mx-auto mb-3 h-9 w-9 text-(--brand-blue)" />
+            <h3 className="mb-1 text-base font-bold text-(--brand-navy)">Can&apos;t make it this time?</h3>
+            <p className="mx-auto mb-5 max-w-md text-sm text-(--gray-600)">
+              Let the organizer know which date would work better for you.
+            </p>
+            {isLoggedIn ? (
               <Dialog>
                 <DialogTrigger asChild>
                   <Button className="rounded-full bg-(--brand-navy) px-6 text-white hover:bg-(--brand-navy)/90">
@@ -426,8 +426,15 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   </div>
                 </DialogContent>
               </Dialog>
-            </section>
-          ) : null}
+            ) : (
+              <Button
+                onClick={() => openModal("register")}
+                className="rounded-full bg-(--brand-navy) px-6 text-white hover:bg-(--brand-navy)/90"
+              >
+                <CalendarPlus className="mr-2 h-4 w-4" /> Request a New Date
+              </Button>
+            )}
+          </section>
 
           {/* Quick links — Refund · Guidelines · Contact */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

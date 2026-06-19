@@ -95,7 +95,7 @@ const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
               placeholder="Sponsor Name"
               value={sponsor.name}
               onChange={(e) => handleSponsorChange(key, index, "name", e.target.value)}
-              className="w-full p-3 rounded-lg border border-border text-sm outline-none box-border text-gray-800 bg-background"
+              className="w-full p-3 rounded-lg border border-border text-sm outline-none box-border text-gray-800 bg-white"
             />
           </div>
 
@@ -105,7 +105,7 @@ const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
               placeholder="Website (Optional)"
               value={sponsor.website}
               onChange={(e) => handleSponsorChange(key, index, "website", e.target.value)}
-              className="w-full p-3 rounded-lg border border-border text-sm outline-none box-border text-gray-800 bg-background"
+              className="w-full p-3 rounded-lg border border-border text-sm outline-none box-border text-gray-800 bg-white"
             />
           </div>
 

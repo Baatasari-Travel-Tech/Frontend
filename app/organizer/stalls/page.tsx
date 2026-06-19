@@ -230,7 +230,7 @@ export default function EventsPage() {
                         </div>
                     </div>
                 </div>
-                <div className="bg-background z-1 ">
+                <div className="bg-white z-1 ">
                     <section>
                         <div className="mb-8 flex flex-col gap-2">
                             <h2 className="text-3xl font-medium text-(--upcoming-primary-700) font-bricolage">
