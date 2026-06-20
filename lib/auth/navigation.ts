@@ -1,5 +1,4 @@
 import type { AppRole, UserRoleRecord } from "@/app/providers"
-import { ADMIN_ROUTES } from "@/lib/admin/routes"
 import type { SafeUser } from "@/types/api"
 
 export function resolveUserHome(params: {
@@ -11,7 +10,8 @@ export function resolveUserHome(params: {
   const { user, activeRole, organizerVerificationStatus, userRoles = [] } = params
 
   if (!user) return "/"
-  if (user.role === "ADMIN") return ADMIN_ROUTES.dashboard
+  // The web admin portal has moved to a separate app; nothing to route to here.
+  if (user.role === "ADMIN") return "/"
 
   const userReady = user.onboardingStatus === "COMPLETED"
 
