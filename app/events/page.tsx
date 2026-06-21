@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useMemo } from "react"
+import { Suspense, useMemo, useState } from "react"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
@@ -90,6 +90,14 @@ function matchesLocation(event: EventSummary, where: string): boolean {
   return typeof event.venue === "string" && event.venue.toLowerCase().includes(needle)
 }
 
+const STATUS_FILTERS = [
+  { key: "live", label: "Live" },
+  { key: "upcoming", label: "Upcoming" },
+  { key: "past", label: "Completed" },
+] as const
+
+type StatusFilterKey = (typeof STATUS_FILTERS)[number]["key"]
+
 function EventsPageContent() {
   const searchParams = useSearchParams()
   const query = searchParams.get("q") ?? ""
@@ -106,6 +114,7 @@ function EventsPageContent() {
   })
 
   const data = eventsQuery.data
+  const [statusFilter, setStatusFilter] = useState<StatusFilterKey>("live")
 
   const sortedCards = useMemo(() => {
     const filtered = (data ?? []).filter(
@@ -130,6 +139,11 @@ function EventsPageContent() {
       .map((item) => toEventCardData(item.event))
   }, [data, query, category, when, budget, where])
 
+  // TEMP PREVIEW: real events + 20 mock cards. Revert `allCards` to `sortedCards`.
+  const allCards = [...sortedCards, ...TEMP_PREVIEW_CARDS]
+  const visibleCards = allCards.filter((c) => c.status === statusFilter)
+  const gridTitle = `${STATUS_FILTERS.find((f) => f.key === statusFilter)?.label ?? "Live"} Events`
+
   return (
     <main className="min-h-screen bg-background">
       <div>
@@ -143,13 +157,45 @@ function EventsPageContent() {
         ) : (
           <>
             <EventsSearchHero />
-            {/* TEMP PREVIEW: real events + 20 mock cards. Revert to `sortedCards`. */}
-            {TEMP_PREVIEW_CARDS.length > 0 ? (
-              <EventGrid events={[...sortedCards, ...TEMP_PREVIEW_CARDS]} title="All Events" />
+
+            {/* Header row: title + count (left), status filters (right) */}
+            <section className="mx-auto w-full max-w-[1680px] px-4 pt-10 md:px-6 md:pt-12 lg:px-10">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="font-bricolage text-3xl font-bold text-(--brand-blue) md:text-4xl">
+                    {gridTitle}
+                  </h2>
+                  <p className="mt-1 text-sm text-(--gray-500)">
+                    {visibleCards.length} event{visibleCards.length === 1 ? "" : "s"} to explore
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {STATUS_FILTERS.map((f) => {
+                    const active = statusFilter === f.key
+                    return (
+                      <button
+                        key={f.key}
+                        onClick={() => setStatusFilter(f.key)}
+                        className={`rounded-full border px-5 py-2 font-poppins text-sm font-semibold transition ${
+                          active
+                            ? "border-(--brand-navy) bg-(--brand-navy) text-white shadow-md"
+                            : "border-(--gray-200) bg-white text-(--gray-700) hover:border-(--brand-blue) hover:text-(--brand-blue)"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {visibleCards.length > 0 ? (
+              <EventGrid events={visibleCards} title={gridTitle} hideHeader />
             ) : (
               <section className="flex flex-col items-center justify-center py-24 text-center">
-                <h2 className="text-2xl font-semibold text-(--brand-blue)">No events available</h2>
-                <p className="mt-3 text-gray-500">Check back later or pitch an event you want to attend.</p>
+                <h2 className="text-2xl font-semibold text-(--brand-blue)">No events here yet</h2>
+                <p className="mt-3 text-gray-500">Try a different filter or check back later.</p>
               </section>
             )}
           </>

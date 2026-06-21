@@ -10,9 +10,11 @@ interface EventGridProps {
     events: EventData[];
     title?: string;
     pageSize?: number;
+    /** Skip the built-in title/count row (the page renders its own header). */
+    hideHeader?: boolean;
 }
 
-export function EventGrid({ events, title = "Events", pageSize = 12 }: EventGridProps) {
+export function EventGrid({ events, title = "Events", pageSize = 12, hideHeader = false }: EventGridProps) {
     const [visibleCount, setVisibleCount] = useState(Math.min(pageSize, events.length));
     const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -58,25 +60,27 @@ export function EventGrid({ events, title = "Events", pageSize = 12 }: EventGrid
 
     return (
         <section className="mx-auto w-full max-w-[1680px] px-4 py-10 md:px-6 md:py-12 lg:px-10">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="mb-8 flex items-end justify-between gap-4"
-            >
-                <div>
-                    <h2 className="font-bricolage text-3xl font-bold text-(--brand-blue) md:text-4xl">
-                        {title}
-                    </h2>
-                    <p className="mt-1 text-sm text-(--gray-500)">
-                        {events.length} event{events.length === 1 ? "" : "s"} to explore
+            {!hideHeader && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6 }}
+                    className="mb-8 flex items-end justify-between gap-4"
+                >
+                    <div>
+                        <h2 className="font-bricolage text-3xl font-bold text-(--brand-blue) md:text-4xl">
+                            {title}
+                        </h2>
+                        <p className="mt-1 text-sm text-(--gray-500)">
+                            {events.length} event{events.length === 1 ? "" : "s"} to explore
+                        </p>
+                    </div>
+                    <p className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-(--gray-400) md:block">
+                        Showing {visibleEvents.length} / {events.length}
                     </p>
-                </div>
-                <p className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-(--gray-400) md:block">
-                    Showing {visibleEvents.length} / {events.length}
-                </p>
-            </motion.div>
+                </motion.div>
+            )}
 
             <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
                 {visibleEvents.map((event, index) => (

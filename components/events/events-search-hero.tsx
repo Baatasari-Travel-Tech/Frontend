@@ -129,7 +129,7 @@ export function EventsSearchHero() {
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
       </div>
 
-      <div className="mx-auto w-full max-w-[1680px] px-4 pt-10 pb-6 md:px-6 md:pt-16 md:pb-10 lg:px-10">
+      <div className="mx-auto w-full max-w-[1680px] px-4 pt-24 pb-12 md:px-6 md:pt-36 md:pb-16 lg:px-10">
         {/* Title with anime.js stagger */}
         <h1
           ref={titleRef}
@@ -171,8 +171,9 @@ export function EventsSearchHero() {
           </span>
         </motion.p>
 
-        {/* Search bar */}
-        <div ref={searchRef} className="mx-auto mt-10 w-full max-w-5xl opacity-0">
+        {/* Search bar — pushed down so the title/subtitle lead, then the image,
+            then search + categories sit lower in the hero. */}
+        <div ref={searchRef} className="mx-auto mt-20 w-full max-w-5xl opacity-0 md:mt-32">
           <div className="flex flex-col gap-0 rounded-[2rem] border border-(--gray-200) bg-white/85 p-2 shadow-[0_20px_60px_-20px_rgba(12,29,55,0.18)] backdrop-blur-xl md:flex-row md:flex-wrap md:items-stretch md:rounded-3xl lg:flex-nowrap lg:rounded-full">
             {/* Search input */}
             <div className="group flex min-w-0 flex-1 items-center gap-2 rounded-2xl px-4 py-3 transition-colors hover:bg-(--gray-50) md:basis-[calc(50%-1px)] md:gap-3 md:px-5 lg:basis-0 lg:rounded-l-full lg:rounded-r-none lg:border-r lg:border-(--gray-100)">
@@ -292,7 +293,7 @@ export function EventsSearchHero() {
                   setActiveCategory(cat);
                   applyFilters({ category: cat });
                 }}
-                className={`pill flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                className={`pill flex items-center gap-2 rounded-full border px-4 py-2 font-poppins text-sm font-semibold transition-colors ${
                   isActive
                     ? "border-(--brand-navy) bg-(--brand-navy) text-white shadow-md"
                     : "border-(--gray-200) bg-white/80 text-(--gray-700) backdrop-blur-sm hover:border-(--blue-200) hover:text-(--brand-blue)"

@@ -58,9 +58,9 @@ export function HandpickedEventCard({
 
     return (
         <Link href={`/events/${id}`} className="group block h-full w-full">
-            <Card className="flex h-full flex-col overflow-hidden rounded-3xl border-0 bg-(--white) shadow-sm transition-all duration-300 hover:shadow-md">
-                {/* Cover */}
-                <div className="relative aspect-[4/5] w-full shrink-0 overflow-hidden">
+            <Card className="flex h-full flex-col gap-0 overflow-hidden rounded-3xl border-0 bg-(--white) py-0 shadow-sm transition-all duration-300 hover:shadow-md">
+                {/* Cover — fills flush to the rounded top edge (no card padding) */}
+                <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden sm:aspect-[4/5]">
                     {image && !errored ? (
                         <Image
                             src={image}
@@ -103,7 +103,7 @@ export function HandpickedEventCard({
                 </div>
 
                 {/* Body */}
-                <CardContent className="flex flex-1 flex-col gap-2 p-3.5">
+                <CardContent className="flex flex-1 flex-col gap-1.5 p-3">
                     {/* Date · day · time */}
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-(--brand-blue)">
