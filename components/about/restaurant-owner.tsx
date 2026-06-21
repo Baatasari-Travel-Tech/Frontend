@@ -12,7 +12,7 @@ export default function RestaurantOwner() {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       viewport={{ once: true }}
-      className="py-20 bg-background overflow-hidden relative"
+      className="py-20 bg-(--gold-soft-bg) overflow-hidden relative"
     >
       <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10">
         <div className="flex flex-col lg:flex-row-reverse items-center lg:items-start gap-12 lg:gap-16">
@@ -25,9 +25,12 @@ export default function RestaurantOwner() {
             transition={{ duration: 0.6, ease: "easeOut" }}
             viewport={{ once: true }}
           >
+            <p className="font-poppins text-xs font-semibold uppercase tracking-[0.18em] text-(--gold-text) mb-4">
+              For Cafés &amp; Restaurants
+            </p>
             {/* Heading */}
             <h2 className="font-bricolage font-bold text-4xl md:text-5xl tracking-tight text-(--brand-blue) mb-4">
-              Let More People Discover Your Café or Restaurant 
+              Let More People Discover Your Café or Restaurant
             </h2>
 
             <div className="relative w-full mb-8 lg:hidden h-72">
@@ -63,19 +66,19 @@ export default function RestaurantOwner() {
 
           {/* Desktop Image (Hidden on mobile, block on lg) */}
           <motion.div
-            className="lg:w-1/2 w-full hidden lg:block"
+            className="group lg:w-1/2 w-full hidden lg:block"
             initial={{ opacity: 0, x: -40 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
             viewport={{ once: true }}
           >
-            <div className="relative w-full h-96">
+            <div className="relative w-full h-96 overflow-hidden rounded-3xl shadow-[0_30px_60px_-20px_rgba(12,29,55,0.25)]">
               <Image
                 src="/restar.jpeg"
                 alt="Restaurant Owner Illustration"
                 fill
                 sizes="50vw"
-                className="object-cover"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               />
             </div>
           </motion.div>

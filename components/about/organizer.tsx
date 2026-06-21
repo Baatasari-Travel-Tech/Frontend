@@ -28,9 +28,12 @@ export default function EventOrganizer() {
             transition={{ duration: 0.6, ease: "easeOut" }}
             viewport={{ once: true }}
           >
+            <p className="font-poppins text-xs font-semibold uppercase tracking-[0.18em] text-(--gold-text) mb-4">
+              For Organizers
+            </p>
             {/* Heading */}
             <h2 className="font-bricolage font-bold text-4xl md:text-5xl tracking-tight text-(--brand-blue) mb-4">
-              For Event Organizers and Experience Hosts 
+              For Event Organizers and Experience Hosts
             </h2>
 
             <div className="relative w-full mb-8 lg:hidden h-72">
@@ -65,19 +68,19 @@ export default function EventOrganizer() {
 
           {/* Desktop Image (Hidden on mobile, block on lg) */}
           <motion.div
-            className="lg:w-1/2 w-full hidden lg:block"
+            className="group lg:w-1/2 w-full hidden lg:block"
             initial={{ opacity: 0, x: 40 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
             viewport={{ once: true }}
           >
-            <div className="relative w-full h-96">
+            <div className="relative w-full h-96 overflow-hidden rounded-3xl shadow-[0_30px_60px_-20px_rgba(12,29,55,0.25)]">
               <Image
                 src="/event.jpeg"
                 alt="Event Organizer Illustration"
                 fill
                 sizes="50vw"
-                className="object-cover"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               />
             </div>
           </motion.div>

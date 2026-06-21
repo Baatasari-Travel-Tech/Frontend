@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PERFORMERS_DATA } from "@/lib/about-data";
 import Image from "next/image";
 
 export default function Performers() {
+  const reduce = useReducedMotion();
   const [activeIndex, setActiveIndex] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [paused, setPaused] = useState(false);
   // Carousel spread — tighter on mobile so side cards peek instead of flying
   // off-screen (otherwise it reads as a lone card and people scroll past).
   const [offset, setOffset] = useState(420);
@@ -21,6 +24,16 @@ export default function Performers() {
   }, []);
 
   const totalCards = PERFORMERS_DATA.length;
+
+  // Autoplay — offset phase from the Features carousel so they don't tick in
+  // lockstep. Pauses on hover and for reduced motion.
+  useEffect(() => {
+    if (reduce || paused) return;
+    const id = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % totalCards);
+    }, 4600);
+    return () => clearInterval(id);
+  }, [reduce, paused, totalCards]);
 
   const getPosition = (index: number) => {
     let diff = index - activeIndex;
@@ -65,7 +78,11 @@ export default function Performers() {
         </h2>
 
         {/* 3D Carousel Container */}
-        <div className="relative h-[440px] sm:h-[500px] md:h-[540px] flex items-center justify-center">
+        <div
+          className="relative h-[440px] sm:h-[500px] md:h-[540px] flex items-center justify-center"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
           {PERFORMERS_DATA.map((item, index) => {
             const position = getPosition(index);
             const isActive = position === 0;

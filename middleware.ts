@@ -13,7 +13,7 @@ async function isMaintenanceOn(): Promise<boolean> {
   if (cache && now - cache.at < TTL_MS) return cache.value
   try {
     const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? ""
-    const res = await fetch(`${base}/api/v1/admin/site-config`, { cache: "no-store" })
+    const res = await fetch(`${base}/api/v1/site-config`, { cache: "no-store" })
     if (!res.ok) throw new Error(`site-config ${res.status}`)
     const json = (await res.json()) as { data?: { maintenanceMode?: boolean } }
     const value = Boolean(json?.data?.maintenanceMode)

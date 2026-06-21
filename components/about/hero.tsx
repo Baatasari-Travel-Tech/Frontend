@@ -1,142 +1,290 @@
 "use client";
 
-import { motion } from "framer-motion";
+import {
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+  type MotionValue,
+  type Variants,
+} from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import { useRef } from "react";
+import CountUp from "./count-up";
 
-export default function Hero() {
-  const titleText = "Discover the Best Things to Do in Your City!";
+const HEADLINE = ["Discover", "the", "best", "things", "to", "do", "in", "your", "city"];
+
+const STATS = [
+  { to: 500, suffix: "+", label: "Curated events" },
+  { to: 30, suffix: "+", label: "Cities" },
+  { to: 50, suffix: "k+", label: "Experiences booked" },
+];
+
+// Floating 3D-style chips that swoosh in around the headline and bob forever.
+// `depth` drives the mouse-parallax amount (further = moves more).
+const FLOATERS = [
+  { emoji: "🎟️", className: "left-[6%] top-[22%] md:left-[12%]", depth: 38, delay: 0.5 },
+  { emoji: "🎵", className: "right-[8%] top-[18%] md:right-[14%]", depth: 30, delay: 0.65 },
+  { emoji: "📍", className: "left-[10%] bottom-[20%] md:left-[18%]", depth: 26, delay: 0.8 },
+  { emoji: "🎭", className: "right-[9%] bottom-[24%] md:right-[16%]", depth: 44, delay: 0.95 },
+  { emoji: "✨", className: "left-[44%] top-[10%]", depth: 20, delay: 1.1 },
+];
+
+function Floater({
+  emoji,
+  className,
+  depth,
+  delay,
+  mx,
+  my,
+  reduce,
+}: {
+  emoji: string;
+  className: string;
+  depth: number;
+  delay: number;
+  mx: MotionValue<number>;
+  my: MotionValue<number>;
+  reduce: boolean | null;
+}) {
+  const x = useTransform(mx, (v) => v * depth);
+  const y = useTransform(my, (v) => v * depth);
 
   return (
-    <section className="hero-section relative min-h-[calc(100dvh-72px)] flex flex-col items-center justify-center px-6 py-12 overflow-hidden">
-      {/* Background image — desktop/landscape */}
-      <Image
-        src="/hero-bg.png"
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        className="hidden md:block object-cover object-[center_30%] z-0 pointer-events-none"
-      />
-
-      {/* Background image — mobile/portrait */}
-      <Image
-        src="/hero-bg-mobile.png"
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        className="md:hidden object-cover z-0 pointer-events-none"
-      />
-
-{/* Readability overlay */}
-<div className="absolute inset-0 z-1 bg-background/70 pointer-events-none" />
-
-      {/* Film Grain */}
-      <div className="absolute inset-0 z-1 opacity-[0.02] pointer-events-none" />
-
-      {/* Ambient Glow */}
+    <motion.div
+      style={reduce ? undefined : { x, y }}
+      className={`absolute z-[5] hidden md:block pointer-events-none ${className}`}
+      initial={reduce ? false : { opacity: 0, scale: 0.2, rotate: -25 }}
+      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+      transition={{ delay, type: "spring", stiffness: 140, damping: 11 }}
+    >
       <motion.div
-        animate={{
-          rotate: [0, 180, 360],
-          scale: [1, 1.06, 1],
-        }}
-        transition={{
-          duration: 40,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute z-0 inset-0 -top-1/2 -left-1/2 w-[200%] h-[200%] opacity-40 blur-[150px] pointer-events-none"
-      />
-
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: 1.2,
-          ease: [0.22, 1, 0.36, 1],
-        }}
-        className="relative z-10 w-full max-w-7xl text-center"
+        animate={reduce ? undefined : { y: [0, -14, 0] }}
+        transition={
+          reduce
+            ? undefined
+            : { duration: 4 + depth * 0.04, repeat: Infinity, ease: "easeInOut" }
+        }
+        className="grid h-16 w-16 place-items-center rounded-2xl border border-white/60 bg-white/60 text-3xl shadow-[0_12px_30px_-8px_rgba(12,29,55,0.35)] backdrop-blur-md md:h-20 md:w-20 md:text-4xl"
       >
+        {emoji}
+      </motion.div>
+    </motion.div>
+  );
+}
 
-        {/* Badge */}
+export default function Hero() {
+  const reduce = useReducedMotion();
+  const sectionRef = useRef<HTMLElement>(null);
 
-        {/* Title */}
-        <h1 className="hero-title font-bricolage tracking-tight leading-[1.05] text-5xl md:text-7xl lg:text-8xl mb-10">
+  // Scroll parallax — the background drifts/scales and the content lifts away.
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "18%"]);
+  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
+  const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
-          {titleText.split("").map((char, index) => (
-            <motion.span
-              key={index}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{
-                duration: 0.06,
-                delay: index * 0.045,
-                ease: "easeOut",
-              }}
-            >
-              {char}
+  // Mouse parallax for the floating chips (spring-smoothed, normalized -0.5..0.5).
+  const rawX = useMotionValue(0);
+  const rawY = useMotionValue(0);
+  const mx = useSpring(rawX, { stiffness: 60, damping: 18 });
+  const my = useSpring(rawY, { stiffness: 60, damping: 18 });
+
+  const onMove = (e: React.MouseEvent) => {
+    if (reduce) return;
+    const r = sectionRef.current?.getBoundingClientRect();
+    if (!r) return;
+    rawX.set((e.clientX - r.left) / r.width - 0.5);
+    rawY.set((e.clientY - r.top) / r.height - 0.5);
+  };
+
+  const container: Variants = {
+    hidden: {},
+    show: {
+      transition: { staggerChildren: reduce ? 0 : 0.08, delayChildren: 0.15 },
+    },
+  };
+
+  // Words "woosh" up with a springy overshoot + blur clear-in.
+  const word: Variants = {
+    hidden: { opacity: 0, y: reduce ? 0 : 80, filter: reduce ? "none" : "blur(10px)" },
+    show: {
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: reduce
+        ? { duration: 0.2 }
+        : { type: "spring", stiffness: 130, damping: 14 },
+    },
+  };
+
+  const rise: Variants = {
+    hidden: { opacity: 0, y: reduce ? 0 : 24 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+  };
+
+  return (
+    <section
+      ref={sectionRef}
+      onMouseMove={onMove}
+      className="hero-section relative min-h-[calc(100dvh-72px)] flex flex-col items-center justify-center px-6 py-16 overflow-hidden"
+    >
+      {/* Parallax background layer (scroll) wrapping a one-time cinematic settle */}
+      <motion.div
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={reduce ? undefined : { y: bgY, scale: bgScale }}
+      >
+        <motion.div
+          className="absolute inset-0"
+          initial={reduce ? false : { scale: 1.18, opacity: 0, filter: "blur(18px)" }}
+          animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+          transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Image
+            src="/hero-bg.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="hidden md:block object-cover object-[center_30%]"
+          />
+          <Image
+            src="/hero-bg-mobile.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="md:hidden object-cover"
+          />
+        </motion.div>
+      </motion.div>
+
+      {/* Readability overlay — directional warm-cream gradient */}
+      <div
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--background) 78%, transparent) 0%, color-mix(in srgb, var(--background) 60%, transparent) 45%, color-mix(in srgb, var(--background) 88%, transparent) 100%)",
+        }}
+      />
+
+      {/* Soft brand glow */}
+      <div
+        aria-hidden
+        className="absolute z-[1] -top-24 left-1/2 -translate-x-1/2 w-[80vw] max-w-3xl aspect-square rounded-full opacity-50 blur-[120px] pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, color-mix(in srgb, var(--gold) 35%, transparent) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* One-time light streak sweeping across on load (the "swoosh") */}
+      {!reduce && (
+        <motion.div
+          aria-hidden
+          initial={{ x: "-130%" }}
+          animate={{ x: "150%" }}
+          transition={{ duration: 1.2, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-y-0 left-0 z-[2] w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none"
+        />
+      )}
+
+      {/* Floating 3D-style chips */}
+      {FLOATERS.map((f) => (
+        <Floater key={f.emoji} {...f} mx={mx} my={my} reduce={reduce} />
+      ))}
+
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        style={reduce ? undefined : { y: contentY, opacity: contentOpacity }}
+        className="relative z-10 w-full max-w-4xl text-center"
+      >
+        {/* Kicker badge */}
+        <motion.div variants={rise} className="mb-8 flex justify-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-(--gold-bar-border) bg-(--gold-bar-bg)/80 px-4 py-1.5 text-sm font-medium text-(--gold-text) backdrop-blur-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-(--gold) opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-(--gold)" />
+            </span>
+            Curated events, venues &amp; experiences
+          </span>
+        </motion.div>
+
+        {/* Title — springy word-by-word woosh */}
+        <h1 className="hero-title font-bricolage font-bold tracking-tight leading-[1.04] text-5xl md:text-7xl lg:text-[5.5rem] mb-8">
+          {HEADLINE.map((w, i) => (
+            <motion.span key={i} variants={word} className="inline-block mr-[0.25em]">
+              {w === "city" ? (
+                <span className="bg-gradient-to-r from-(--brand-blue) to-(--gold) bg-clip-text text-transparent">
+                  {w}
+                </span>
+              ) : (
+                w
+              )}
             </motion.span>
           ))}
-
-          <motion.span
-            animate={{ opacity: [0, 1, 0] }}
-            transition={{
-              duration: 1.4,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="inline-block w-1 h-10 md:h-16 lg:h-20 ml-2 align-middle"
-            style={{ backgroundColor: "var(--border)" }}
-          />
-
         </h1>
 
         {/* Subtitle */}
         <motion.p
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            delay: 2.2,
-            duration: 1,
-            ease: "easeOut",
-          }}
-          className="hero-description font-poppins font-medium text-lg md:text-2xl leading-relaxed mb-14 max-w-3xl mx-auto"
+          variants={rise}
+          className="hero-description font-poppins font-medium text-lg md:text-2xl leading-relaxed mb-10 max-w-2xl mx-auto"
         >
-           Your city has more to offer than you think.
+          Your city has more to offer than you think.
           <br className="hidden md:block" />
           Start exploring today.
         </motion.p>
 
-        {/* CTA */}
+        {/* CTAs */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{
-            delay: 2.8,
-            duration: 0.6,
-            ease: "easeOut",
-          }}
+          variants={rise}
+          className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-
           <Link
             href="/events"
-            className="hero-button group relative inline-flex items-center justify-center font-poppins font-bold text-lg px-15 py-5 rounded-full transition-all duration-500 hover:scale-[1.04] cursor-pointer overflow-hidden"
+            className="hero-button group relative inline-flex items-center justify-center font-poppins font-bold text-lg px-12 py-4 rounded-full transition-all duration-300 hover:scale-[1.03] hover:shadow-xl cursor-pointer overflow-hidden"
           >
-
-            <span className="relative z-10 flex items-center gap-3">
+            <span className="relative z-10 flex items-center gap-2.5">
               Explore your city
-              <span className="group-hover:translate-x-2 transition-transform duration-300">
-                »
+              <span className="transition-transform duration-300 group-hover:translate-x-1.5">
+                &raquo;
               </span>
             </span>
-
-            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-[120%] group-hover:translate-x-[120%] transition-transform duration-1400 ease-out" />
-
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-[120%] group-hover:translate-x-[120%] transition-transform duration-[1100ms] ease-out" />
           </Link>
 
+          <Link
+            href="/talent"
+            className="font-poppins font-semibold text-lg px-8 py-4 rounded-full border border-(--brand-blue)/30 text-(--brand-navy) transition-all duration-300 hover:border-(--brand-blue) hover:bg-(--brand-navy)/[0.04]"
+          >
+            Showcase your talent
+          </Link>
         </motion.div>
 
+        {/* Trust strip with count-up */}
+        <motion.div
+          variants={rise}
+          className="mt-14 flex items-center justify-center gap-8 sm:gap-12"
+        >
+          {STATS.map((s) => (
+            <div key={s.label} className="text-center">
+              <div className="font-bricolage font-bold text-2xl md:text-3xl text-(--brand-navy)">
+                <CountUp to={s.to} suffix={s.suffix} />
+              </div>
+              <div className="font-poppins text-xs md:text-sm text-(--brand-blue)/70 mt-1">
+                {s.label}
+              </div>
+            </div>
+          ))}
+        </motion.div>
       </motion.div>
     </section>
   );
