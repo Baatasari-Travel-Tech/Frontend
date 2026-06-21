@@ -18,7 +18,6 @@ import {
   X,
 } from 'lucide-react'
 import LoadingScreen from '@/components/loading-screen'
-import { isAdminRoutePath } from '@/lib/admin/routes'
 import { DEFAULT_AVATAR_IMAGE } from '@/lib/avatar'
 import {
   type AppRole, ROLE_LABELS,
@@ -273,7 +272,6 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { open, openModal } = useAuthModal()
-  const isAdminRoute = isAdminRoutePath(pathname)
   const isOrderConfirmed = pathname?.startsWith('/order-confirmed') ?? false
 
   useEffect(() => {
@@ -364,10 +362,6 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
       { label: 'Events', href: '/events' },
       { label: 'Talents', href: '/talent' },
     ]
-
-  if (isAdminRoute) {
-    return <main className="min-h-dvh bg-slate-100">{children}</main>
-  }
 
   // Maintenance page stands alone — no site nav/footer chrome.
   if (pathname === '/maintenance') {

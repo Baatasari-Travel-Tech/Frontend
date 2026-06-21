@@ -7,7 +7,6 @@ import {
   broadcastSessionCleared,
   onSessionCleared,
 } from "@/lib/auth/session-channel"
-import { isAdminRoutePath } from "@/lib/admin/routes"
 import { useAuthStore } from "@/lib/auth/store"
 import { ApiError } from "@/types/api"
 import type {
@@ -322,11 +321,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (typeof window !== "undefined" && isAdminRoutePath(window.location.pathname)) {
-      setBootstrapping(false)
-      return
-    }
-
     void bootstrap()
   }, [bootstrap, setBootstrapping])
 
@@ -336,9 +330,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // UI doesn't lie about being signed in until the next API call 401s.
   useEffect(() => {
     const unsubscribe = onSessionCleared(() => {
-      if (typeof window !== "undefined" && isAdminRoutePath(window.location.pathname)) {
-        return
-      }
       clearSession()
     })
     return unsubscribe

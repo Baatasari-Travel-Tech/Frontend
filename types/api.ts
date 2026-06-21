@@ -267,32 +267,6 @@ export type EventFunnel = {
   stages: EventFunnelStages;
 };
 
-// Admin-only: funnel counts PLUS who is at each stage.
-export type FunnelActor = {
-  visitorId: string;
-  userId: string | null;
-  fullName: string | null;
-  email: string | null;
-  at: string;
-};
-
-export type FunnelBuyer = {
-  userId: string | null;
-  fullName: string | null;
-  email: string | null;
-  tickets: number;
-  amount: number;
-  at: string | null;
-};
-
-export type AdminEventFunnel = {
-  stats: EventFunnelStages;
-  viewers: FunnelActor[];
-  checkouts: FunnelActor[];
-  buyers: FunnelBuyer[];
-};
-
-
 export type OrderBreakdown = {
   subtotal: number;
   taxAmount: number;
@@ -372,53 +346,6 @@ export type TalentProfile = {
   paidAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
-};
-
-export type AdminUserListResponse = {
-  users: Array<
-    SafeUser & {
-      organizationName: string | null;
-    }
-  >;
-  total: number;
-  page: number;
-  limit: number;
-};
-
-export type AdminLoginPayload = {
-  username: string;
-  password: string;
-};
-
-export type AdminVerifyPayload = {
-  token: string;
-  // Pending-2FA session id from /admin/login — binds this TOTP step to the
-  // password step so 2FA is a true second factor.
-  pending: string;
-};
-
-export type AdminDashboardResponse = {
-  message: string;
-  stats: {
-    totalUsers: number;
-    organizerCount: number;
-    pendingOrganizerCount: number;
-  };
-};
-
-export type AdminPendingOrganizerUser = SafeUser & {
-  profile: Record<string, unknown> | null;
-};
-
-export type AdminOrganizerDetailsResponse = {
-  user: SafeUser;
-  userProfile: UserProfile | null;
-  organizerProfile: OrganizerProfile | null;
-};
-
-export type AdminUserDetailsResponse = {
-  user: SafeUser;
-  userProfile: UserProfile | null;
 };
 
 export type SiteConfig = {

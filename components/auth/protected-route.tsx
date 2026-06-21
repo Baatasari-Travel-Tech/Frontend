@@ -9,7 +9,6 @@ type ProtectedRouteProps = {
   children: React.ReactNode
   requireOnboarding?: boolean
   requireOrganizer?: boolean
-  requireAdmin?: boolean
   requireTalentPaid?: boolean
   allowPendingOrganizer?: boolean
 }
@@ -18,7 +17,6 @@ export function ProtectedRoute({
   children,
   requireOnboarding = true,
   requireOrganizer = false,
-  requireAdmin = false,
   requireTalentPaid = false,
   allowPendingOrganizer = false,
 }: ProtectedRouteProps) {
@@ -37,13 +35,6 @@ export function ProtectedRoute({
     }
 
     const hasCompletedOnboarding = profile?.global_onboarding_completed === true
-
-    if (requireAdmin) {
-      if (user.role !== "ADMIN") {
-        router.replace("/403")
-      }
-      return
-    }
 
     if (requireOrganizer) {
       if (user.role !== "ORGANIZER" || activeRole !== "EVENT_ORGANIZER") {
@@ -85,7 +76,6 @@ export function ProtectedRoute({
     organizerVerificationStatus,
     pathname,
     profile?.global_onboarding_completed,
-    requireAdmin,
     allowPendingOrganizer,
     requireOnboarding,
     requireOrganizer,
