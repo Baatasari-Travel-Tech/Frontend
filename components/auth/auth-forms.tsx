@@ -292,6 +292,8 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const selectedRole: 'USER' | 'ORGANIZER' = role === 'organizer' ? 'ORGANIZER' : 'USER'
+  // Minimum age differs by role: attendees 13+, organizers 18+.
+  const minAge = role === 'organizer' ? 18 : 13
 
   const handleRegister = async () => {
     if (!email || !password || !confirm) {
@@ -494,7 +496,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
           className="mt-0.5 h-4 w-4 rounded border-slate-300"
         />
         <span>
-          I am <strong>18 years or older</strong> and agree to the{" "}
+          I am <strong>{minAge} years or older</strong> and agree to the{" "}
           <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-700 underline">
             Terms &amp; Conditions
           </a>{" "}

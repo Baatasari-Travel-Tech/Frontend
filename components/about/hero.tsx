@@ -2,79 +2,16 @@
 
 import {
   motion,
-  useMotionValue,
   useReducedMotion,
   useScroll,
-  useSpring,
   useTransform,
-  type MotionValue,
   type Variants,
 } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useRef } from "react";
-import CountUp from "./count-up";
 
 const HEADLINE = ["Discover", "the", "best", "things", "to", "do", "in", "your", "city"];
-
-const STATS = [
-  { to: 500, suffix: "+", label: "Curated events" },
-  { to: 30, suffix: "+", label: "Cities" },
-  { to: 50, suffix: "k+", label: "Experiences booked" },
-];
-
-// Floating 3D-style chips that swoosh in around the headline and bob forever.
-// `depth` drives the mouse-parallax amount (further = moves more).
-const FLOATERS = [
-  { emoji: "🎟️", className: "left-[6%] top-[22%] md:left-[12%]", depth: 38, delay: 0.5 },
-  { emoji: "🎵", className: "right-[8%] top-[18%] md:right-[14%]", depth: 30, delay: 0.65 },
-  { emoji: "📍", className: "left-[10%] bottom-[20%] md:left-[18%]", depth: 26, delay: 0.8 },
-  { emoji: "🎭", className: "right-[9%] bottom-[24%] md:right-[16%]", depth: 44, delay: 0.95 },
-  { emoji: "✨", className: "left-[44%] top-[10%]", depth: 20, delay: 1.1 },
-];
-
-function Floater({
-  emoji,
-  className,
-  depth,
-  delay,
-  mx,
-  my,
-  reduce,
-}: {
-  emoji: string;
-  className: string;
-  depth: number;
-  delay: number;
-  mx: MotionValue<number>;
-  my: MotionValue<number>;
-  reduce: boolean | null;
-}) {
-  const x = useTransform(mx, (v) => v * depth);
-  const y = useTransform(my, (v) => v * depth);
-
-  return (
-    <motion.div
-      style={reduce ? undefined : { x, y }}
-      className={`absolute z-[5] hidden md:block pointer-events-none ${className}`}
-      initial={reduce ? false : { opacity: 0, scale: 0.2, rotate: -25 }}
-      animate={{ opacity: 1, scale: 1, rotate: 0 }}
-      transition={{ delay, type: "spring", stiffness: 140, damping: 11 }}
-    >
-      <motion.div
-        animate={reduce ? undefined : { y: [0, -14, 0] }}
-        transition={
-          reduce
-            ? undefined
-            : { duration: 4 + depth * 0.04, repeat: Infinity, ease: "easeInOut" }
-        }
-        className="grid h-16 w-16 place-items-center rounded-2xl border border-white/60 bg-white/60 text-3xl shadow-[0_12px_30px_-8px_rgba(12,29,55,0.35)] backdrop-blur-md md:h-20 md:w-20 md:text-4xl"
-      >
-        {emoji}
-      </motion.div>
-    </motion.div>
-  );
-}
 
 export default function Hero() {
   const reduce = useReducedMotion();
@@ -89,20 +26,6 @@ export default function Hero() {
   const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
   const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const contentOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
-
-  // Mouse parallax for the floating chips (spring-smoothed, normalized -0.5..0.5).
-  const rawX = useMotionValue(0);
-  const rawY = useMotionValue(0);
-  const mx = useSpring(rawX, { stiffness: 60, damping: 18 });
-  const my = useSpring(rawY, { stiffness: 60, damping: 18 });
-
-  const onMove = (e: React.MouseEvent) => {
-    if (reduce) return;
-    const r = sectionRef.current?.getBoundingClientRect();
-    if (!r) return;
-    rawX.set((e.clientX - r.left) / r.width - 0.5);
-    rawY.set((e.clientY - r.top) / r.height - 0.5);
-  };
 
   const container: Variants = {
     hidden: {},
@@ -132,7 +55,6 @@ export default function Hero() {
   return (
     <section
       ref={sectionRef}
-      onMouseMove={onMove}
       className="hero-section relative min-h-[calc(100dvh-72px)] flex flex-col items-center justify-center px-6 py-16 overflow-hidden"
     >
       {/* Parallax background layer (scroll) wrapping a one-time cinematic settle */}
@@ -194,11 +116,6 @@ export default function Hero() {
           className="absolute inset-y-0 left-0 z-[2] w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none"
         />
       )}
-
-      {/* Floating 3D-style chips */}
-      {FLOATERS.map((f) => (
-        <Floater key={f.emoji} {...f} mx={mx} my={my} reduce={reduce} />
-      ))}
 
       <motion.div
         variants={container}
@@ -267,23 +184,6 @@ export default function Hero() {
           >
             Showcase your talent
           </Link>
-        </motion.div>
-
-        {/* Trust strip with count-up */}
-        <motion.div
-          variants={rise}
-          className="mt-14 flex items-center justify-center gap-8 sm:gap-12"
-        >
-          {STATS.map((s) => (
-            <div key={s.label} className="text-center">
-              <div className="font-bricolage font-bold text-2xl md:text-3xl text-(--brand-navy)">
-                <CountUp to={s.to} suffix={s.suffix} />
-              </div>
-              <div className="font-poppins text-xs md:text-sm text-(--brand-blue)/70 mt-1">
-                {s.label}
-              </div>
-            </div>
-          ))}
         </motion.div>
       </motion.div>
     </section>

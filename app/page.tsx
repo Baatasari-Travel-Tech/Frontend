@@ -65,14 +65,14 @@ export default function AboutPage() {
         <main className="min-h-screen">
             <Hero />
             <Marquee />
+            <CtaBand />
             <Features />
             <EventOrganizer />
             <RestaurantOwner />
             <CampusAmbassador />
             <Performers />
-            <CtaBand />
             <footer className="text-white border-t border-slate-200 bg-slate-900">
-              <div className="mx-auto w-full max-w-screen-2xl px-4 py-10 sm:px-6 md:px-10 lg:px-16">
+              <div className="mx-auto w-full max-w-[1680px] px-4 py-10 sm:px-6 md:px-10 lg:px-16">
                 <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-x-6 gap-y-8">
 
                   {/* Row 1: Logo */}

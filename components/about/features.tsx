@@ -12,10 +12,16 @@ export default function Features() {
   const [activeIndex, setActiveIndex] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const [paused, setPaused] = useState(false);
-  // Tighter spread on mobile so side cards peek instead of flying off-screen.
+  // Tighter spread on mobile; side cards are hidden there (see card style) so
+  // the active card stands alone instead of crowding under the neighbours.
   const [offset, setOffset] = useState(420);
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const update = () => setOffset(window.innerWidth < 640 ? 230 : 420);
+    const update = () => {
+      const mobile = window.innerWidth < 640;
+      setOffset(mobile ? 280 : 420);
+      setIsMobile(mobile);
+    };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -67,7 +73,7 @@ export default function Features() {
 
   return (
     <section id="features" className="pt-10 pb-16 md:pt-16 md:pb-24 bg-background overflow-hidden relative">
-      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10 relative">
+      <div className="mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-10 relative">
         {/* Section Heading */}
         <h2 className="font-bricolage font-bold text-3xl sm:text-4xl md:text-[54px] leading-tight md:leading-16 tracking-[0] text-(--brand-blue) mb-8 md:mb-16">
           What makes us stand apart?
@@ -90,7 +96,8 @@ export default function Features() {
                 style={{
                   transform: `translateX(${position * offset}px) scale(${isActive ? 1 : 0.85})`,
                   zIndex: isActive ? 30 : 20,
-                  opacity: isActive ? 1 : 0.6,
+                  opacity: isActive ? 1 : isMobile ? 0 : 0.6,
+                  pointerEvents: !isActive && isMobile ? "none" : "auto",
                 }}
                 className={`
                     absolute
@@ -107,8 +114,8 @@ export default function Features() {
                   }
                   `}
               >
-                {/* Image — fills all space above the text */}
-                <div className="relative w-full flex-1 overflow-hidden">
+                {/* Image — framed with a border inset from the card edge */}
+                <div className="relative mx-4 mt-4 flex-1 overflow-hidden rounded-2xl border border-(--gray-200) bg-(--gray-100)">
                   <Image
                     src={item.image}
                     alt={item.title}

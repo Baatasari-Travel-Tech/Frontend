@@ -12,14 +12,14 @@ export default function CampusAmbassador() {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       viewport={{ once: true }}
-      className="py-20 bg-background overflow-hidden relative"
+      className="py-20 lg:py-0 lg:min-h-[88vh] lg:flex lg:items-center bg-background overflow-hidden relative"
     >
-      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10">
+      <div className="mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-10">
         <div className="flex flex-col lg:flex-row items-center lg:items-start gap-12 lg:gap-16">
 
           {/* Text Content */}
           <motion.div
-            className="lg:w-1/2"
+            className="lg:w-1/2 lg:mt-24"
             initial={{ opacity: 0, x: -40 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
@@ -68,7 +68,7 @@ export default function CampusAmbassador() {
             transition={{ duration: 0.6, ease: "easeOut" }}
             viewport={{ once: true }}
           >
-            <div className="relative w-full h-96 overflow-hidden rounded-3xl shadow-[0_30px_60px_-20px_rgba(12,29,55,0.25)]">
+            <div className="relative w-full h-96 lg:h-[34rem] overflow-hidden rounded-3xl shadow-[0_30px_60px_-20px_rgba(12,29,55,0.25)]">
               <Image
                 src="/campus.png"
                 alt="Campus Ambassador Illustration"

@@ -13,11 +13,16 @@ export default function Performers() {
   const [activeIndex, setActiveIndex] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const [paused, setPaused] = useState(false);
-  // Carousel spread — tighter on mobile so side cards peek instead of flying
-  // off-screen (otherwise it reads as a lone card and people scroll past).
+  // Carousel spread — wider on mobile; side cards are hidden there (see card
+  // style) so the active card stands alone instead of crowding its neighbours.
   const [offset, setOffset] = useState(420);
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const update = () => setOffset(window.innerWidth < 640 ? 230 : 420);
+    const update = () => {
+      const mobile = window.innerWidth < 640;
+      setOffset(mobile ? 280 : 420);
+      setIsMobile(mobile);
+    };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -71,7 +76,7 @@ export default function Performers() {
 
   return (
     <section id="performers" className="py-12 md:py-24 bg-background overflow-hidden relative">
-      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10 relative">
+      <div className="mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-10 relative">
         {/* Heading */}
         <h2 className="font-bricolage font-bold text-3xl sm:text-4xl md:text-[54px] leading-tight md:leading-18 tracking-[0] text-(--brand-blue) mb-8 md:mb-16">
           Calling All Performers!
@@ -94,7 +99,8 @@ export default function Performers() {
                 style={{
                   transform: `translateX(${position * offset}px) scale(${isActive ? 1 : 0.85})`,
                   zIndex: isActive ? 30 : 20,
-                  opacity: isActive ? 1 : 0.6,
+                  opacity: isActive ? 1 : isMobile ? 0 : 0.6,
+                  pointerEvents: !isActive && isMobile ? "none" : "auto",
                 }}
                 className={`
                     absolute
