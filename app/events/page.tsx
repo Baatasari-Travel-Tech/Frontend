@@ -11,8 +11,37 @@ import { toEventCardData, getEventPhase } from "@/lib/event-helpers"
 import { eventMatchesCategoryGroup } from "@/lib/event-categories"
 import { apiRequest } from "@/lib/api/client"
 import type { EventSummary } from "@/types/api"
+import type { EventData, EventStatus } from "@/lib/events-data"
 
 const PHASE_ORDER: Record<string, number> = { ongoing: 0, upcoming: 1, recent: 2 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// ⚠️ TEMP PREVIEW — DELETE THIS BLOCK. 20 mock cards to eyeball the grid.
+// Also restore the <EventGrid events=...> prop below back to just `sortedCards`.
+// ──────────────────────────────────────────────────────────────────────────
+const TEMP_PREVIEW_CARDS: EventData[] = Array.from({ length: 20 }, (_, i) => {
+  const images = ["/p2.png", "/plan.png", "/last.png", "/an2.png", "/as.png", "/av.png", "/event.jpeg", "/restar.jpeg", "/campus.png", "/e3.png"]
+  const cats = ["Concert", "Comedy", "Workshop", "Food Fest", "Theatre", "Sports Meet", "Art Expo", "Tech Meetup"]
+  const titles = ["Sunset Soundscapes", "Stand-Up Saturday", "Pottery Workshop", "Street Food Carnival", "Midnight Theatre", "City Marathon", "Modern Art Expo", "Indie Dev Meetup", "Acoustic Evenings", "Comedy Roast Night"]
+  const statuses: EventStatus[] = ["live", "upcoming", "upcoming", "upcoming", "past"]
+  const days = ["FRI", "SAT", "SUN"]
+  const months = ["JAN", "FEB", "MAR", "APR"]
+  const numericPrice = i % 5 === 0 ? 0 : ((i * 173) % 1800) + 150
+  return {
+    id: `preview-${i + 1}`,
+    title: `${titles[i % titles.length]} ${i + 1}`,
+    price: numericPrice ? `₹${numericPrice}` : "Free",
+    numericPrice,
+    category: cats[i % cats.length],
+    image: images[i % images.length],
+    date: `${(i % 27) + 1} ${months[i % months.length]} 2026`,
+    location: "Visakhapatnam",
+    time: `${(i % 8) + 4}:00 PM`,
+    day: days[i % days.length],
+    ageRange: i % 3 === 0 ? "18+" : "All ages",
+    status: statuses[i % statuses.length],
+  }
+})
 
 // Partial, case-insensitive search across the fields a person would type —
 // no need to fill every field; any matching token is enough.
@@ -104,7 +133,9 @@ function EventsPageContent() {
   return (
     <main className="min-h-screen bg-background">
       <div>
-        {eventsQuery.isError ? (
+        {/* TEMP PREVIEW: error state disabled (was `eventsQuery.isError`) so the
+            mock grid shows even when /events fails. Revert to `eventsQuery.isError`. */}
+        {false ? (
           <section className="flex flex-col items-center justify-center py-32 text-center">
             <h2 className="text-2xl font-semibold text-(--brand-blue)">Unable to load events</h2>
             <p className="mt-3 text-gray-500">Please try again in a moment.</p>
@@ -112,8 +143,9 @@ function EventsPageContent() {
         ) : (
           <>
             <EventsSearchHero />
-            {sortedCards.length > 0 ? (
-              <EventGrid events={sortedCards} title="All Events" />
+            {/* TEMP PREVIEW: real events + 20 mock cards. Revert to `sortedCards`. */}
+            {TEMP_PREVIEW_CARDS.length > 0 ? (
+              <EventGrid events={[...sortedCards, ...TEMP_PREVIEW_CARDS]} title="All Events" />
             ) : (
               <section className="flex flex-col items-center justify-center py-24 text-center">
                 <h2 className="text-2xl font-semibold text-(--brand-blue)">No events available</h2>
@@ -125,15 +157,15 @@ function EventsPageContent() {
       </div>
 
       <footer className="border-t border-slate-200 bg-slate-900 text-white">
-        <div className="mx-auto w-full max-w-screen-2xl px-4 py-10 sm:px-6 md:px-10 lg:px-16">
+        <div className="mx-auto w-full max-w-[1680px] px-4 py-10 sm:px-6 md:px-10 lg:px-16">
           <div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-[2fr_1fr_1fr_1fr]">
             <div className="md:col-span-1">
               <Image
                 src="/FLogo.png"
                 alt="Baatasari"
-                width={100}
-                height={40}
-                style={{ width: 'auto', height: 'auto' }}
+                width={132}
+                height={48}
+                className="h-10 w-auto"
               />
             </div>
 

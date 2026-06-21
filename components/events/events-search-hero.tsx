@@ -129,7 +129,7 @@ export function EventsSearchHero() {
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
       </div>
 
-      <div className="mx-auto w-full max-w-[1400px] px-4 pt-10 pb-6 md:px-6 md:pt-16 md:pb-10 lg:px-10">
+      <div className="mx-auto w-full max-w-[1680px] px-4 pt-10 pb-6 md:px-6 md:pt-16 md:pb-10 lg:px-10">
         {/* Title with anime.js stagger */}
         <h1
           ref={titleRef}

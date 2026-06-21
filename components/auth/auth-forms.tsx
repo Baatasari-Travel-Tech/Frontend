@@ -9,7 +9,6 @@ import { useAuthModal } from './auth-modal-context'
 import InlineSpinner from '@/components/ui/inline-spinner'
 import { User, CalendarPlus, Eye, EyeOff } from 'lucide-react'
 import { logAuth, logAuthError } from '@/lib/auth-log'
-import { TermsDialog } from '@/components/common/terms-dialog'
 import { ApiError } from '@/types/api'
 import { supportMailto } from '@/lib/support-mailto'
 
@@ -256,13 +255,11 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
 
         <p className="text-xs">
           By continuing, you agree to our{' '}
-          <TermsDialog>
-            <button type="button" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
-              Terms
-            </button>
-          </TermsDialog>{' '}
+          <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
+            Terms &amp; Conditions
+          </a>{' '}
           and{' '}
-          <a href="/privacy-policy" className="font-semibold text-brand-800">
+          <a href="/privacy-policy" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
             Privacy Policy
           </a>
         </p>
@@ -555,13 +552,11 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
         <p className="text-xs">
           By continuing, you agree to our{' '}
-          <TermsDialog>
-            <button type="button" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
-              Terms
-            </button>
-          </TermsDialog>{' '}
+          <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
+            Terms &amp; Conditions
+          </a>{' '}
           and{' '}
-          <a href="/privacy-policy" className="font-semibold text-brand-800">
+          <a href="/privacy-policy" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
             Privacy Policy
           </a>
         </p>

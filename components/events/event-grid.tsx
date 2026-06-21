@@ -45,7 +45,7 @@ export function EventGrid({ events, title = "Events", pageSize = 12 }: EventGrid
 
     if (events.length === 0) {
         return (
-            <section className="mx-auto w-full max-w-[1400px] px-4 py-16 text-center md:px-6 lg:px-10">
+            <section className="mx-auto w-full max-w-[1680px] px-4 py-16 text-center md:px-6 lg:px-10">
                 <p className="text-lg font-semibold text-(--brand-blue)">
                     No events available right now
                 </p>
@@ -57,7 +57,7 @@ export function EventGrid({ events, title = "Events", pageSize = 12 }: EventGrid
     }
 
     return (
-        <section className="mx-auto w-full max-w-[1400px] px-4 py-10 md:px-6 md:py-12 lg:px-10">
+        <section className="mx-auto w-full max-w-[1680px] px-4 py-10 md:px-6 md:py-12 lg:px-10">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
