@@ -116,14 +116,23 @@ export function EventsSearchHero() {
     <section className="relative isolate flex min-h-[88vh] w-full flex-col justify-center overflow-hidden">
       {/* Ambient backdrop */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        {/* Background image */}
+        {/* Background image — desktop */}
         <Image
           src="/events-hero.png"
           alt=""
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          className="hidden object-cover md:block"
+        />
+        {/* Background image — mobile (purpose-built crop) */}
+        <Image
+          src="/events-hero-mobile.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover md:hidden"
         />
         {/* Cream overlay for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />

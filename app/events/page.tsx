@@ -11,37 +11,8 @@ import { toEventCardData, getEventPhase } from "@/lib/event-helpers"
 import { eventMatchesCategoryGroup } from "@/lib/event-categories"
 import { apiRequest } from "@/lib/api/client"
 import type { EventSummary } from "@/types/api"
-import type { EventData, EventStatus } from "@/lib/events-data"
 
 const PHASE_ORDER: Record<string, number> = { ongoing: 0, upcoming: 1, recent: 2 }
-
-// ──────────────────────────────────────────────────────────────────────────
-// ⚠️ TEMP PREVIEW — DELETE THIS BLOCK. 20 mock cards to eyeball the grid.
-// Also restore the <EventGrid events=...> prop below back to just `sortedCards`.
-// ──────────────────────────────────────────────────────────────────────────
-const TEMP_PREVIEW_CARDS: EventData[] = Array.from({ length: 20 }, (_, i) => {
-  const images = ["/p2.png", "/plan.png", "/last.png", "/an2.png", "/as.png", "/av.png", "/event.jpeg", "/restar.jpeg", "/campus.png", "/e3.png"]
-  const cats = ["Concert", "Comedy", "Workshop", "Food Fest", "Theatre", "Sports Meet", "Art Expo", "Tech Meetup"]
-  const titles = ["Sunset Soundscapes", "Stand-Up Saturday", "Pottery Workshop", "Street Food Carnival", "Midnight Theatre", "City Marathon", "Modern Art Expo", "Indie Dev Meetup", "Acoustic Evenings", "Comedy Roast Night"]
-  const statuses: EventStatus[] = ["live", "upcoming", "upcoming", "upcoming", "past"]
-  const days = ["FRI", "SAT", "SUN"]
-  const months = ["JAN", "FEB", "MAR", "APR"]
-  const numericPrice = i % 5 === 0 ? 0 : ((i * 173) % 1800) + 150
-  return {
-    id: `preview-${i + 1}`,
-    title: `${titles[i % titles.length]} ${i + 1}`,
-    price: numericPrice ? `₹${numericPrice}` : "Free",
-    numericPrice,
-    category: cats[i % cats.length],
-    image: images[i % images.length],
-    date: `${(i % 27) + 1} ${months[i % months.length]} 2026`,
-    location: "Visakhapatnam",
-    time: `${(i % 8) + 4}:00 PM`,
-    day: days[i % days.length],
-    ageRange: i % 3 === 0 ? "18+" : "All ages",
-    status: statuses[i % statuses.length],
-  }
-})
 
 // Partial, case-insensitive search across the fields a person would type —
 // no need to fill every field; any matching token is enough.
@@ -139,17 +110,13 @@ function EventsPageContent() {
       .map((item) => toEventCardData(item.event))
   }, [data, query, category, when, budget, where])
 
-  // TEMP PREVIEW: real events + 20 mock cards. Revert `allCards` to `sortedCards`.
-  const allCards = [...sortedCards, ...TEMP_PREVIEW_CARDS]
-  const visibleCards = allCards.filter((c) => c.status === statusFilter)
+  const visibleCards = sortedCards.filter((c) => c.status === statusFilter)
   const gridTitle = `${STATUS_FILTERS.find((f) => f.key === statusFilter)?.label ?? "Live"} Events`
 
   return (
     <main className="min-h-screen bg-background">
       <div>
-        {/* TEMP PREVIEW: error state disabled (was `eventsQuery.isError`) so the
-            mock grid shows even when /events fails. Revert to `eventsQuery.isError`. */}
-        {false ? (
+        {eventsQuery.isError ? (
           <section className="flex flex-col items-center justify-center py-32 text-center">
             <h2 className="text-2xl font-semibold text-(--brand-blue)">Unable to load events</h2>
             <p className="mt-3 text-gray-500">Please try again in a moment.</p>
