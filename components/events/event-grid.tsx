@@ -82,7 +82,7 @@ export function EventGrid({ events, title = "Events", pageSize = 12, hideHeader 
                 </motion.div>
             )}
 
-            <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid auto-rows-fr grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
                 {visibleEvents.map((event, index) => (
                     <motion.div
                         key={event.id ?? index}
