@@ -77,6 +77,17 @@ const WHAT_YOU_GET = [
   "Verified talent profile & dashboard",
 ] as const
 
+const MAIN_SKILLS: { group: string; options: string[] }[] = [
+  { group: "Hosting & Speaking", options: ["Event Anchor", "Public Speaker"] },
+  { group: "Music", options: ["Singer", "Band", "DJ"] },
+  { group: "Dance", options: ["Dancer", "Choreographer", "Flash Mob Team", "Cultural Performer"] },
+  { group: "Comedy & Variety", options: ["Stand-up Comedian", "Mimicry Artist", "Ventriloquist", "Beatboxer"] },
+  { group: "Art", options: ["Live Painter", "Sketch Artist", "Calligraphy Artist", "Caricature Artist", "Craft Artist", "Face Painter"] },
+  { group: "Photo & Video", options: ["Photographer", "Videographer", "Cinematographer", "Video Editor", "Content Creator"] },
+  { group: "Fashion & Beauty", options: ["Makeup Artist", "Hair Stylist", "Fashion Stylist", "Model", "Fashion Choreographer"] },
+  { group: "Other", options: ["Event Coordinator", "Fitness Trainer"] },
+]
+
 const inputClass =
   "mt-2 w-full rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-3 font-albert text-sm text-(--brand-navy) outline-none transition placeholder:text-(--gray-400) focus:border-(--brand-navy) focus:bg-white focus:ring-4 focus:ring-(--brand-navy)/10"
 
@@ -422,11 +433,16 @@ export default function TalentOnboardingPage() {
                     <div className="grid gap-5 sm:grid-cols-2">
                       <div>
                         <FieldLabel icon={Sparkles}>Main skill</FieldLabel>
-                        <input
-                          className={inputClass}
-                          placeholder="e.g. Singer, Photographer"
-                          {...form.register("mainSkill")}
-                        />
+                        <select className={inputClass} defaultValue="" {...form.register("mainSkill")}>
+                          <option value="" disabled>Select your skill</option>
+                          {MAIN_SKILLS.map((g) => (
+                            <optgroup key={g.group} label={g.group}>
+                              {g.options.map((o) => (
+                                <option key={o} value={o}>{o}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
                         {errors.mainSkill ? (
                           <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.mainSkill.message}</p>
                         ) : null}
@@ -525,7 +541,12 @@ export default function TalentOnboardingPage() {
                           inputMode="numeric"
                           className={`${inputClass} mt-0 pl-8`}
                           placeholder="Enter starting price"
-                          {...form.register("expectedPriceBand")}
+                          value={form.watch("expectedPriceBand")}
+                          onChange={(e) =>
+                            form.setValue("expectedPriceBand", e.target.value.replace(/\D/g, ""), {
+                              shouldValidate: true,
+                            })
+                          }
                         />
                       </div>
                       <p className="mt-1.5 font-albert text-xs text-(--gray-500)">Prices can be discussed later.</p>
