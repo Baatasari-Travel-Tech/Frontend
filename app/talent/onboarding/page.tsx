@@ -1,28 +1,47 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  ArrowRight,
+  Award,
+  Briefcase,
+  CalendarDays,
+  Check,
+  Globe,
+  IndianRupee,
+  Instagram,
+  Link2,
+  Loader2,
+  MapPin,
+  PenLine,
+  ShieldCheck,
+  Sparkles,
+  Tag,
+  User,
+  Youtube,
+} from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { PageShell, SectionCard } from "@/components/platform/page-shell"
 import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
-import { formatCurrency } from "@/lib/format"
 import { loadRazorpayScript } from "@/lib/payments/razorpay"
 
 const schema = z.object({
   stageName: z.string().min(2, "Enter your stage name"),
   mainSkill: z.string().min(2, "Enter your main skill"),
-  experienceLevel: z.string().min(2, "Select your experience level"),
-  yearsOfExperience: z.string().min(1, "Enter your experience"),
-  bio: z.string().min(20, "Tell us a bit more about your work"),
-  preferredSlots: z.string().min(1, "Add at least one preferred slot"),
-  availableFor: z.string().min(1, "Add at least one work type"),
-  location: z.string().min(2, "Enter your location"),
-  expectedPriceBand: z.string().min(1, "Enter your expected price band"),
-  portfolioLinks: z.string().optional(),
+  experienceLevel: z.string().min(2, "Select your professional level"),
+  yearsOfExperience: z.string().min(1, "Select your experience"),
+  bio: z.string().min(20, "Tell us a bit more — at least 20 characters"),
+  preferredSlots: z.string().min(1, "Pick at least one day"),
+  availableFor: z.string().min(1, "Pick at least one work type"),
+  location: z.string().min(2, "Choose your base location"),
+  expectedPriceBand: z.string().min(1, "Enter your starting price"),
+  instagram: z.string().optional(),
+  youtube: z.string().optional(),
+  website: z.string().optional(),
 })
 
 type Values = z.infer<typeof schema>
@@ -34,11 +53,119 @@ type TalentOrderResponse = {
   currency: string
 }
 
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const
+const WORK_TYPES = [
+  "Events",
+  "Cafes",
+  "Restaurants",
+  "Corporate Events",
+  "Pop-ups",
+  "Private Parties",
+] as const
+const EXPERIENCE = ["Less than 1 year", "1–3 years", "3–5 years", "5+ years"] as const
+const LEVELS = ["Beginner", "Intermediate", "Professional", "Expert"] as const
+const CITIES = [
+  "Visakhapatnam, Andhra Pradesh",
+  "Vijayawada, Andhra Pradesh",
+  "Hyderabad, Telangana",
+  "Bengaluru, Karnataka",
+  "Chennai, Tamil Nadu",
+] as const
+
+const inputClass =
+  "mt-2 w-full rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-3 font-albert text-sm text-(--brand-navy) outline-none transition placeholder:text-(--gray-400) focus:border-(--brand-navy) focus:bg-white focus:ring-4 focus:ring-(--brand-navy)/10"
+
+function FieldLabel({
+  icon: Icon,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  children: React.ReactNode
+}) {
+  return (
+    <label className="flex items-center gap-1.5 font-albert text-sm font-semibold text-(--brand-navy)">
+      <Icon className="h-4 w-4 text-(--gold-icon)" />
+      {children}
+    </label>
+  )
+}
+
+function SectionCard({
+  icon: Icon,
+  step,
+  title,
+  hint,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  step: number
+  title: string
+  hint?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-3xl border border-(--gold-bar-border) bg-white/90 p-5 shadow-[0_18px_50px_-32px_rgba(12,29,55,0.4)] backdrop-blur-sm sm:p-7">
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--gold-soft-bg) text-(--gold-icon)">
+          <Icon className="h-5 w-5" />
+        </span>
+        <div className="pt-0.5">
+          <h2 className="font-bricolage text-lg font-bold leading-tight text-(--brand-navy) sm:text-xl">
+            <span className="text-(--gold)">{step}.</span> {title}
+          </h2>
+          {hint ? (
+            <p className="mt-0.5 font-albert text-xs text-(--gray-500) sm:text-sm">{hint}</p>
+          ) : null}
+        </div>
+      </div>
+      <div className="mt-6">{children}</div>
+    </section>
+  )
+}
+
+function Chip({
+  active,
+  onClick,
+  icon: Icon,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  icon?: React.ComponentType<{ className?: string }>
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex items-center justify-between gap-2 rounded-xl border px-3.5 py-3 font-albert text-sm font-semibold transition active:scale-[0.98] ${
+        active
+          ? "border-(--gold) bg-(--gold-soft-bg) text-(--brand-navy) shadow-sm"
+          : "border-(--gold-bar-border) bg-white text-(--gray-600) hover:border-(--gold)/60 hover:text-(--brand-navy)"
+      }`}
+    >
+      <span className="flex items-center gap-2">
+        {Icon ? <Icon className="h-4 w-4 text-(--gold-icon)" /> : null}
+        {children}
+      </span>
+      <span
+        className={`flex h-5 w-5 items-center justify-center rounded-full transition ${
+          active ? "bg-(--gold) text-white" : "border border-(--gold-bar-border)"
+        }`}
+      >
+        {active ? <Check className="h-3 w-3" /> : null}
+      </span>
+    </button>
+  )
+}
+
 export default function TalentOnboardingPage() {
   const router = useRouter()
   const { talentProfile } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -51,7 +178,9 @@ export default function TalentOnboardingPage() {
       availableFor: talentProfile?.availableFor.join(", ") ?? "",
       location: talentProfile?.location ?? "",
       expectedPriceBand: talentProfile?.expectedPriceBand ?? "",
-      portfolioLinks: talentProfile?.portfolioLinks.join(", ") ?? "",
+      instagram: "",
+      youtube: "",
+      website: talentProfile?.portfolioLinks?.[0] ?? "",
     },
   })
 
@@ -66,23 +195,26 @@ export default function TalentOnboardingPage() {
       availableFor: talentProfile?.availableFor.join(", ") ?? "",
       location: talentProfile?.location ?? "",
       expectedPriceBand: talentProfile?.expectedPriceBand ?? "",
-      portfolioLinks: talentProfile?.portfolioLinks.join(", ") ?? "",
+      instagram: "",
+      youtube: "",
+      website: talentProfile?.portfolioLinks?.[0] ?? "",
     })
-  }, [
-    form,
-    talentProfile?.availableFor,
-    talentProfile?.bio,
-    talentProfile?.experienceLevel,
-    talentProfile?.expectedPriceBand,
-    talentProfile?.location,
-    talentProfile?.mainSkill,
-    talentProfile?.portfolioLinks,
-    talentProfile?.preferredSlots,
-    talentProfile?.stageName,
-    talentProfile?.yearsOfExperience,
-  ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [talentProfile])
 
-  const feeLabel = useMemo(() => formatCurrency(249), [])
+  const errors = form.formState.errors
+  const bio = form.watch("bio") ?? ""
+  const slots = (form.watch("preferredSlots") ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+  const work = (form.watch("availableFor") ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+
+  const toggleList = (field: "preferredSlots" | "availableFor", value: string) => {
+    const current =
+      field === "preferredSlots" ? slots : work
+    const next = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value]
+    form.setValue(field, next.join(", "), { shouldValidate: true })
+  }
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null)
@@ -90,18 +222,22 @@ export default function TalentOnboardingPage() {
 
     try {
       const orderId = crypto.randomUUID()
-      const orderResponse = await apiRequest<{ data: { order: TalentOrderResponse } }>("/talent/onboarding/order", {
-        method: "POST",
-        auth: true,
-      })
+      const orderResponse = await apiRequest<{ data: { order: TalentOrderResponse } }>(
+        "/talent/onboarding/order",
+        { method: "POST", auth: true },
+      )
 
       await loadRazorpayScript()
 
       const order = orderResponse.data.order
       const Razorpay = window.Razorpay
       if (!Razorpay) {
-        throw new Error("Razorpay failed to load.")
+        throw new Error("Razorpay failed to load. Please try again.")
       }
+
+      const portfolioLinks = [values.website, values.instagram, values.youtube]
+        .map((item) => item?.trim())
+        .filter((item): item is string => Boolean(item))
 
       const razorpay = new Razorpay({
         key: order.providerKeyId,
@@ -129,122 +265,284 @@ export default function TalentOnboardingPage() {
               experienceLevel: values.experienceLevel,
               yearsOfExperience: values.yearsOfExperience,
               bio: values.bio,
-              preferredSlots: values.preferredSlots.split(",").map((item) => item.trim()).filter(Boolean),
-              availableFor: values.availableFor.split(",").map((item) => item.trim()).filter(Boolean),
+              preferredSlots: values.preferredSlots.split(",").map((i) => i.trim()).filter(Boolean),
+              availableFor: values.availableFor.split(",").map((i) => i.trim()).filter(Boolean),
               location: values.location,
               expectedPriceBand: values.expectedPriceBand,
-              portfolioLinks: values.portfolioLinks?.split(",").map((item) => item.trim()).filter(Boolean) ?? [],
+              portfolioLinks,
             }),
           })
 
-          setSuccess("Talent onboarding completed successfully.")
+          setSuccess("Your talent profile is live. Redirecting to your dashboard.")
           router.push("/talent/dashboard")
         },
       })
 
       razorpay.open()
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Talent onboarding failed.")
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Something went wrong. Please try again.",
+      )
     }
   })
 
+  const submitting = form.formState.isSubmitting
+
   return (
     <ProtectedRoute>
-      <PageShell
-        eyebrow="Talent onboarding"
-        title="Complete your talent setup"
-        description="Fill in your creative profile, then complete the fixed onboarding payment to activate the talent dashboard."
-      >
-        <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <SectionCard title="Profile and payment">
-            <form className="grid gap-5" onSubmit={onSubmit}>
+      <main className="min-h-[calc(100dvh-72px)] bg-(--background)">
+        <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-10 sm:px-6 sm:pt-14">
+          {/* Header */}
+          <div className="mb-8 text-center sm:mb-10">
+            <span className="inline-flex items-center gap-2 rounded-full border border-(--gold-bar-border) bg-(--gold-bar-bg)/80 px-4 py-1.5 font-poppins text-xs font-semibold uppercase tracking-[0.18em] text-(--gold-text)">
+              <Sparkles className="h-3.5 w-3.5" />
+              Talent onboarding
+            </span>
+            <h1 className="mt-4 font-bricolage text-3xl font-bold tracking-tight text-(--brand-navy) sm:text-5xl">
+              Build your talent profile
+            </h1>
+            <p className="mx-auto mt-3 max-w-md font-albert text-sm leading-6 text-(--gray-600) sm:text-base">
+              A few details and a one-time fee — then you&apos;re discoverable by cafés,
+              events and brands across Vizag.
+            </p>
+          </div>
+
+          <form onSubmit={onSubmit} className="grid gap-5">
+            {/* 1 — About */}
+            <SectionCard icon={User} step={1} title="Tell us about yourself">
+              <div className="grid gap-5">
+                <div>
+                  <FieldLabel icon={User}>Stage name</FieldLabel>
+                  <input
+                    className={inputClass}
+                    placeholder="The name you perform under"
+                    {...form.register("stageName")}
+                  />
+                  {errors.stageName ? (
+                    <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.stageName.message}</p>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <FieldLabel icon={Sparkles}>Main skill</FieldLabel>
+                    <input
+                      className={inputClass}
+                      placeholder="e.g. Singer, Photographer"
+                      {...form.register("mainSkill")}
+                    />
+                    {errors.mainSkill ? (
+                      <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.mainSkill.message}</p>
+                    ) : null}
+                  </div>
+                  <div>
+                    <FieldLabel icon={Briefcase}>Experience</FieldLabel>
+                    <select className={inputClass} defaultValue="" {...form.register("yearsOfExperience")}>
+                      <option value="" disabled>Select experience</option>
+                      {EXPERIENCE.map((e) => (
+                        <option key={e} value={e}>{e}</option>
+                      ))}
+                    </select>
+                    {errors.yearsOfExperience ? (
+                      <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.yearsOfExperience.message}</p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div>
+                  <FieldLabel icon={Award}>Professional level</FieldLabel>
+                  <select className={inputClass} defaultValue="" {...form.register("experienceLevel")}>
+                    <option value="" disabled>Select level</option>
+                    {LEVELS.map((l) => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                  </select>
+                  {errors.experienceLevel ? (
+                    <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.experienceLevel.message}</p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <FieldLabel icon={PenLine}>Short bio</FieldLabel>
+                  <p className="mt-1 font-albert text-xs text-(--gray-500)">
+                    Tell us about your journey, style and what makes your work unique.
+                  </p>
+                  <div className="relative">
+                    <textarea
+                      maxLength={500}
+                      className={`${inputClass} min-h-32 resize-none`}
+                      placeholder="Share your story…"
+                      {...form.register("bio")}
+                    />
+                    <span className="pointer-events-none absolute bottom-3 right-4 font-albert text-xs text-(--gray-400)">
+                      {bio.length}/500
+                    </span>
+                  </div>
+                  {errors.bio ? (
+                    <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.bio.message}</p>
+                  ) : null}
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* 2 — Availability */}
+            <SectionCard icon={CalendarDays} step={2} title="Availability" hint="When are you typically available, and for what?">
+              <div className="grid gap-6">
+                <div>
+                  <FieldLabel icon={CalendarDays}>Preferred days</FieldLabel>
+                  <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
+                    {DAYS.map((d) => (
+                      <Chip key={d} active={slots.includes(d)} onClick={() => toggleList("preferredSlots", d)}>
+                        {d}
+                      </Chip>
+                    ))}
+                  </div>
+                  {errors.preferredSlots ? (
+                    <p className="mt-2 font-albert text-xs text-rose-600">{errors.preferredSlots.message}</p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <FieldLabel icon={Tag}>Available for</FieldLabel>
+                  <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                    {WORK_TYPES.map((w) => (
+                      <Chip key={w} active={work.includes(w)} onClick={() => toggleList("availableFor", w)}>
+                        {w}
+                      </Chip>
+                    ))}
+                  </div>
+                  {errors.availableFor ? (
+                    <p className="mt-2 font-albert text-xs text-rose-600">{errors.availableFor.message}</p>
+                  ) : null}
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* 3 — Pricing & location */}
+            <SectionCard icon={IndianRupee} step={3} title="Pricing & base location">
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-medium text-slate-700">Stage name</label>
-                  <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" {...form.register("stageName")} />
-                  <p className="mt-1 text-xs text-rose-600">{form.formState.errors.stageName?.message ?? ""}</p>
+                  <FieldLabel icon={IndianRupee}>Starting price</FieldLabel>
+                  <div className="relative mt-2">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-albert text-sm font-semibold text-(--gold-icon)">₹</span>
+                    <input
+                      inputMode="numeric"
+                      className={`${inputClass} mt-0 pl-8`}
+                      placeholder="Enter starting price"
+                      {...form.register("expectedPriceBand")}
+                    />
+                  </div>
+                  <p className="mt-1.5 font-albert text-xs text-(--gray-500)">Prices can be discussed later.</p>
+                  {errors.expectedPriceBand ? (
+                    <p className="mt-1 font-albert text-xs text-rose-600">{errors.expectedPriceBand.message}</p>
+                  ) : null}
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-700">Main skill</label>
-                  <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" {...form.register("mainSkill")} />
-                  <p className="mt-1 text-xs text-rose-600">{form.formState.errors.mainSkill?.message ?? ""}</p>
+                  <FieldLabel icon={MapPin}>Base location</FieldLabel>
+                  <select className={inputClass} defaultValue="" {...form.register("location")}>
+                    <option value="" disabled>Where are you based?</option>
+                    {CITIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  {errors.location ? (
+                    <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.location.message}</p>
+                  ) : null}
                 </div>
               </div>
+            </SectionCard>
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Experience level</label>
-                  <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" {...form.register("experienceLevel")} />
-                  <p className="mt-1 text-xs text-rose-600">{form.formState.errors.experienceLevel?.message ?? ""}</p>
+            {/* 4 — Portfolio & social */}
+            <SectionCard icon={Link2} step={4} title="Portfolio & social links" hint="Add your work so we can feature you better. (Optional)">
+              <div className="grid gap-4">
+                <div className="flex items-center gap-3 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-2.5 transition focus-within:border-(--brand-navy) focus-within:bg-white">
+                  <Instagram className="h-5 w-5 shrink-0 text-(--gold-icon)" />
+                  <input
+                    className="w-full bg-transparent py-1.5 font-albert text-sm text-(--brand-navy) outline-none placeholder:text-(--gray-400)"
+                    placeholder="Instagram — @yourusername"
+                    {...form.register("instagram")}
+                  />
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Years of experience</label>
-                  <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" {...form.register("yearsOfExperience")} />
-                  <p className="mt-1 text-xs text-rose-600">{form.formState.errors.yearsOfExperience?.message ?? ""}</p>
+                <div className="flex items-center gap-3 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-2.5 transition focus-within:border-(--brand-navy) focus-within:bg-white">
+                  <Youtube className="h-5 w-5 shrink-0 text-(--gold-icon)" />
+                  <input
+                    className="w-full bg-transparent py-1.5 font-albert text-sm text-(--brand-navy) outline-none placeholder:text-(--gray-400)"
+                    placeholder="YouTube channel link"
+                    {...form.register("youtube")}
+                  />
                 </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-slate-700">Bio</label>
-                <textarea className="mt-2 min-h-32 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" {...form.register("bio")} />
-                <p className="mt-1 text-xs text-rose-600">{form.formState.errors.bio?.message ?? ""}</p>
-              </div>
-
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Preferred slots</label>
-                  <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="Evenings, weekends" {...form.register("preferredSlots")} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Available for</label>
-                  <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="Live shows, hosting" {...form.register("availableFor")} />
-                </div>
-              </div>
-
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Location</label>
-                  <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" {...form.register("location")} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Expected price band</label>
-                  <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="INR 5k - 15k" {...form.register("expectedPriceBand")} />
+                <div className="flex items-center gap-3 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-2.5 transition focus-within:border-(--brand-navy) focus-within:bg-white">
+                  <Globe className="h-5 w-5 shrink-0 text-(--gold-icon)" />
+                  <input
+                    className="w-full bg-transparent py-1.5 font-albert text-sm text-(--brand-navy) outline-none placeholder:text-(--gray-400)"
+                    placeholder="Portfolio or website link"
+                    {...form.register("website")}
+                  />
                 </div>
               </div>
+            </SectionCard>
 
-              <div>
-                <label className="text-sm font-medium text-slate-700">Portfolio links</label>
-                <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="Comma-separated URLs" {...form.register("portfolioLinks")} />
-              </div>
+            {/* Status messages */}
+            {error ? (
+              <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 font-albert text-sm text-rose-700">
+                {error}
+              </p>
+            ) : null}
+            {success ? (
+              <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-albert text-sm text-emerald-700">
+                {success}
+              </p>
+            ) : null}
 
-              {error ? <p className="rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
-              {success ? <p className="rounded-[1.25rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p> : null}
+            {/* Sticky pay bar */}
+            <div className="sticky bottom-4 z-20 mt-2">
+              <div className="relative overflow-hidden rounded-3xl border border-(--gold)/30 bg-(--brand-navy) p-4 shadow-[0_24px_60px_-20px_rgba(12,29,55,0.6)] sm:p-5">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-(--gold) to-transparent opacity-70" />
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-(--gold)">
+                      <ShieldCheck className="h-6 w-6" />
+                    </span>
+                    <div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-bricolage text-2xl font-bold text-white">₹249</span>
+                        <span className="font-albert text-xs text-white/55">one-time</span>
+                      </div>
+                      <p className="font-albert text-[11px] leading-4 text-white/60">
+                        Inclusive of all taxes &amp; payment charges
+                      </p>
+                    </div>
+                  </div>
 
-              <button
-                type="submit"
-                disabled={form.formState.isSubmitting}
-                className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                {form.formState.isSubmitting ? "Processing..." : `Pay ${feeLabel} and activate`}
-              </button>
-            </form>
-          </SectionCard>
-
-          <SectionCard title="What happens after payment">
-            <div className="grid gap-3 text-sm leading-6 text-slate-600">
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Payment is collected with Razorpay and only trusted after backend signature verification.
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-(--gold) px-8 font-poppins text-base font-bold text-(--brand-navy) shadow-[0_14px_40px_-10px_rgba(194,150,46,0.8)] transition-all hover:scale-[1.02] hover:shadow-[0_18px_50px_-8px_rgba(194,150,46,0.9)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Processing…
+                      </>
+                    ) : (
+                      <>
+                        Pay ₹249 &amp; submit
+                        <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                Your completed profile becomes the source of truth for the talent dashboard immediately afterward.
-              </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
-                This is a user capability, not a new primary backend role, so your normal user experience remains intact.
-              </div>
+              <p className="mt-3 flex items-center justify-center gap-1.5 font-albert text-xs text-(--gray-500)">
+                <ShieldCheck className="h-3.5 w-3.5 text-(--gold-icon)" />
+                Your profile is reviewed by our curation team before going live.
+              </p>
             </div>
-          </SectionCard>
+          </form>
         </div>
-      </PageShell>
+      </main>
     </ProtectedRoute>
   )
 }
