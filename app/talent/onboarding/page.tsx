@@ -293,9 +293,9 @@ export default function TalentOnboardingPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-[calc(100dvh-72px)] bg-(--background)">
-        <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-10 sm:px-6 sm:pt-14">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-10 sm:px-6 sm:pt-14 lg:pb-16">
           {/* Header */}
-          <div className="mb-8 text-center sm:mb-10">
+          <div className="mb-8 text-center sm:mb-10 lg:text-left">
             <span className="inline-flex items-center gap-2 rounded-full border border-(--gold-bar-border) bg-(--gold-bar-bg)/80 px-4 py-1.5 font-poppins text-xs font-semibold uppercase tracking-[0.18em] text-(--gold-text)">
               <Sparkles className="h-3.5 w-3.5" />
               Talent onboarding
@@ -303,13 +303,15 @@ export default function TalentOnboardingPage() {
             <h1 className="mt-4 font-bricolage text-3xl font-bold tracking-tight text-(--brand-navy) sm:text-5xl">
               Build your talent profile
             </h1>
-            <p className="mx-auto mt-3 max-w-md font-albert text-sm leading-6 text-(--gray-600) sm:text-base">
+            <p className="mx-auto mt-3 max-w-md font-albert text-sm leading-6 text-(--gray-600) sm:text-base lg:mx-0">
               A few details and a one-time fee — then you&apos;re discoverable by cafés,
               events and brands across Vizag.
             </p>
           </div>
 
-          <form onSubmit={onSubmit} className="grid gap-5">
+          <form onSubmit={onSubmit} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+            {/* Left column — form sections */}
+            <div className="grid gap-5">
             {/* 1 — About */}
             <SectionCard icon={User} step={1} title="Tell us about yourself">
               <div className="grid gap-5">
@@ -496,8 +498,8 @@ export default function TalentOnboardingPage() {
               </p>
             ) : null}
 
-            {/* Sticky pay bar */}
-            <div className="sticky bottom-4 z-20 mt-2">
+            {/* Mobile sticky pay bar */}
+            <div className="sticky bottom-4 z-20 mt-2 lg:hidden">
               <div className="relative overflow-hidden rounded-3xl border border-(--gold)/30 bg-(--brand-navy) p-4 shadow-[0_24px_60px_-20px_rgba(12,29,55,0.6)] sm:p-5">
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-(--gold) to-transparent opacity-70" />
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -540,6 +542,62 @@ export default function TalentOnboardingPage() {
                 Your profile is reviewed by our curation team before going live.
               </p>
             </div>
+            </div>
+
+            {/* Right column — desktop checkout summary */}
+            <aside className="hidden lg:block">
+              <div className="relative overflow-hidden rounded-3xl border border-(--gold)/30 bg-(--brand-navy) p-6 shadow-[0_30px_70px_-25px_rgba(12,29,55,0.65)] lg:sticky lg:top-24">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-(--gold) to-transparent opacity-70" />
+                <p className="font-poppins text-[11px] font-semibold uppercase tracking-[0.22em] text-(--gold)">
+                  One-time onboarding
+                </p>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="font-bricolage text-4xl font-bold text-white">₹249</span>
+                  <span className="font-albert text-sm text-white/55">incl. taxes</span>
+                </div>
+                <p className="mt-1 font-albert text-xs text-white/55">
+                  Inclusive of all taxes &amp; payment charges.
+                </p>
+
+                <ul className="mt-6 grid gap-3">
+                  {[
+                    "Discoverable by cafés, events & brands",
+                    "Direct booking requests, no middlemen",
+                    "Verified talent profile & dashboard",
+                  ].map((t) => (
+                    <li key={t} className="flex items-start gap-2.5 font-albert text-sm text-white/80">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-(--gold)/20 text-(--gold)">
+                        <Check className="h-3 w-3" />
+                      </span>
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="group mt-7 inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-(--gold) px-6 font-poppins text-base font-bold text-(--brand-navy) shadow-[0_14px_40px_-10px_rgba(194,150,46,0.8)] transition-all hover:scale-[1.02] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Processing…
+                    </>
+                  ) : (
+                    <>
+                      Pay ₹249 &amp; submit
+                      <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
+                </button>
+
+                <p className="mt-4 flex items-center justify-center gap-1.5 font-albert text-[11px] text-white/55">
+                  <ShieldCheck className="h-3.5 w-3.5 text-(--gold)" />
+                  Reviewed by our curation team before going live.
+                </p>
+              </div>
+            </aside>
           </form>
         </div>
       </main>
