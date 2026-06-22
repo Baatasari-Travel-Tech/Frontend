@@ -97,15 +97,16 @@ function EventsPageContent() {
         matchesLocation(event, where),
     )
 
-    // Live/ongoing first, then upcoming (soonest first), then recently
-    // completed (most recent first); events older than 2 days are dropped.
+    // Live/ongoing first, then upcoming (soonest first), then completed
+    // (most recent first). We keep ALL completed events — old ones included —
+    // so the Completed filter shows the full history, not just the last 2 days.
     return filtered
       .map((event) => ({ event, ...getEventPhase(event) }))
-      .filter((item) => item.phase !== "hidden")
       .sort((a, b) => {
         const order = (PHASE_ORDER[a.phase] ?? 9) - (PHASE_ORDER[b.phase] ?? 9)
         if (order !== 0) return order
-        return a.phase === "recent" ? b.sort - a.sort : a.sort - b.sort
+        const isPast = a.phase === "recent" || a.phase === "hidden"
+        return isPast ? b.sort - a.sort : a.sort - b.sort
       })
       .map((item) => toEventCardData(item.event))
   }, [data, query, category, when, budget, where])
