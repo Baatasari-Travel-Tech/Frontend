@@ -71,6 +71,11 @@ const CITIES = [
   "Bengaluru, Karnataka",
   "Chennai, Tamil Nadu",
 ] as const
+const WHAT_YOU_GET = [
+  "Discoverable by cafés, events & brands",
+  "Direct booking requests, no middlemen",
+  "Verified talent profile & dashboard",
+] as const
 
 const inputClass =
   "mt-2 w-full rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-3 font-albert text-sm text-(--brand-navy) outline-none transition placeholder:text-(--gray-400) focus:border-(--brand-navy) focus:bg-white focus:ring-4 focus:ring-(--brand-navy)/10"
@@ -126,12 +131,10 @@ function SectionCard({
 function Chip({
   active,
   onClick,
-  icon: Icon,
   children,
 }: {
   active: boolean
   onClick: () => void
-  icon?: React.ComponentType<{ className?: string }>
   children: React.ReactNode
 }) {
   return (
@@ -145,12 +148,9 @@ function Chip({
           : "border-(--gold-bar-border) bg-white text-(--gray-600) hover:border-(--gold)/60 hover:text-(--brand-navy)"
       }`}
     >
-      <span className="flex items-center gap-2">
-        {Icon ? <Icon className="h-4 w-4 text-(--gold-icon)" /> : null}
-        {children}
-      </span>
+      {children}
       <span
-        className={`flex h-5 w-5 items-center justify-center rounded-full transition ${
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition ${
           active ? "bg-(--gold) text-white" : "border border-(--gold-bar-border)"
         }`}
       >
@@ -208,8 +208,7 @@ export default function TalentOnboardingPage() {
   const work = (form.watch("availableFor") ?? "").split(",").map((s) => s.trim()).filter(Boolean)
 
   const toggleList = (field: "preferredSlots" | "availableFor", value: string) => {
-    const current =
-      field === "preferredSlots" ? slots : work
+    const current = field === "preferredSlots" ? slots : work
     const next = current.includes(value)
       ? current.filter((v) => v !== value)
       : [...current, value]
@@ -292,236 +291,78 @@ export default function TalentOnboardingPage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-[calc(100dvh-72px)] bg-(--background)">
-        <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-10 sm:px-6 sm:pt-14 lg:pb-16">
-          {/* Header */}
-          <div className="mb-8 text-center sm:mb-10 lg:text-left">
-            <span className="inline-flex items-center gap-2 rounded-full border border-(--gold-bar-border) bg-(--gold-bar-bg)/80 px-4 py-1.5 font-poppins text-xs font-semibold uppercase tracking-[0.18em] text-(--gold-text)">
-              <Sparkles className="h-3.5 w-3.5" />
-              Talent onboarding
-            </span>
-            <h1 className="mt-4 font-bricolage text-3xl font-bold tracking-tight text-(--brand-navy) sm:text-5xl">
-              Build your talent profile
-            </h1>
-            <p className="mx-auto mt-3 max-w-md font-albert text-sm leading-6 text-(--gray-600) sm:text-base lg:mx-0">
-              A few details and a one-time fee — then you&apos;re discoverable by cafés,
-              events and brands across Vizag.
-            </p>
-          </div>
+      <main className="bg-(--background)">
+        <form
+          onSubmit={onSubmit}
+          className="lg:grid lg:min-h-[calc(100dvh-72px)] lg:grid-cols-[23rem_minmax(0,1fr)] xl:grid-cols-[27rem_minmax(0,1fr)]"
+        >
+          {/* ===================== Desktop context / checkout rail ===================== */}
+          <aside className="relative hidden overflow-hidden bg-(--brand-navy) lg:sticky lg:top-[72px] lg:flex lg:h-[calc(100dvh-72px)] lg:flex-col">
+            {/* dot-grid texture */}
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-[0.15]"
+              style={{
+                backgroundImage:
+                  "radial-gradient(color-mix(in srgb, var(--gold) 55%, transparent) 1px, transparent 1px)",
+                backgroundSize: "22px 22px",
+                maskImage: "radial-gradient(ellipse 75% 60% at 30% 35%, black 20%, transparent 75%)",
+                WebkitMaskImage: "radial-gradient(ellipse 75% 60% at 30% 35%, black 20%, transparent 75%)",
+              }}
+            />
+            {/* warm glow */}
+            <div
+              aria-hidden
+              className="absolute -left-1/4 top-1/4 h-96 w-96 rounded-full opacity-40 blur-[120px]"
+              style={{
+                background:
+                  "radial-gradient(circle, color-mix(in srgb, var(--gold) 55%, transparent) 0%, transparent 70%)",
+              }}
+            />
+            {/* gold hairline on the seam */}
+            <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-(--gold)/50 to-transparent" />
 
-          <form onSubmit={onSubmit} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-            {/* Left column — form sections */}
-            <div className="grid gap-5">
-            {/* 1 — About */}
-            <SectionCard icon={User} step={1} title="Tell us about yourself">
-              <div className="grid gap-5">
-                <div>
-                  <FieldLabel icon={User}>Stage name</FieldLabel>
-                  <input
-                    className={inputClass}
-                    placeholder="The name you perform under"
-                    {...form.register("stageName")}
-                  />
-                  {errors.stageName ? (
-                    <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.stageName.message}</p>
-                  ) : null}
-                </div>
+            <div className="relative z-10 flex h-full flex-col overflow-y-auto p-10 xl:p-12">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 font-poppins text-[11px] font-semibold uppercase tracking-[0.18em] text-(--gold)">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Talent onboarding
+                </span>
+                <h1 className="mt-7 font-bricolage text-4xl font-bold leading-[1.04] text-white xl:text-5xl">
+                  Build your
+                  <br />
+                  talent profile
+                </h1>
+                <p className="mt-4 max-w-xs font-albert text-sm leading-6 text-white/60">
+                  A few details and a one-time fee — then cafés, events and brands across
+                  Vizag can discover and book you.
+                </p>
+              </div>
 
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <div>
-                    <FieldLabel icon={Sparkles}>Main skill</FieldLabel>
-                    <input
-                      className={inputClass}
-                      placeholder="e.g. Singer, Photographer"
-                      {...form.register("mainSkill")}
-                    />
-                    {errors.mainSkill ? (
-                      <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.mainSkill.message}</p>
-                    ) : null}
+              <div className="mt-auto space-y-7 pt-12">
+                <ul className="space-y-3.5">
+                  {WHAT_YOU_GET.map((t) => (
+                    <li key={t} className="flex items-start gap-3 font-albert text-sm text-white/80">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-(--gold)/20 text-(--gold)">
+                        <Check className="h-3 w-3" />
+                      </span>
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-5 backdrop-blur">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-bricolage text-3xl font-bold text-white">₹249</span>
+                    <span className="font-albert text-xs text-white/55">one-time</span>
                   </div>
-                  <div>
-                    <FieldLabel icon={Briefcase}>Experience</FieldLabel>
-                    <select className={inputClass} defaultValue="" {...form.register("yearsOfExperience")}>
-                      <option value="" disabled>Select experience</option>
-                      {EXPERIENCE.map((e) => (
-                        <option key={e} value={e}>{e}</option>
-                      ))}
-                    </select>
-                    {errors.yearsOfExperience ? (
-                      <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.yearsOfExperience.message}</p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div>
-                  <FieldLabel icon={Award}>Professional level</FieldLabel>
-                  <select className={inputClass} defaultValue="" {...form.register("experienceLevel")}>
-                    <option value="" disabled>Select level</option>
-                    {LEVELS.map((l) => (
-                      <option key={l} value={l}>{l}</option>
-                    ))}
-                  </select>
-                  {errors.experienceLevel ? (
-                    <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.experienceLevel.message}</p>
-                  ) : null}
-                </div>
-
-                <div>
-                  <FieldLabel icon={PenLine}>Short bio</FieldLabel>
-                  <p className="mt-1 font-albert text-xs text-(--gray-500)">
-                    Tell us about your journey, style and what makes your work unique.
+                  <p className="mt-1 font-albert text-[11px] leading-4 text-white/55">
+                    Inclusive of all taxes &amp; payment charges
                   </p>
-                  <div className="relative">
-                    <textarea
-                      maxLength={500}
-                      className={`${inputClass} min-h-32 resize-none`}
-                      placeholder="Share your story…"
-                      {...form.register("bio")}
-                    />
-                    <span className="pointer-events-none absolute bottom-3 right-4 font-albert text-xs text-(--gray-400)">
-                      {bio.length}/500
-                    </span>
-                  </div>
-                  {errors.bio ? (
-                    <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.bio.message}</p>
-                  ) : null}
-                </div>
-              </div>
-            </SectionCard>
-
-            {/* 2 — Availability */}
-            <SectionCard icon={CalendarDays} step={2} title="Availability" hint="When are you typically available, and for what?">
-              <div className="grid gap-6">
-                <div>
-                  <FieldLabel icon={CalendarDays}>Preferred days</FieldLabel>
-                  <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
-                    {DAYS.map((d) => (
-                      <Chip key={d} active={slots.includes(d)} onClick={() => toggleList("preferredSlots", d)}>
-                        {d}
-                      </Chip>
-                    ))}
-                  </div>
-                  {errors.preferredSlots ? (
-                    <p className="mt-2 font-albert text-xs text-rose-600">{errors.preferredSlots.message}</p>
-                  ) : null}
-                </div>
-
-                <div>
-                  <FieldLabel icon={Tag}>Available for</FieldLabel>
-                  <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                    {WORK_TYPES.map((w) => (
-                      <Chip key={w} active={work.includes(w)} onClick={() => toggleList("availableFor", w)}>
-                        {w}
-                      </Chip>
-                    ))}
-                  </div>
-                  {errors.availableFor ? (
-                    <p className="mt-2 font-albert text-xs text-rose-600">{errors.availableFor.message}</p>
-                  ) : null}
-                </div>
-              </div>
-            </SectionCard>
-
-            {/* 3 — Pricing & location */}
-            <SectionCard icon={IndianRupee} step={3} title="Pricing & base location">
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <FieldLabel icon={IndianRupee}>Starting price</FieldLabel>
-                  <div className="relative mt-2">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-albert text-sm font-semibold text-(--gold-icon)">₹</span>
-                    <input
-                      inputMode="numeric"
-                      className={`${inputClass} mt-0 pl-8`}
-                      placeholder="Enter starting price"
-                      {...form.register("expectedPriceBand")}
-                    />
-                  </div>
-                  <p className="mt-1.5 font-albert text-xs text-(--gray-500)">Prices can be discussed later.</p>
-                  {errors.expectedPriceBand ? (
-                    <p className="mt-1 font-albert text-xs text-rose-600">{errors.expectedPriceBand.message}</p>
-                  ) : null}
-                </div>
-                <div>
-                  <FieldLabel icon={MapPin}>Base location</FieldLabel>
-                  <select className={inputClass} defaultValue="" {...form.register("location")}>
-                    <option value="" disabled>Where are you based?</option>
-                    {CITIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  {errors.location ? (
-                    <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.location.message}</p>
-                  ) : null}
-                </div>
-              </div>
-            </SectionCard>
-
-            {/* 4 — Portfolio & social */}
-            <SectionCard icon={Link2} step={4} title="Portfolio & social links" hint="Add your work so we can feature you better. (Optional)">
-              <div className="grid gap-4">
-                <div className="flex items-center gap-3 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-2.5 transition focus-within:border-(--brand-navy) focus-within:bg-white">
-                  <Instagram className="h-5 w-5 shrink-0 text-(--gold-icon)" />
-                  <input
-                    className="w-full bg-transparent py-1.5 font-albert text-sm text-(--brand-navy) outline-none placeholder:text-(--gray-400)"
-                    placeholder="Instagram — @yourusername"
-                    {...form.register("instagram")}
-                  />
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-2.5 transition focus-within:border-(--brand-navy) focus-within:bg-white">
-                  <Youtube className="h-5 w-5 shrink-0 text-(--gold-icon)" />
-                  <input
-                    className="w-full bg-transparent py-1.5 font-albert text-sm text-(--brand-navy) outline-none placeholder:text-(--gray-400)"
-                    placeholder="YouTube channel link"
-                    {...form.register("youtube")}
-                  />
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-2.5 transition focus-within:border-(--brand-navy) focus-within:bg-white">
-                  <Globe className="h-5 w-5 shrink-0 text-(--gold-icon)" />
-                  <input
-                    className="w-full bg-transparent py-1.5 font-albert text-sm text-(--brand-navy) outline-none placeholder:text-(--gray-400)"
-                    placeholder="Portfolio or website link"
-                    {...form.register("website")}
-                  />
-                </div>
-              </div>
-            </SectionCard>
-
-            {/* Status messages */}
-            {error ? (
-              <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 font-albert text-sm text-rose-700">
-                {error}
-              </p>
-            ) : null}
-            {success ? (
-              <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-albert text-sm text-emerald-700">
-                {success}
-              </p>
-            ) : null}
-
-            {/* Mobile sticky pay bar */}
-            <div className="sticky bottom-4 z-20 mt-2 lg:hidden">
-              <div className="relative overflow-hidden rounded-3xl border border-(--gold)/30 bg-(--brand-navy) p-4 shadow-[0_24px_60px_-20px_rgba(12,29,55,0.6)] sm:p-5">
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-(--gold) to-transparent opacity-70" />
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-(--gold)">
-                      <ShieldCheck className="h-6 w-6" />
-                    </span>
-                    <div>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-bricolage text-2xl font-bold text-white">₹249</span>
-                        <span className="font-albert text-xs text-white/55">one-time</span>
-                      </div>
-                      <p className="font-albert text-[11px] leading-4 text-white/60">
-                        Inclusive of all taxes &amp; payment charges
-                      </p>
-                    </div>
-                  </div>
-
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-(--gold) px-8 font-poppins text-base font-bold text-(--brand-navy) shadow-[0_14px_40px_-10px_rgba(194,150,46,0.8)] transition-all hover:scale-[1.02] hover:shadow-[0_18px_50px_-8px_rgba(194,150,46,0.9)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="group mt-4 inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-(--gold) px-6 font-poppins text-base font-bold text-(--brand-navy) shadow-[0_14px_40px_-12px_rgba(194,150,46,0.9)] transition-all hover:scale-[1.02] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {submitting ? (
                       <>
@@ -535,71 +376,253 @@ export default function TalentOnboardingPage() {
                       </>
                     )}
                   </button>
+                  <p className="mt-3 flex items-center justify-center gap-1.5 font-albert text-[11px] text-white/55">
+                    <ShieldCheck className="h-3.5 w-3.5 text-(--gold)" />
+                    Reviewed by our curation team
+                  </p>
                 </div>
               </div>
-              <p className="mt-3 flex items-center justify-center gap-1.5 font-albert text-xs text-(--gray-500)">
-                <ShieldCheck className="h-3.5 w-3.5 text-(--gold-icon)" />
-                Your profile is reviewed by our curation team before going live.
-              </p>
             </div>
-            </div>
+          </aside>
 
-            {/* Right column — desktop checkout summary */}
-            <aside className="hidden lg:block">
-              <div className="relative overflow-hidden rounded-3xl border border-(--gold)/30 bg-(--brand-navy) p-6 shadow-[0_30px_70px_-25px_rgba(12,29,55,0.65)] lg:sticky lg:top-24">
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-(--gold) to-transparent opacity-70" />
-                <p className="font-poppins text-[11px] font-semibold uppercase tracking-[0.22em] text-(--gold)">
-                  One-time onboarding
-                </p>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="font-bricolage text-4xl font-bold text-white">₹249</span>
-                  <span className="font-albert text-sm text-white/55">incl. taxes</span>
-                </div>
-                <p className="mt-1 font-albert text-xs text-white/55">
-                  Inclusive of all taxes &amp; payment charges.
-                </p>
-
-                <ul className="mt-6 grid gap-3">
-                  {[
-                    "Discoverable by cafés, events & brands",
-                    "Direct booking requests, no middlemen",
-                    "Verified talent profile & dashboard",
-                  ].map((t) => (
-                    <li key={t} className="flex items-start gap-2.5 font-albert text-sm text-white/80">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-(--gold)/20 text-(--gold)">
-                        <Check className="h-3 w-3" />
-                      </span>
-                      {t}
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="group mt-7 inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-(--gold) px-6 font-poppins text-base font-bold text-(--brand-navy) shadow-[0_14px_40px_-10px_rgba(194,150,46,0.8)] transition-all hover:scale-[1.02] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Processing…
-                    </>
-                  ) : (
-                    <>
-                      Pay ₹249 &amp; submit
-                      <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                    </>
-                  )}
-                </button>
-
-                <p className="mt-4 flex items-center justify-center gap-1.5 font-albert text-[11px] text-white/55">
-                  <ShieldCheck className="h-3.5 w-3.5 text-(--gold)" />
-                  Reviewed by our curation team before going live.
+          {/* ===================== Form fields ===================== */}
+          <div className="px-4 pb-28 pt-10 sm:px-6 sm:pt-12 lg:px-12 lg:pb-16 lg:pt-16">
+            <div className="mx-auto w-full max-w-2xl">
+              {/* Mobile header (desktop uses the rail) */}
+              <div className="mb-8 text-center lg:hidden">
+                <span className="inline-flex items-center gap-2 rounded-full border border-(--gold-bar-border) bg-(--gold-bar-bg)/80 px-4 py-1.5 font-poppins text-xs font-semibold uppercase tracking-[0.18em] text-(--gold-text)">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Talent onboarding
+                </span>
+                <h1 className="mt-4 font-bricolage text-3xl font-bold tracking-tight text-(--brand-navy)">
+                  Build your talent profile
+                </h1>
+                <p className="mx-auto mt-3 max-w-md font-albert text-sm leading-6 text-(--gray-600)">
+                  A few details and a one-time fee — then you&apos;re discoverable by cafés,
+                  events and brands across Vizag.
                 </p>
               </div>
-            </aside>
-          </form>
-        </div>
+
+              <div className="grid gap-5">
+                {/* 1 — About */}
+                <SectionCard icon={User} step={1} title="Tell us about yourself">
+                  <div className="grid gap-5">
+                    <div>
+                      <FieldLabel icon={User}>Stage name</FieldLabel>
+                      <input
+                        className={inputClass}
+                        placeholder="The name you perform under"
+                        {...form.register("stageName")}
+                      />
+                      {errors.stageName ? (
+                        <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.stageName.message}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <FieldLabel icon={Sparkles}>Main skill</FieldLabel>
+                        <input
+                          className={inputClass}
+                          placeholder="e.g. Singer, Photographer"
+                          {...form.register("mainSkill")}
+                        />
+                        {errors.mainSkill ? (
+                          <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.mainSkill.message}</p>
+                        ) : null}
+                      </div>
+                      <div>
+                        <FieldLabel icon={Briefcase}>Experience</FieldLabel>
+                        <select className={inputClass} defaultValue="" {...form.register("yearsOfExperience")}>
+                          <option value="" disabled>Select experience</option>
+                          {EXPERIENCE.map((e) => (
+                            <option key={e} value={e}>{e}</option>
+                          ))}
+                        </select>
+                        {errors.yearsOfExperience ? (
+                          <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.yearsOfExperience.message}</p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div>
+                      <FieldLabel icon={Award}>Professional level</FieldLabel>
+                      <select className={inputClass} defaultValue="" {...form.register("experienceLevel")}>
+                        <option value="" disabled>Select level</option>
+                        {LEVELS.map((l) => (
+                          <option key={l} value={l}>{l}</option>
+                        ))}
+                      </select>
+                      {errors.experienceLevel ? (
+                        <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.experienceLevel.message}</p>
+                      ) : null}
+                    </div>
+
+                    <div>
+                      <FieldLabel icon={PenLine}>Short bio</FieldLabel>
+                      <p className="mt-1 font-albert text-xs text-(--gray-500)">
+                        Tell us about your journey, style and what makes your work unique.
+                      </p>
+                      <div className="relative">
+                        <textarea
+                          maxLength={500}
+                          className={`${inputClass} min-h-32 resize-none`}
+                          placeholder="Share your story…"
+                          {...form.register("bio")}
+                        />
+                        <span className="pointer-events-none absolute bottom-3 right-4 font-albert text-xs text-(--gray-400)">
+                          {bio.length}/500
+                        </span>
+                      </div>
+                      {errors.bio ? (
+                        <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.bio.message}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* 2 — Availability */}
+                <SectionCard icon={CalendarDays} step={2} title="Availability" hint="When are you typically available, and for what?">
+                  <div className="grid gap-6">
+                    <div>
+                      <FieldLabel icon={CalendarDays}>Preferred days</FieldLabel>
+                      <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
+                        {DAYS.map((d) => (
+                          <Chip key={d} active={slots.includes(d)} onClick={() => toggleList("preferredSlots", d)}>
+                            {d}
+                          </Chip>
+                        ))}
+                      </div>
+                      {errors.preferredSlots ? (
+                        <p className="mt-2 font-albert text-xs text-rose-600">{errors.preferredSlots.message}</p>
+                      ) : null}
+                    </div>
+
+                    <div>
+                      <FieldLabel icon={Tag}>Available for</FieldLabel>
+                      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                        {WORK_TYPES.map((w) => (
+                          <Chip key={w} active={work.includes(w)} onClick={() => toggleList("availableFor", w)}>
+                            {w}
+                          </Chip>
+                        ))}
+                      </div>
+                      {errors.availableFor ? (
+                        <p className="mt-2 font-albert text-xs text-rose-600">{errors.availableFor.message}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* 3 — Pricing & location */}
+                <SectionCard icon={IndianRupee} step={3} title="Pricing & base location">
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <FieldLabel icon={IndianRupee}>Starting price</FieldLabel>
+                      <div className="relative mt-2">
+                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-albert text-sm font-semibold text-(--gold-icon)">₹</span>
+                        <input
+                          inputMode="numeric"
+                          className={`${inputClass} mt-0 pl-8`}
+                          placeholder="Enter starting price"
+                          {...form.register("expectedPriceBand")}
+                        />
+                      </div>
+                      <p className="mt-1.5 font-albert text-xs text-(--gray-500)">Prices can be discussed later.</p>
+                      {errors.expectedPriceBand ? (
+                        <p className="mt-1 font-albert text-xs text-rose-600">{errors.expectedPriceBand.message}</p>
+                      ) : null}
+                    </div>
+                    <div>
+                      <FieldLabel icon={MapPin}>Base location</FieldLabel>
+                      <select className={inputClass} defaultValue="" {...form.register("location")}>
+                        <option value="" disabled>Where are you based?</option>
+                        {CITIES.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                      {errors.location ? (
+                        <p className="mt-1.5 font-albert text-xs text-rose-600">{errors.location.message}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* 4 — Portfolio & social */}
+                <SectionCard icon={Link2} step={4} title="Portfolio & social links" hint="Add your work so we can feature you better. (Optional)">
+                  <div className="grid gap-4">
+                    <div className="flex items-center gap-3 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-2.5 transition focus-within:border-(--brand-navy) focus-within:bg-white">
+                      <Instagram className="h-5 w-5 shrink-0 text-(--gold-icon)" />
+                      <input
+                        className="w-full bg-transparent py-1.5 font-albert text-sm text-(--brand-navy) outline-none placeholder:text-(--gray-400)"
+                        placeholder="Instagram — @yourusername"
+                        {...form.register("instagram")}
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-2.5 transition focus-within:border-(--brand-navy) focus-within:bg-white">
+                      <Youtube className="h-5 w-5 shrink-0 text-(--gold-icon)" />
+                      <input
+                        className="w-full bg-transparent py-1.5 font-albert text-sm text-(--brand-navy) outline-none placeholder:text-(--gray-400)"
+                        placeholder="YouTube channel link"
+                        {...form.register("youtube")}
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/30 px-4 py-2.5 transition focus-within:border-(--brand-navy) focus-within:bg-white">
+                      <Globe className="h-5 w-5 shrink-0 text-(--gold-icon)" />
+                      <input
+                        className="w-full bg-transparent py-1.5 font-albert text-sm text-(--brand-navy) outline-none placeholder:text-(--gray-400)"
+                        placeholder="Portfolio or website link"
+                        {...form.register("website")}
+                      />
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* Status messages */}
+                {error ? (
+                  <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 font-albert text-sm text-rose-700">
+                    {error}
+                  </p>
+                ) : null}
+                {success ? (
+                  <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-albert text-sm text-emerald-700">
+                    {success}
+                  </p>
+                ) : null}
+
+                {/* Mobile sticky pay bar (desktop uses the rail) */}
+                <div className="sticky bottom-4 z-20 mt-2 lg:hidden">
+                  <div className="relative overflow-hidden rounded-3xl border border-(--gold)/30 bg-(--brand-navy) p-4 shadow-[0_24px_60px_-20px_rgba(12,29,55,0.6)] sm:p-5">
+                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-(--gold) to-transparent opacity-70" />
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-bricolage text-2xl font-bold text-white">₹249</span>
+                          <span className="font-albert text-xs text-white/55">one-time</span>
+                        </div>
+                        <p className="font-albert text-[11px] leading-4 text-white/60">
+                          Inclusive of all taxes &amp; payment charges
+                        </p>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="group inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-(--gold) px-6 font-poppins text-sm font-bold text-(--brand-navy) shadow-[0_14px_40px_-12px_rgba(194,150,46,0.9)] transition-all active:scale-[0.98] disabled:opacity-70"
+                      >
+                        {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                          <>
+                            Pay ₹249
+                            <ArrowRight className="h-4 w-4" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
       </main>
     </ProtectedRoute>
   )
