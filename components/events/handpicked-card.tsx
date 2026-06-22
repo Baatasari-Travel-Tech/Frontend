@@ -160,9 +160,11 @@ export function HandpickedEventCard({
                                 ) : null}
                             </p>
                         </div>
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--brand-navy) text-white transition group-hover:bg-(--brand-navy)/90">
-                            <ArrowRight className="h-4 w-4" />
-                        </span>
+                        {!isPast ? (
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--brand-navy) text-white transition group-hover:bg-(--brand-navy)/90">
+                                <ArrowRight className="h-4 w-4" />
+                            </span>
+                        ) : null}
                     </div>
                 </CardContent>
             </Card>
