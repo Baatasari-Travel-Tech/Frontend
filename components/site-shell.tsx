@@ -287,8 +287,18 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     }
   }, [searchParams, openModal])
 
+  // Strip the auth params only after the modal has actually been open and then
+  // closed. Without the ref this raced the opening effect above (open is still
+  // false in the same render pass), wiping ?role=organizer before the register
+  // form could read it.
+  const authModalWasOpenRef = useRef(false)
   useEffect(() => {
-    if (open) return
+    if (open) {
+      authModalWasOpenRef.current = true
+      return
+    }
+    if (!authModalWasOpenRef.current) return
+    authModalWasOpenRef.current = false
     const auth = searchParams.get('auth')
     if (!auth) return
     const params = new URLSearchParams(searchParams.toString())
@@ -467,7 +477,14 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   className="inline-flex items-center justify-center rounded-full bg-(--brand-navy) px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-(--brand-navy)/90"
-                  onClick={() => openModal('register')}
+                  onClick={() => {
+                    // On the organizer landing page, "Get started" means organizer signup.
+                    if (pathname === '/for-organizers') {
+                      router.push('/for-organizers?auth=register&role=organizer')
+                    } else {
+                      openModal('register')
+                    }
+                  }}
                 >
                   Get started
                 </button>

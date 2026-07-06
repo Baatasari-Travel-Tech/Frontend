@@ -203,6 +203,15 @@ function EventsPageContent() {
             <div className="space-y-3 text-sm">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Resources</p>
               <div className="grid gap-2 text-slate-300">
+                <a className="transition hover:text-white" href="/events">
+                  Events
+                </a>
+                <a className="transition hover:text-white" href="/talent">
+                  Talents
+                </a>
+                <a className="transition hover:text-white" href="/for-organizers">
+                  Organizers
+                </a>
                 <a className="transition hover:text-white" href="/contact-us">
                   Contact
                 </a>

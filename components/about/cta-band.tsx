@@ -69,7 +69,7 @@ export default function CtaBand() {
             Start exploring
           </Link>
           <Link
-            href="/?auth=register&role=organizer"
+            href="/for-organizers"
             className="font-poppins font-semibold text-lg px-8 py-4 rounded-full border border-(--white)/25 text-(--white) transition-all duration-300 hover:border-(--white)/60 hover:bg-(--white)/[0.06]"
           >
             List your event

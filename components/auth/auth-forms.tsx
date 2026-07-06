@@ -7,7 +7,7 @@ import { resolveUserHome } from '@/lib/auth/navigation'
 import { useAuthStore } from '@/lib/auth/store'
 import { useAuthModal } from './auth-modal-context'
 import InlineSpinner from '@/components/ui/inline-spinner'
-import { User, CalendarPlus, Eye, EyeOff } from 'lucide-react'
+import { CalendarPlus, Eye, EyeOff } from 'lucide-react'
 import { logAuth, logAuthError } from '@/lib/auth-log'
 import { ApiError } from '@/types/api'
 import { supportMailto } from '@/lib/support-mailto'
@@ -278,19 +278,31 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  // Role is fixed by the entry point (organizer CTAs pass ?role=organizer,
+  // e.g. from /for-organizers) — there is deliberately no in-form toggle.
+  // Latched rather than derived live: the URL cleanup in SiteShell can strip
+  // ?role while the modal is open, and the form must not flip back to user.
   const roleParam = searchParams.get('role')
-  const initialRole: 'user' | 'organizer' = roleParam === 'organizer' ? 'organizer' : 'user'
-  const [role, setRole] = useState<'user' | 'organizer'>(initialRole)
+  const [role, setLatchedRole] = useState<'user' | 'organizer'>(
+    roleParam === 'organizer' ? 'organizer' : 'user'
+  )
+  // Adjust-during-render latch (guarded, so it can't loop).
+  if (roleParam === 'organizer' && role !== 'organizer') {
+    setLatchedRole('organizer')
+  }
   const [error, setError] = useState<string | null>(null)
   const [pendingDeletion, setPendingDeletion] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
-  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [acceptedTermsChecked, setAcceptedTerms] = useState(false)
 
   const selectedRole: 'USER' | 'ORGANIZER' = role === 'organizer' ? 'ORGANIZER' : 'USER'
   // Minimum age differs by role: attendees 13+, organizers 18+.
   const minAge = role === 'organizer' ? 18 : 13
+  // Users consent implicitly by continuing (clickwrap — the notice sits by the
+  // buttons); organizers must tick the explicit checkbox.
+  const acceptedTerms = role === 'organizer' ? acceptedTermsChecked : true
 
   const handleRegister = async () => {
     if (!email || !password || !confirm) {
@@ -369,45 +381,19 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1 text-center">
+      <div className="space-y-2 text-center">
+        {role === 'organizer' && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-900/5 px-3 py-1 text-xs font-semibold text-brand-800">
+            <CalendarPlus className="h-3.5 w-3.5" />
+            Event organizer
+          </span>
+        )}
         <h2 className="text-2xl font-semibold text-slate-900">
-          Create your account
+          {role === 'organizer' ? 'Create your organizer account' : 'Create your account'}
         </h2>
-        <p className="text-sm text-slate-500">Get started in seconds</p>
-      </div>
-
-      <div className="relative mb-4 grid grid-cols-2 rounded-full bg-brand-700/90 p-1 backdrop-blur">
-        <div
-          className={`absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-full bg-brand-900 shadow-[0_6px_20px_rgba(0,0,0,0.25)] transition-all duration-300 ease-out ${
-            role === 'organizer' ? 'translate-x-full' : 'translate-x-0'
-          }`}
-        />
-
-        <button
-          type="button"
-          onClick={() => setRole('user')}
-          className={`relative z-10 flex items-center justify-center gap-2 rounded-full py-2 text-xs font-semibold transition-all duration-200 ${
-            role === 'user'
-              ? 'scale-100 text-white'
-              : 'scale-95 text-white/60 hover:text-white/80'
-          }`}
-        >
-          <User className="h-3.5 w-3.5" />
-          User
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setRole('organizer')}
-          className={`relative z-10 flex items-center justify-center gap-2 rounded-full py-2 text-xs font-semibold transition-all duration-200 ${
-            role === 'organizer'
-              ? 'scale-100 text-white'
-              : 'scale-95 text-white/60 hover:text-white/80'
-          }`}
-        >
-          <CalendarPlus className="h-3.5 w-3.5" />
-          Event organizer
-        </button>
+        <p className="text-sm text-slate-500">
+          {role === 'organizer' ? 'Start hosting events on Baatasari' : 'Get started in seconds'}
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -485,25 +471,27 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
         />
       </div>
 
-      <label className="flex items-start gap-2 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={acceptedTerms}
-          onChange={(e) => setAcceptedTerms(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-slate-300"
-        />
-        <span>
-          I am <strong>{minAge} years or older</strong> and agree to the{" "}
-          <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-700 underline">
-            Terms &amp; Conditions
-          </a>{" "}
-          and{" "}
-          <a href="/privacy-policy" target="_blank" className="font-semibold text-brand-700 underline">
-            Privacy Policy
-          </a>
-          .
-        </span>
-      </label>
+      {role === 'organizer' && (
+        <label className="flex items-start gap-2 text-xs text-slate-600">
+          <input
+            type="checkbox"
+            checked={acceptedTermsChecked}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300"
+          />
+          <span>
+            I am <strong>{minAge} years or older</strong> and agree to the{" "}
+            <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-700 underline">
+              Terms &amp; Conditions
+            </a>{" "}
+            and{" "}
+            <a href="/privacy-policy" target="_blank" className="font-semibold text-brand-700 underline">
+              Privacy Policy
+            </a>
+            .
+          </span>
+        </label>
+      )}
 
       {error && (
         pendingDeletion ? (
@@ -550,16 +538,18 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
           </button>
         </p>
 
-        <p className="text-xs">
-          By continuing, you agree to our{' '}
-          <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
-            Terms &amp; Conditions
-          </a>{' '}
-          and{' '}
-          <a href="/privacy-policy" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
-            Privacy Policy
-          </a>
-        </p>
+        {role === 'user' && (
+          <p className="text-xs">
+            By continuing, you agree to our{' '}
+            <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
+              Terms &amp; Conditions
+            </a>{' '}
+            and{' '}
+            <a href="/privacy-policy" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
+              Privacy Policy
+            </a>
+          </p>
+        )}
       </div>
     </div>
   )
