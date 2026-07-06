@@ -17,6 +17,7 @@ import {
   MessageCircle,
   MonitorSmartphone,
   QrCode,
+  Rocket,
   ShieldCheck,
   Smartphone,
   Smile,
@@ -45,7 +46,7 @@ const TRUST_POINTS = ['Takes less than 5 minutes', 'No setup fee', 'Start free']
 const ATTENDEE_PAINS = [
   'Fill the same details every time',
   'Switch between apps to register',
-  'Send payment screenshots manually',
+  'Send payment screenshots',
   'Wait for confirmation from you',
   'Wonder if the ticket is really confirmed',
 ]
@@ -140,7 +141,7 @@ function CreateEventCta() {
 
 function TrustRow() {
   return (
-    <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
+    <ul className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2">
       {TRUST_POINTS.map((point) => (
         <li key={point} className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden />
@@ -211,6 +212,23 @@ function WayRow({
   )
 }
 
+function HeroCopy() {
+  return (
+    <>
+      <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+        <span className="text-(--brand-navy)">Create unforgettable experiences.</span>
+        <span className="block text-(--gold)">Leave the operations to us.</span>
+      </h1>
+      <p className="max-w-md text-sm leading-relaxed text-slate-600 sm:text-base">
+        Baatasari quietly handles bookings, payments, tickets and check-ins, so you can focus
+        on what people came for.
+      </p>
+      <CreateEventCta />
+      <TrustRow />
+    </>
+  )
+}
+
 function SparkleHeading({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="flex items-center justify-center gap-3 text-center text-2xl font-bold text-(--brand-navy) sm:text-3xl">
@@ -226,32 +244,40 @@ export default function ForOrganizersPage() {
     <main className="bg-white text-slate-900">
       {/* ============ HERO ============ */}
       <section className="bg-[#fbf6f2]">
-        <div className="mx-auto grid w-full max-w-[1400px] items-center gap-10 px-4 pb-14 pt-6 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:gap-14 lg:px-10 lg:pb-20 lg:pt-8">
+        {/* Mobile: artwork shown in full (its height sets the section); text layered on top.
+            Both children share one grid cell, so the section can never crop the image nor
+            clip the text — it's as tall as the taller of the two. */}
+        <div className="grid lg:hidden">
+          <Illustration
+            src="/for-organizers/hero-mobile.png"
+            alt="Organizer relaxing at a laptop while their event runs itself"
+            width={750}
+            height={1200}
+            className="col-start-1 row-start-1 w-full"
+          />
+          <div className="z-10 col-start-1 row-start-1 space-y-4 px-4 pt-8 sm:px-6">
+            <HeroCopy />
+          </div>
+        </div>
+
+        {/* Desktop: two-column hero */}
+        <div className="mx-auto hidden w-full max-w-[1400px] items-center gap-14 px-10 pb-20 pt-8 lg:grid lg:grid-cols-[1fr_1.05fr]">
           <div className="space-y-6">
-            <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-              <span className="text-(--brand-navy)">Create unforgettable experiences.</span>{' '}
-              <span className="text-(--gold)">Leave the operations to us.</span>
-            </h1>
-            <p className="max-w-md text-base leading-relaxed text-slate-600">
-              Baatasari quietly handles bookings, payments, tickets and check-ins, so you can
-              focus on what people came for.
-            </p>
-            <CreateEventCta />
-            <TrustRow />
+            <HeroCopy />
           </div>
           <Illustration
             src="/for-organizers/hero.png"
             alt="Organizer relaxing at a laptop while their event runs itself"
             width={1016}
             height={981}
-            className="-mt-4 w-full lg:-mt-8"
+            className="-mt-8 w-full"
           />
         </div>
       </section>
 
       {/* ============ ATTENDEE vs ORGANIZER PAIN ============ */}
       <section className="mx-auto w-full max-w-[1400px] px-4 py-16 sm:px-6 lg:px-10">
-        <div className="mx-auto max-w-2xl text-center">
+        <div className="max-w-2xl text-left sm:mx-auto sm:text-center">
           <h2 className="text-2xl font-bold text-(--brand-navy) sm:text-3xl">
             Every Event Starts With Excitement.
           </h2>
@@ -262,59 +288,65 @@ export default function ForOrganizersPage() {
 
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
           {/* Attendees */}
-          <div className="grid gap-6 rounded-3xl border border-rose-100 bg-rose-50/60 p-6 sm:grid-cols-[1.2fr_1fr] sm:p-8">
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-rose-600">
-                  <Users className="h-5 w-5" aria-hidden />
-                </span>
-                <h3 className="text-base font-bold text-rose-600">
-                  What your attendees experience
-                </h3>
-              </div>
-              <ul className="mt-5 space-y-3">
+          <div className="relative overflow-hidden rounded-3xl border border-rose-100 bg-rose-50/60 py-6 pl-4 pr-4 sm:p-8">
+            <div className="relative z-10 flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                <Users className="h-5 w-5" aria-hidden />
+              </span>
+              <h3 className="text-base font-bold text-rose-600">
+                What your attendees experience
+              </h3>
+            </div>
+            <div className="mt-5 sm:grid sm:grid-cols-[1.3fr_1fr] sm:items-end sm:gap-6">
+              <ul className="relative z-10 space-y-3.5">
                 {ATTENDEE_PAINS.map((pain) => (
-                  <li key={pain} className="flex items-start gap-2.5 text-sm text-slate-700">
+                  <li
+                    key={pain}
+                    className="flex items-start gap-2 whitespace-nowrap text-xs text-slate-700 sm:gap-2.5 sm:whitespace-normal sm:text-sm"
+                  >
                     <CircleMinus className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" aria-hidden />
                     {pain}
                   </li>
                 ))}
               </ul>
+              <Illustration
+                src="/for-organizers/attendee.png"
+                alt="Attendee frustrated with a confusing registration on their phone"
+                width={900}
+                height={1200}
+                className="absolute -right-2 top-[58%] w-[36%] -translate-y-1/2 sm:static sm:right-auto sm:top-auto sm:-mb-8 sm:w-full sm:translate-y-0"
+              />
             </div>
-            <Illustration
-              src="/for-organizers/attendee.png"
-              alt="Attendee frustrated with a confusing registration on their phone"
-              width={900}
-              height={1200}
-              className="w-full self-end"
-            />
           </div>
 
           {/* Organizers */}
-          <div className="grid gap-6 rounded-3xl border border-blue-100 bg-blue-50/60 p-6 sm:grid-cols-[1.2fr_1fr] sm:p-8">
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                  <UserRound className="h-5 w-5" aria-hidden />
-                </span>
-                <h3 className="text-base font-bold text-blue-700">What you experience</h3>
-              </div>
-              <ul className="mt-5 space-y-3">
+          <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-blue-50/60 py-6 pl-4 pr-4 sm:p-8">
+            <div className="relative z-10 flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                <UserRound className="h-5 w-5" aria-hidden />
+              </span>
+              <h3 className="text-base font-bold text-blue-700">What you experience</h3>
+            </div>
+            <div className="mt-5 sm:grid sm:grid-cols-[1.3fr_1fr] sm:items-end sm:gap-6">
+              <ul className="relative z-10 space-y-3.5">
                 {ORGANIZER_PAINS.map((pain) => (
-                  <li key={pain} className="flex items-start gap-2.5 text-sm text-slate-700">
+                  <li
+                    key={pain}
+                    className="flex items-start gap-2 whitespace-nowrap text-xs text-slate-700 sm:gap-2.5 sm:whitespace-normal sm:text-sm"
+                  >
                     <CircleMinus className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" aria-hidden />
                     {pain}
                   </li>
                 ))}
               </ul>
+              <Illustration
+                src="/for-organizers/organizer.png"
+                alt="Organizer buried in WhatsApp messages and spreadsheets"
+                width={900}
+                height={1200}
+                className="absolute -right-2 top-[58%] w-[36%] -translate-y-1/2 sm:static sm:right-auto sm:top-auto sm:-mb-8 sm:w-full sm:translate-y-0"
+              />
             </div>
-            <Illustration
-              src="/for-organizers/organizer.png"
-              alt="Organizer buried in WhatsApp messages and spreadsheets"
-              width={900}
-              height={1200}
-              className="w-full self-end"
-            />
           </div>
         </div>
       </section>
@@ -327,10 +359,16 @@ export default function ForOrganizersPage() {
           <WayRow title="The Old Way" steps={OLD_WAY_STEPS} tone="old" />
           <WayRow title="The Baatasari Way" steps={NEW_WAY_STEPS} tone="new" />
 
-          <div className="flex flex-wrap items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-6 py-4 text-sm">
-            <Heart className="h-4 w-4 text-emerald-600" aria-hidden />
-            <span className="font-bold text-(--brand-navy)">The best events feel effortless.</span>
-            <span className="text-slate-600">Your registration should too.</span>
+          <div className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-[#fbf4e4] px-6 py-6 text-center text-sm sm:flex-row sm:flex-wrap sm:bg-emerald-50 sm:py-4">
+            <Heart className="h-6 w-6 text-(--gold) sm:h-4 sm:w-4 sm:text-emerald-600" aria-hidden />
+            <p>
+              <span className="block font-bold text-(--brand-navy) sm:inline">
+                The best events feel effortless.
+              </span>{' '}
+              <span className="block font-bold text-(--brand-navy) sm:inline sm:font-normal sm:text-slate-600">
+                Your registration process should too.
+              </span>
+            </p>
           </div>
         </div>
       </section>
@@ -382,8 +420,63 @@ export default function ForOrganizersPage() {
       </section>
 
       {/* ============ CLOSING CTA ============ */}
-      <section className="mx-auto w-full max-w-[1400px] px-4 pb-20 sm:px-6 lg:px-10">
-        <div className="grid items-center gap-10 overflow-hidden rounded-3xl bg-[#fbf4e4] px-8 pt-8 sm:px-10 sm:pt-10 lg:grid-cols-[1.1fr_1fr] lg:px-14 lg:py-0">
+      <section className="mx-auto w-full max-w-[1400px] pb-16 lg:px-10 lg:pb-20">
+        {/* Mobile: full-bleed artwork with centered copy on top, overlapping trust card + CTA */}
+        <div className="lg:hidden">
+          <div className="grid">
+            <Illustration
+              src="/for-organizers/crowd-mobile.png"
+              alt="Happy crowd enjoying an evening event"
+              width={1000}
+              height={1560}
+              className="col-start-1 row-start-1 w-full"
+            />
+            <div className="z-10 col-start-1 row-start-1 px-6 pt-8 text-center">
+              <h2 className="text-3xl font-bold leading-tight tracking-tight">
+                <span className="text-(--brand-navy)">
+                  Your attendees should remember your event.
+                </span>
+                <span className="block text-(--gold)">Not your registration process.</span>
+              </h2>
+              <p className="mx-auto mt-4 max-w-xs text-base leading-relaxed text-slate-600">
+                Baatasari handles the details. You create the memories.
+              </p>
+            </div>
+          </div>
+
+          <div className="relative z-10 mx-4 -mt-14 grid grid-cols-4 divide-x divide-slate-100 rounded-3xl border border-slate-100 bg-white/95 py-5 shadow-[0_18px_40px_-20px_rgba(15,23,42,0.25)] backdrop-blur-sm">
+            {[
+              { label: 'Takes less than 5 minutes', icon: CheckCircle2, cls: 'bg-emerald-50 text-emerald-600' },
+              { label: 'No setup fee', icon: IndianRupee, cls: 'bg-amber-50 text-(--gold)' },
+              { label: 'Start free', icon: Rocket, cls: 'bg-violet-50 text-violet-600' },
+              { label: 'Loved by organizers', icon: Heart, cls: 'bg-rose-50 text-rose-500' },
+            ].map(({ label, icon: Icon, cls }) => (
+              <div key={label} className="flex flex-col items-center gap-2.5 px-2 text-center">
+                <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${cls}`}>
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+                <span className="text-[11px] font-medium leading-tight text-slate-800">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="px-4 pt-6">
+            <Link
+              href={REGISTER_HREF}
+              className="flex w-full items-center justify-center gap-3 rounded-full bg-(--brand-navy) py-4 text-base font-semibold text-white shadow-md transition hover:bg-(--brand-navy-hover) active:scale-95"
+            >
+              Create Your First Event
+              <ArrowRight className="h-5 w-5" aria-hidden />
+            </Link>
+            <p className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
+              <ShieldCheck className="h-4 w-4 text-emerald-600" aria-hidden />
+              Secure. Reliable. Made for organizers like you.
+            </p>
+          </div>
+        </div>
+
+        {/* Desktop: cream two-column card */}
+        <div className="hidden items-center gap-10 overflow-hidden rounded-3xl bg-[#fbf4e4] px-14 lg:grid lg:grid-cols-[1.1fr_1fr]">
           <div className="space-y-6">
             <h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
               <span className="text-(--brand-navy)">Your attendees should remember your event.</span>{' '}
