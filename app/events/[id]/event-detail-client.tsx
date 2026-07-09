@@ -186,7 +186,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   const aboutLong = (event.description ?? "").length > 260
 
   return (
-    <div className="min-h-screen bg-background pb-24 lg:pb-12">
+    <div className="min-h-screen overflow-x-clip bg-background pb-24 lg:pb-12">
       <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
         {/* ── Hero: cover + ticket card ─────────────────────────────── */}
         <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
@@ -584,17 +584,23 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
       {/* ── Sticky bottom bar (mobile) ────────────────────────────── */}
       {!unavailable ? (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-(--gray-200) bg-(--white) px-4 py-3 shadow-[0_-8px_24px_rgba(12,29,55,0.08)] lg:hidden">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--gray-400)">Starting from</p>
-              <p className="font-bricolage text-xl font-bold text-(--brand-navy)">{priceDisplay}</p>
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-(--gray-400)">
+                {totalQty > 0 ? `${totalQty} ticket${totalQty > 1 ? "s" : ""}` : "Starting from"}
+              </p>
+              <p className="truncate font-bricolage text-xl font-bold text-(--brand-navy)">
+                {totalQty > 0 ? (totalPrice === 0 ? "Free" : formatCurrency(totalPrice)) : priceDisplay}
+              </p>
             </div>
             <button
               type="button"
               onClick={goToCheckout}
-              className="flex items-center gap-2 rounded-full bg-(--brand-navy) px-7 py-3 font-poppins text-sm font-bold text-white transition hover:bg-(--brand-navy)/90"
+              disabled={tiers.length > 0 && totalQty === 0}
+              className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-(--brand-navy) px-5 py-3 font-poppins text-sm font-bold text-white transition hover:bg-(--brand-navy)/90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-7"
             >
-              <Ticket className="h-4 w-4" /> Book Tickets
+              <Ticket className="h-4 w-4" />
+              {tiers.length > 0 && totalQty === 0 ? "Select tickets" : "Book Tickets"}
             </button>
           </div>
         </div>
