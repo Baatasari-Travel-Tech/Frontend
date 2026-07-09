@@ -14,6 +14,34 @@ interface EventGridProps {
     hideHeader?: boolean;
 }
 
+/** YouTube-style placeholder cards shown while the events data is still loading. */
+export function EventGridSkeleton({ count = 10 }: { count?: number }) {
+    return (
+        <section className="mx-auto w-full max-w-[1680px] px-4 py-10 md:px-6 md:py-12 lg:px-10">
+            <div className="grid auto-rows-fr grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
+                {Array.from({ length: count }).map((_, i) => (
+                    <div
+                        key={i}
+                        className="overflow-hidden rounded-3xl border-t-2 border-(--brand-navy) bg-white shadow-sm"
+                    >
+                        <div className="aspect-[4/3] w-full animate-pulse bg-slate-200 sm:aspect-[4/5]" />
+                        <div className="space-y-2.5 p-3">
+                            <div className="h-3.5 w-24 animate-pulse rounded-full bg-slate-200" />
+                            <div className="h-5 w-4/5 animate-pulse rounded-full bg-slate-200" />
+                            <div className="h-6 w-28 animate-pulse rounded-full bg-slate-100" />
+                            <div className="h-4 w-3/5 animate-pulse rounded-full bg-slate-100" />
+                            <div className="flex items-end justify-between pt-2">
+                                <div className="h-6 w-16 animate-pulse rounded-full bg-slate-200" />
+                                <div className="h-10 w-10 animate-pulse rounded-full bg-slate-200" />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </section>
+    )
+}
+
 export function EventGrid({ events, title = "Events", pageSize = 12, hideHeader = false }: EventGridProps) {
     const [visibleCount, setVisibleCount] = useState(Math.min(pageSize, events.length));
     const sentinelRef = useRef<HTMLDivElement>(null);

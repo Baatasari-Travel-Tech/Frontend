@@ -629,7 +629,7 @@ export default function OrganizerDocumentUploadPage() {
         </p>
 
         <p style={agSectionTitle}>5. Consideration &amp; Payment Terms</p>
-        <p style={agPara}>5.1 Baatasari will charge a Platform Fee of 10% (or as mutually agreed) + applicable taxes on the total booking revenue.</p>
+        <p style={agPara}>5.1 Baatasari will charge a Platform Fee of ₹10 (Rupees Ten) per ticket (or as mutually agreed) + applicable taxes.</p>
         <p style={agPara}>5.2 Payment Gateway fees (Razorpay) shall be charged as per actuals and may be absorbed by Organizer or passed to Customer as selected during event creation.</p>
         <p style={agPara}>5.3 Baatasari shall release the Organizer&rsquo;s share after deduction of Platform Fee, PG Fee, TCS (if applicable), and any other charges, within T+7 days after the Event (subject to Razorpay settlement policy).</p>
         <p style={agPara}>5.4 In case of cancellations or refunds, the Organizer shall reimburse Baatasari immediately for any amounts already settled.</p>
@@ -766,7 +766,7 @@ export default function OrganizerDocumentUploadPage() {
 
         <p style={{ ...agSectionTitle, textAlign: "center" }}>Schedule 2 — Commercial Arrangement</p>
         <div style={{ border: "1px solid #d1d5db", borderRadius: "10px", padding: "12px" }}>
-          <p style={{ margin: "0 0 4px" }}>Platform Fee: 10%</p>
+          <p style={{ margin: "0 0 4px" }}>Platform Fee: ₹10 per ticket</p>
           <p style={{ margin: "0 0 4px" }}>Settlement Timeline: T+7 days</p>
           <p style={{ margin: "0 0 8px" }}>Term: 12 months</p>
           <p style={{ margin: "0 0 4px", fontWeight: 700 }}>Notices</p>

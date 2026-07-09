@@ -275,6 +275,17 @@ export type OrderBreakdown = {
   currency: string;
 };
 
+// One ticket on an order — multi-tier orders issue one per cart line, each
+// with its own code + signed QR.
+export type OrderTicket = {
+  ticketId: string;
+  tierName: string | null;
+  quantity: number;
+  ticketCode: string;
+  qrPayload: string | null;
+  ticketStatus: string;
+};
+
 export type TicketRecord = {
   ticketId: string;
   orderId: string;
@@ -285,10 +296,13 @@ export type TicketRecord = {
   attendeeName: string;
   attendeeEmail: string;
   attendeePhone: string | null;
+  // Order-level total quantity; the top-level code/QR are the first ticket's.
   quantity: number;
   ticketCode: string;
   qrPayload: string | null;
   ticketStatus: string;
+  // Every ticket on the order (one per tier line), in creation order.
+  tickets?: OrderTicket[];
   orderStatus: string;
   totalAmount: number;
   refundedAmount: number;
@@ -314,6 +328,14 @@ export type TaxInvoice = {
   intraState: boolean;
   eventTitle: string;
   quantity: number;
+  // Per-tier cart lines (tier name, qty, unit-price snapshot). Legacy orders
+  // yield a single line; unitPrice may be "" for pre-cart orders.
+  items?: {
+    ticketTierId: string;
+    ticketTierName: string;
+    quantity: number;
+    unitPrice: string;
+  }[];
   currency: string;
   ticketSubtotal: string;
   platformFee: {

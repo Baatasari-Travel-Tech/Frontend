@@ -40,8 +40,6 @@ const checkoutSchema = z
     guestEmail: z.string().trim(),
     guestPhone: z.string().regex(/^\d{10}$/, "Phone number must be 10 digits."),
     sendCopyToMe: z.boolean(),
-    quantity: z.number().int().min(1).max(10),
-    selectedTierId: z.string().min(1, "No ticket tier available for this event."),
     termsAccepted: z
       .boolean()
       .refine((v) => v === true, { message: "Please accept terms and conditions to continue." }),
@@ -74,7 +72,12 @@ type CreateOrderResponse = {
     currency: string
   }
   ticket?: { id: string }
+  tickets?: { id: string }[]
 }
+
+// Cap enforced server-side per identity per event (A9); mirrored here so the
+// steppers stop at the limit instead of failing at submit.
+const MAX_TICKETS_PER_ORDER = 6
 
 export default function CheckoutClient({ event }: { event: EventDetail }) {
   const router = useRouter()
@@ -86,7 +89,36 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
   const isLoggedIn = Boolean(session?.user)
   const accountEmail = session?.user?.email ?? ""
 
-  const lockedTierId = searchParams.get("tierId") ?? ""
+  // Per-tier quantities. Seeded from the URL: `sel=tierId:qty,tierId:qty`
+  // (multi-tier, from the event page steppers), with `tierId=` accepted as the
+  // legacy single-tier form. Falls back to 1 × first tier. Still editable here.
+  const [lineQty, setLineQty] = useState<Record<string, number>>(() => {
+    const validIds = new Set((event.ticketTiers ?? []).map((t) => t.id ?? ""))
+    const map: Record<string, number> = {}
+    const sel = searchParams.get("sel")
+    if (sel) {
+      let total = 0
+      for (const part of sel.split(",")) {
+        const [tid, q] = part.split(":")
+        const qty = Number(q)
+        if (tid && validIds.has(tid) && Number.isInteger(qty) && qty > 0) {
+          const take = Math.min(qty, MAX_TICKETS_PER_ORDER - total)
+          if (take > 0) {
+            map[tid] = (map[tid] ?? 0) + take
+            total += take
+          }
+        }
+      }
+    } else {
+      const tierId = searchParams.get("tierId")
+      if (tierId && validIds.has(tierId)) map[tierId] = 1
+    }
+    if (Object.keys(map).length === 0) {
+      const first = event.ticketTiers?.[0]?.id
+      if (first) map[first] = 1
+    }
+    return map
+  })
 
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
@@ -114,8 +146,6 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
       guestPhone: (profile?.phone ?? "").replace(/^\+91/, ""),
       guestEmail: accountEmail,
       sendCopyToMe: false,
-      quantity: 1,
-      selectedTierId: lockedTierId,
       termsAccepted: false,
     },
   })
@@ -141,8 +171,6 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
 
   // Reactive form values — derived totals + UI branching depend on these.
   const bookingFor = useWatch({ control, name: "bookingFor" })
-  const quantity = useWatch({ control, name: "quantity" })
-  const selectedTierId = useWatch({ control, name: "selectedTierId" })
 
   // When the user logs in (or profile loads) mid-flow on "self" mode, populate
   // any empty self-fields from the account profile. Skips "other" mode.
@@ -199,32 +227,48 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
 
   const tiers = useMemo(() => event.ticketTiers ?? [], [event.ticketTiers])
 
-  const selectedTier = useMemo(() => {
-    if (tiers.length === 0) return undefined
-    if (!selectedTierId) return tiers[0]
-    return tiers.find((tier) => tier.id === selectedTierId) ?? tiers[0]
-  }, [tiers, selectedTierId])
+  // Cart lines derived from the per-tier quantities (in tier display order).
+  const lines = useMemo(
+    () =>
+      tiers
+        .filter((tier) => (lineQty[tier.id ?? ""] ?? 0) > 0)
+        .map((tier) => ({ tier, qty: lineQty[tier.id ?? ""] ?? 0 })),
+    [tiers, lineQty],
+  )
+  const totalQty = useMemo(() => lines.reduce((sum, l) => sum + l.qty, 0), [lines])
 
-  // Keep the form's selectedTierId in sync with the fallback chosen by
-  // selectedTier (first tier if the URL-locked id is missing or invalid).
-  // Without this, an empty form value would fail schema validation even
-  // though the UI shows a tier selected.
-  useEffect(() => {
-    const id = selectedTier?.id
-    if (!id) return
-    if (getValues("selectedTierId") === id) return
-    setValue("selectedTierId", id, { shouldValidate: false })
-  }, [selectedTier?.id, getValues, setValue])
+  const adjustLineQty = (tierId: string, delta: number) => {
+    setCheckoutError(null)
+    setLineQty((prev) => {
+      const current = prev[tierId] ?? 0
+      const total = Object.values(prev).reduce((sum, n) => sum + n, 0)
+      const next =
+        delta > 0
+          ? total >= MAX_TICKETS_PER_ORDER
+            ? current
+            : current + 1
+          : Math.max(0, current - 1)
+      if (next === current) return prev
+      return { ...prev, [tierId]: next }
+    })
+  }
 
-  const tierPrice = Number(selectedTier?.price ?? 0)
-  const isFreeEvent = tierPrice === 0
-  const subtotal = useMemo(() => Number((tierPrice * quantity).toFixed(2)), [quantity, tierPrice])
+  const subtotal = useMemo(
+    () =>
+      Number(
+        lines
+          .reduce((sum, l) => sum + Number(l.tier.price ?? 0) * l.qty, 0)
+          .toFixed(2),
+      ),
+    [lines],
+  )
+  const isFreeEvent = subtotal === 0
   const PLATFORM_FEE_PER_TICKET = 10
   const RAZORPAY_RATE = 0.02 * 1.18 // 2% + 18% GST
   const gatewayBearer = (event.addOns as Record<string, unknown>)?.gatewayBearer ?? "customer"
   const platformFee = useMemo(
-    () => (isFreeEvent ? 0 : PLATFORM_FEE_PER_TICKET * quantity),
-    [isFreeEvent, quantity]
+    () => (isFreeEvent ? 0 : PLATFORM_FEE_PER_TICKET * totalQty),
+    [isFreeEvent, totalQty]
   )
   const gatewayFee = useMemo(() => {
     if (isFreeEvent || gatewayBearer === "organizer") return 0
@@ -243,6 +287,11 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
       return
     }
 
+    if (lines.length === 0) {
+      setCheckoutError("Please select at least one ticket.")
+      return
+    }
+
     setCheckoutError(null)
     setCheckoutSuccess(null)
     setCheckoutLoading(true)
@@ -250,9 +299,9 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     try {
       // Idempotency: reuse one key across retries of the SAME selection (e.g.
       // user dismisses the Razorpay modal and resubmits) so the backend returns
-      // the original order instead of creating a duplicate. Changing tier or
-      // quantity rotates the key so a genuinely different order is created.
-      const selectionSig = `${values.selectedTierId}:${values.quantity}`
+      // the original order instead of creating a duplicate. Changing any line
+      // rotates the key so a genuinely different order is created.
+      const selectionSig = lines.map((l) => `${l.tier.id}:${l.qty}`).join("|")
       if (idempotencyRef.current?.sig !== selectionSig) {
         idempotencyRef.current = { sig: selectionSig, key: crypto.randomUUID() }
       }
@@ -265,8 +314,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
           method: "POST",
           auth: true,
           body: JSON.stringify({
-            ticketTierId: values.selectedTierId,
-            quantity: values.quantity,
+            items: lines.map((l) => ({ ticketTierId: l.tier.id, quantity: l.qty })),
             guestName: values.guestName.trim(),
             guestEmail: values.guestEmail.trim(),
             guestPhone: values.guestPhone.trim(),
@@ -282,7 +330,9 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
 
       if (isFreeEvent || order.breakdown.totalAmount === 0) {
         setCheckoutSuccess("Your free ticket has been confirmed!")
-        const ticketHref = order.ticket?.id ? `/order-confirmed/${order.ticket.id}` : "/history"
+        // Route by ORDER id — the confirmation page accepts it and shows every
+        // ticket on the order (one per tier line).
+        const ticketHref = `/order-confirmed/${order.orderId}`
         if (user?.onboardingStatus !== "COMPLETED") {
           router.push(`/onboarding?next=${encodeURIComponent(ticketHref)}`)
           return
@@ -314,7 +364,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
           razorpay_signature: string
         }) => {
           try {
-            const verifyResponse = await apiRequest<{ data: { result: { ticket?: { id?: string } } } }>(
+            await apiRequest<{ data: { result: { ticket?: { id?: string } } } }>(
               "/payments/razorpay/verify",
               {
                 method: "POST",
@@ -329,8 +379,9 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
             )
 
             setCheckoutSuccess("Payment verified successfully.")
-            const ticketId = verifyResponse.data.result.ticket?.id
-            const ticketHref = ticketId ? `/order-confirmed/${ticketId}` : "/history"
+            // Route by ORDER id — the confirmation page accepts it and shows
+            // every ticket on the order (one per tier line).
+            const ticketHref = `/order-confirmed/${order.orderId}`
 
             if (user?.onboardingStatus !== "COMPLETED") {
               router.push(`/onboarding?next=${encodeURIComponent(ticketHref)}`)
@@ -475,9 +526,13 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                         <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
-                            Ticket
+                            Tickets
                           </p>
-                          <p className="font-semibold">{selectedTier?.name ?? "—"}</p>
+                          <p className="font-semibold">
+                            {lines.length > 0
+                              ? lines.map((l) => `${l.qty} × ${l.tier.name}`).join(" · ")
+                              : "—"}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -686,51 +741,62 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                         Booking Details
                       </h3>
 
-                      {selectedTier ? (
-                        <div>
-                          <p className="mb-2 block text-xs font-medium text-(--gray-700) sm:text-sm">
-                            Ticket Type
-                          </p>
-                          <div className="flex items-center justify-between rounded-lg border border-(--gray-200) bg-(--gray-50) px-4 py-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-(--brand-navy)">{selectedTier.name}</p>
-                              {selectedTier.description ? (
-                                <p className="mt-0.5 text-xs text-(--gray-500)">{selectedTier.description}</p>
-                              ) : null}
-                            </div>
-                            <p className="ml-3 shrink-0 text-sm font-bold text-(--brand-navy)">
-                              {tierPrice === 0 ? "Free" : formatCurrency(tierPrice)}
-                            </p>
-                          </div>
-                        </div>
-                      ) : null}
-
                       <div>
-                        <label htmlFor="tickets" className="mb-2 block text-xs font-medium text-(--gray-700) sm:text-sm">
-                          No. of Tickets *{" "}
-                          <span className="text-xs font-normal text-(--gray-400)">(max 10)</span>
-                        </label>
-                        <Input
-                          id="tickets"
-                          type="number"
-                          min={1}
-                          max={10}
-                          {...register("quantity", {
-                            valueAsNumber: true,
-                            onBlur: (e) => {
-                            const n = Number(e.target.value)
-                            if (!Number.isFinite(n)) {
-                              setValue("quantity", 1)
-                            } else {
-                              setValue("quantity", Math.max(1, Math.min(10, n)))
-                            }
-                            },
+                        <p className="mb-2 block text-xs font-medium text-(--gray-700) sm:text-sm">
+                          Tickets *{" "}
+                          <span className="text-xs font-normal text-(--gray-400)">
+                            (max {MAX_TICKETS_PER_ORDER} per booking)
+                          </span>
+                        </p>
+                        <div className="space-y-2">
+                          {tiers.map((tier) => {
+                            const qty = lineQty[tier.id ?? ""] ?? 0
+                            const price = Number(tier.price ?? 0)
+                            return (
+                              <div
+                                key={tier.id ?? tier.name}
+                                className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 transition ${
+                                  qty > 0
+                                    ? "border-(--brand-navy) bg-(--brand-navy)/5"
+                                    : "border-(--gray-200) bg-(--gray-50)"
+                                }`}
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-(--brand-navy)">{tier.name}</p>
+                                  {tier.description ? (
+                                    <p className="mt-0.5 truncate text-xs text-(--gray-500)">{tier.description}</p>
+                                  ) : null}
+                                  <p className="text-sm font-bold text-(--brand-navy)">
+                                    {price === 0 ? "Free" : formatCurrency(price)}
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => adjustLineQty(tier.id ?? "", -1)}
+                                    disabled={qty === 0}
+                                    aria-label={`Remove one ${tier.name} ticket`}
+                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-(--gray-300) bg-white text-lg font-bold text-(--brand-navy) transition hover:border-(--brand-navy) disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    −
+                                  </button>
+                                  <span className="w-6 text-center text-sm font-bold text-(--brand-navy)" aria-live="polite">
+                                    {qty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => adjustLineQty(tier.id ?? "", 1)}
+                                    disabled={totalQty >= MAX_TICKETS_PER_ORDER}
+                                    aria-label={`Add one ${tier.name} ticket`}
+                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-(--gray-300) bg-white text-lg font-bold text-(--brand-navy) transition hover:border-(--brand-navy) disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                            )
                           })}
-                          className="w-full rounded-lg border border-(--gray-300) px-3 py-2 text-sm sm:px-4 sm:py-3 sm:text-base"
-                        />
-                        {errors.quantity ? (
-                          <p className="mt-1 text-xs text-rose-600">{errors.quantity.message}</p>
-                        ) : null}
+                        </div>
                       </div>
                     </section>
 
@@ -740,18 +806,22 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                       {isFreeEvent ? (
                         <div className="py-2 text-center">
                           <span className="text-3xl font-bold text-emerald-600">Free</span>
-                          <p className="mt-1 text-sm text-(--gray-500)">No charges — this is a free event</p>
+                          <p className="mt-1 text-sm text-(--gray-500)">No charges — this is a free booking</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
+                          {lines.map((line) => (
+                            <div key={line.tier.id ?? line.tier.name} className="flex items-center justify-between text-sm">
+                              <span className="text-(--gray-600)">
+                                {line.tier.name} ({formatCurrency(Number(line.tier.price ?? 0))} × {line.qty})
+                              </span>
+                              <span className="font-medium text-(--gray-800)">
+                                {formatCurrency(Number(line.tier.price ?? 0) * line.qty)}
+                              </span>
+                            </div>
+                          ))}
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-(--gray-600)">
-                              {selectedTier?.name} ({formatCurrency(tierPrice)} × {quantity})
-                            </span>
-                            <span className="font-medium text-(--gray-800)">{formatCurrency(subtotal)}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-(--gray-600)">Platform Fee (₹10 × {quantity})</span>
+                            <span className="text-(--gray-600)">Platform Fee (₹10 × {totalQty})</span>
                             <span className="font-medium text-(--gray-800)">+ {formatCurrency(platformFee)}</span>
                           </div>
                           {gatewayBearer === "customer" ? (
@@ -791,9 +861,6 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                     {errors.termsAccepted ? (
                       <p className="-mt-3 text-xs text-rose-600">{errors.termsAccepted.message}</p>
                     ) : null}
-                    {errors.selectedTierId ? (
-                      <p className="text-xs text-rose-600">{errors.selectedTierId.message}</p>
-                    ) : null}
 
                     {checkoutError ? (
                       <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
@@ -810,7 +877,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.98 }}
                       type="submit"
-                      disabled={checkoutLoading || !tiers.length}
+                      disabled={checkoutLoading || !tiers.length || totalQty === 0}
                       className="w-full rounded-xl bg-(--brand-navy) px-4 py-3 text-base font-semibold text-(--white) shadow-lg transition-all hover:bg-[#0A172C] hover:shadow-xl disabled:opacity-60 sm:px-6 sm:py-4 sm:text-lg"
                     >
                       {checkoutLoading ? "Processing..." : isFreeEvent ? "Get Free Ticket" : "Pay Now"}

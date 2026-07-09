@@ -1,17 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 import QRCode from "qrcode"
 import { useQuery } from "@tanstack/react-query"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { apiRequest } from "@/lib/api/client"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
-import type { TicketRecord } from "@/types/api"
+import type { OrderTicket, TicketRecord } from "@/types/api"
 
 export default function TicketDetailPage() {
   const params = useParams<{ id: string }>()
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  // ticketId → QR data-url; multi-tier orders carry one entry pass per line.
+  const [qrMap, setQrMap] = useState<Record<string, string>>({})
 
   const query = useQuery({
     queryKey: ["ticket-detail", params.id],
@@ -23,38 +24,104 @@ export default function TicketDetailPage() {
     },
   })
 
+  // Every ticket on the order; older single-ticket records (no tickets array)
+  // fall back to the top-level fields.
+  const orderTickets = useMemo<OrderTicket[]>(() => {
+    const t = query.data
+    if (!t) return []
+    if (t.tickets && t.tickets.length > 0) return t.tickets
+    return [
+      {
+        ticketId: t.ticketId,
+        tierName: null,
+        quantity: t.quantity,
+        ticketCode: t.ticketCode,
+        qrPayload: t.qrPayload,
+        ticketStatus: t.ticketStatus,
+      },
+    ]
+  }, [query.data])
+
   useEffect(() => {
-    if (!query.data?.qrPayload) return
-    QRCode.toDataURL(query.data.qrPayload, { width: 200, margin: 2 })
-      .then((url) => setQrDataUrl(url))
-      .catch(() => undefined)
-  }, [query.data?.qrPayload])
+    let cancelled = false
+    const withQr = orderTickets.filter((t) => t.qrPayload)
+    if (withQr.length === 0) return
+    void Promise.all(
+      withQr.map(async (t) => {
+        const url = await QRCode.toDataURL(t.qrPayload as string, { width: 200, margin: 2 }).catch(
+          () => null,
+        )
+        return [t.ticketId, url] as const
+      }),
+    ).then((entries) => {
+      if (cancelled) return
+      const map: Record<string, string> = {}
+      for (const [id, url] of entries) if (url) map[id] = url
+      setQrMap(map)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [orderTickets])
+
+  const multiPass = orderTickets.length > 1
 
   return (
     <ProtectedRoute>
       <main className="page-x py-10">
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/60 bg-white/90 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-900">Ticket</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-900">
+            {multiPass ? "Tickets" : "Ticket"}
+          </p>
           <h1 className="mt-3 font-bricolage text-4xl text-slate-950">
             {query.data?.eventTitle ?? "Loading ticket…"}
           </h1>
 
           {query.data ? (
             <>
-              {qrDataUrl ? (
-                <div className="mt-6 flex justify-center">
-                  <div className="inline-block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-center">
-                    <img src={qrDataUrl} alt="Ticket QR code" width={180} height={180} />
-                    <p className="mt-2 text-xs text-slate-500">Show this at entry</p>
+              {/* Entry passes — one QR per ticket type */}
+              <div className={`mt-6 grid gap-4 ${multiPass ? "sm:grid-cols-2" : "justify-center"}`}>
+                {orderTickets.map((pass) => (
+                  <div
+                    key={pass.ticketId}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm"
+                  >
+                    {qrMap[pass.ticketId] ? (
+                      <img
+                        src={qrMap[pass.ticketId]}
+                        alt={`QR code for ${pass.tierName ?? "ticket"}`}
+                        width={180}
+                        height={180}
+                        className="mx-auto"
+                      />
+                    ) : (
+                      <div className="mx-auto h-[180px] w-[180px] animate-pulse rounded-lg bg-slate-100" />
+                    )}
+                    {multiPass ? (
+                      <p className="mt-2 text-sm font-semibold text-slate-900">
+                        {pass.tierName ?? "Ticket"} · Admits {pass.quantity}
+                      </p>
+                    ) : null}
+                    <p className="mt-1 font-mono text-xs font-semibold text-slate-700">{pass.ticketCode}</p>
+                    <p className="mt-1 text-xs text-slate-500">Show this at entry</p>
                   </div>
-                </div>
-              ) : null}
+                ))}
+              </div>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Ticket code</p>
-                  <p className="mt-2 font-mono text-lg font-semibold text-slate-950">{query.data.ticketCode}</p>
-                </div>
+                {multiPass ? (
+                  <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Tickets</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-950">
+                      {orderTickets.map((p) => `${p.quantity} × ${p.tierName ?? "Ticket"}`).join(" · ")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Ticket code</p>
+                    <p className="mt-2 font-mono text-lg font-semibold text-slate-950">{query.data.ticketCode}</p>
+                  </div>
+                )}
 
                 <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Status</p>

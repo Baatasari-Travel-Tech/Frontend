@@ -516,16 +516,16 @@ export default function ForOrganizersPage() {
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Company</p>
               <div className="grid gap-2 text-slate-300">
                 <a className="transition hover:text-white" href="/about">About</a>
+                <a className="transition hover:text-white" href="/contact-us">Contact</a>
               </div>
             </div>
 
             <div className="space-y-3 text-sm">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Resources</p>
               <div className="grid gap-2 text-slate-300">
-                <a className="transition hover:text-white" href="/events">Events</a>
-                <a className="transition hover:text-white" href="/talent">Talents</a>
-                <a className="transition hover:text-white" href="/for-organizers">Organizers</a>
-                <a className="transition hover:text-white" href="/contact-us">Contact</a>
+                <Link className="transition hover:text-white" href="/events">Events</Link>
+                <Link className="transition hover:text-white" href="/talent">Talents</Link>
+                <Link className="transition hover:text-white" href="/for-organizers">Organizers</Link>
               </div>
             </div>
 

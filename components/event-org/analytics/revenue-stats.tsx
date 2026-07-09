@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell } from "recharts"
+import { Pie, PieChart, Cell } from "recharts"
 import { ArrowUp, ShoppingBag, Users, Clock, BookmarkCheck } from "lucide-react"
 
 import {
@@ -11,20 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-
 import type { EventDetail } from "@/types/api"
-
-import {
-  REVENUE_BY_DATE_DATA,
-  TICKETS_BY_DATE_DATA,
-  REVENUE_CHART_CONFIG,
-} from "../data/analytics-data"
 
 // Prevent hydration mismatch
 function ClientOnlyPieChart({ radialData }: { radialData: { name: string; value: number; fill?: string }[] }) {
@@ -61,18 +48,9 @@ function ClientOnlyPieChart({ radialData }: { radialData: { name: string; value:
 interface AnalyticsChartBlockProps {
   amount: string
   label: string
-  data: Record<string, string | number>[]
-  dataKey: string
-  config: ChartConfig
 }
 
-const AnalyticsChartBlock = ({
-  amount,
-  label,
-  data,
-  dataKey,
-  config,
-}: AnalyticsChartBlockProps) => (
+const AnalyticsChartBlock = ({ amount, label }: AnalyticsChartBlockProps) => (
   <div className="overflow-x-auto scrollbar-hide pb-2">
     <div className="relative h-80 w-full rounded-2xl bg-muted/10 p-4 border border-border/50">
       <div className="absolute top-6 left-6 z-10">
@@ -156,9 +134,9 @@ export function RevenueStats({ event, isLoading }: Props) {
   const chartProps =
     viewMode === "revenue"
       ? revenueTab === "total"
-        ? { amount: formatCurrency(totalRevenue), label: "Ticket Revenue", data: REVENUE_BY_DATE_DATA, dataKey: "revenue", config: REVENUE_CHART_CONFIG }
-        : { amount: formatCurrency(0), label: "Add-Ons Revenue", data: REVENUE_BY_DATE_DATA, dataKey: "addOns", config: REVENUE_CHART_CONFIG }
-      : { amount: String(tierSold), label: `${activeTier?.name ?? ""} Tickets Sold`, data: TICKETS_BY_DATE_DATA, dataKey: "vip", config: REVENUE_CHART_CONFIG }
+        ? { amount: formatCurrency(totalRevenue), label: "Ticket Revenue" }
+        : { amount: formatCurrency(0), label: "Add-Ons Revenue" }
+      : { amount: String(tierSold), label: `${activeTier?.name ?? ""} Tickets Sold` }
 
   if (isLoading) {
     return <div className="rounded-xl border bg-card h-96 animate-pulse" />

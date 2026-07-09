@@ -8,6 +8,7 @@ import Hero from "@/components/about/hero"
 import Features from "@/components/about/features"
 import { FooterSocialLinks } from "@/components/events/footer-social-edit";
 import Image from "next/image";
+import Link from "next/link";
 import EventOrganizer from "@/components/about/organizer"
 import RestaurantOwner from "@/components/about/restaurant-owner"
 import Performers from "@/components/about/performers"
@@ -102,6 +103,7 @@ export default function AboutPage() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Company</p>
                     <div className="grid gap-2 text-slate-300">
                       <a className="hover:text-white transition" href="/about">About</a>
+                      <a className="hover:text-white transition" href="/contact-us">Contact</a>
                     </div>
                   </div>
 
@@ -109,10 +111,9 @@ export default function AboutPage() {
                   <div className="space-y-3 text-sm">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Resources</p>
                     <div className="grid gap-2 text-slate-300">
-                      <a className="hover:text-white transition" href="/events">Events</a>
-                      <a className="hover:text-white transition" href="/talent">Talents</a>
-                      <a className="hover:text-white transition" href="/for-organizers">Organizers</a>
-                      <a className="hover:text-white transition" href="/contact-us">Contact</a>
+                      <Link className="hover:text-white transition" href="/events">Events</Link>
+                      <Link className="hover:text-white transition" href="/talent">Talents</Link>
+                      <Link className="hover:text-white transition" href="/for-organizers">Organizers</Link>
                     </div>
                   </div>
 

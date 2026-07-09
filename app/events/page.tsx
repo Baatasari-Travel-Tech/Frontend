@@ -2,9 +2,10 @@
 
 import { Suspense, useMemo, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { EventGrid } from "@/components/events/event-grid"
+import { EventGrid, EventGridSkeleton } from "@/components/events/event-grid"
 import { EventsSearchHero } from "@/components/events/events-search-hero"
 import { FooterSocialLinks } from "@/components/events/footer-social-edit"
 import { toEventCardData, getEventPhase } from "@/lib/event-helpers"
@@ -134,7 +135,9 @@ function EventsPageContent() {
                     {gridTitle}
                   </h2>
                   <p className="mt-1 text-sm text-(--gray-500)">
-                    {visibleCards.length} event{visibleCards.length === 1 ? "" : "s"} to explore
+                    {eventsQuery.isPending
+                      ? "Loading events…"
+                      : `${visibleCards.length} event${visibleCards.length === 1 ? "" : "s"} to explore`}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -158,7 +161,9 @@ function EventsPageContent() {
               </div>
             </section>
 
-            {visibleCards.length > 0 ? (
+            {eventsQuery.isPending ? (
+              <EventGridSkeleton />
+            ) : visibleCards.length > 0 ? (
               <EventGrid events={visibleCards} title={gridTitle} hideHeader />
             ) : (
               <section className="flex flex-col items-center justify-center py-24 text-center">
@@ -197,24 +202,24 @@ function EventsPageContent() {
                 <a className="transition hover:text-white" href="/about">
                   About
                 </a>
+                <a className="transition hover:text-white" href="/contact-us">
+                  Contact
+                </a>
               </div>
             </div>
 
             <div className="space-y-3 text-sm">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Resources</p>
               <div className="grid gap-2 text-slate-300">
-                <a className="transition hover:text-white" href="/events">
+                <Link className="transition hover:text-white" href="/events">
                   Events
-                </a>
-                <a className="transition hover:text-white" href="/talent">
+                </Link>
+                <Link className="transition hover:text-white" href="/talent">
                   Talents
-                </a>
-                <a className="transition hover:text-white" href="/for-organizers">
+                </Link>
+                <Link className="transition hover:text-white" href="/for-organizers">
                   Organizers
-                </a>
-                <a className="transition hover:text-white" href="/contact-us">
-                  Contact
-                </a>
+                </Link>
               </div>
             </div>
 

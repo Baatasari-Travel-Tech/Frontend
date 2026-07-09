@@ -80,7 +80,36 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   }, [event.id])
 
   const tiers = event.ticketTiers ?? []
-  const [selectedTierId, setSelectedTierId] = useState<string>(() => tiers[0]?.id ?? "")
+  // Per-tier quantities (multi-tier cart). Buyers mix tiers — e.g. 2 Adults +
+  // 2 Kids — and the whole selection goes to checkout as one order.
+  const MAX_TICKETS_PER_ORDER = 6
+  const [tierQty, setTierQty] = useState<Record<string, number>>({})
+  const totalQty = useMemo(
+    () => Object.values(tierQty).reduce((sum, n) => sum + n, 0),
+    [tierQty],
+  )
+  const totalPrice = useMemo(
+    () =>
+      tiers.reduce(
+        (sum, t) => sum + (tierQty[t.id ?? ""] ?? 0) * Number(t.price ?? 0),
+        0,
+      ),
+    [tiers, tierQty],
+  )
+  const adjustTierQty = (tierId: string, delta: number) => {
+    setTierQty((prev) => {
+      const current = prev[tierId] ?? 0
+      const total = Object.values(prev).reduce((sum, n) => sum + n, 0)
+      const next =
+        delta > 0
+          ? total >= MAX_TICKETS_PER_ORDER
+            ? current
+            : current + 1
+          : Math.max(0, current - 1)
+      if (next === current) return prev
+      return { ...prev, [tierId]: next }
+    })
+  }
   const isFreeEvent = tiers.length > 0 && tiers.every((t) => Number(t.price) === 0)
   const minPrice = useMemo(() => {
     if (tiers.length === 0) return null
@@ -136,8 +165,14 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
 
   const goToCheckout = () => {
     if (unavailable) return
-    const tierParam = selectedTierId ? `&tierId=${encodeURIComponent(selectedTierId)}` : ""
-    const target = `/checkout?eventId=${event.id}${tierParam}`
+    if (tiers.length > 0 && totalQty === 0) return
+    // Selection travels as `sel=tierId:qty,tierId:qty` — refresh/share-safe.
+    const sel = tiers
+      .filter((t) => (tierQty[t.id ?? ""] ?? 0) > 0)
+      .map((t) => `${t.id}:${tierQty[t.id ?? ""]}`)
+      .join(",")
+    const selParam = sel ? `&sel=${encodeURIComponent(sel)}` : ""
+    const target = `/checkout?eventId=${event.id}${selParam}`
     if (!isLoggedIn) {
       const params = new URLSearchParams(searchParams?.toString() ?? "")
       params.set("redirect", target)
@@ -237,22 +272,20 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                 ))}
               </div>
 
-              {/* Tier selection */}
+              {/* Tier selection — per-tier quantity steppers (mix tiers freely) */}
               {tiers.length > 0 && !unavailable ? (
                 <div className="mt-4 space-y-2">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-(--gray-400)">Pick your ticket</p>
-                  {tiers.slice(0, 4).map((tier) => {
-                    const isSelected = tier.id === selectedTierId
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-(--gray-400)">Pick your tickets</p>
+                  {tiers.map((tier) => {
+                    const qty = tierQty[tier.id ?? ""] ?? 0
+                    const atCap = totalQty >= MAX_TICKETS_PER_ORDER
                     return (
-                      <button
-                        type="button"
+                      <div
                         key={tier.id ?? tier.name}
-                        onClick={() => setSelectedTierId(tier.id ?? "")}
-                        aria-pressed={isSelected}
-                        className={`flex w-full items-center justify-between rounded-xl border px-4 py-2.5 text-left transition ${
-                          isSelected
+                        className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-2.5 transition ${
+                          qty > 0
                             ? "border-(--brand-navy) bg-(--brand-navy)/5 ring-2 ring-(--brand-navy)/25"
-                            : "border-(--gray-100) bg-(--white) hover:border-(--brand-blue)/40 hover:bg-(--blue-50)/40"
+                            : "border-(--gray-100) bg-(--white)"
                         }`}
                       >
                         <div className="min-w-0">
@@ -260,13 +293,50 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                           {tier.description ? (
                             <p className="truncate text-xs text-(--gray-500)">{tier.description}</p>
                           ) : null}
+                          <p className="text-sm font-bold text-(--brand-blue)">
+                            {Number(tier.price) === 0 ? "Free" : formatCurrency(Number(tier.price))}
+                          </p>
                         </div>
-                        <p className="ml-3 shrink-0 text-sm font-bold text-(--brand-blue)">
-                          {Number(tier.price) === 0 ? "Free" : formatCurrency(Number(tier.price))}
-                        </p>
-                      </button>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => adjustTierQty(tier.id ?? "", -1)}
+                            disabled={qty === 0}
+                            aria-label={`Remove one ${tier.name} ticket`}
+                            className="flex h-8 w-8 items-center justify-center rounded-full border border-(--gray-200) bg-white text-lg font-bold text-(--brand-navy) transition hover:border-(--brand-blue) disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            −
+                          </button>
+                          <span className="w-6 text-center text-sm font-bold text-(--brand-navy)" aria-live="polite">
+                            {qty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => adjustTierQty(tier.id ?? "", 1)}
+                            disabled={atCap}
+                            aria-label={`Add one ${tier.name} ticket`}
+                            className="flex h-8 w-8 items-center justify-center rounded-full border border-(--gray-200) bg-white text-lg font-bold text-(--brand-navy) transition hover:border-(--brand-blue) disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
                     )
                   })}
+                  {totalQty > 0 ? (
+                    <div className="flex items-center justify-between rounded-xl bg-(--blue-50) px-4 py-2.5 text-sm">
+                      <span className="font-semibold text-(--brand-blue)">
+                        {totalQty} ticket{totalQty > 1 ? "s" : ""} selected
+                      </span>
+                      <span className="font-bold text-(--brand-navy)">
+                        {totalPrice === 0 ? "Free" : formatCurrency(totalPrice)}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-center text-[11px] text-(--gray-400)">
+                      Up to {MAX_TICKETS_PER_ORDER} tickets per booking
+                    </p>
+                  )}
                 </div>
               ) : null}
 
@@ -291,10 +361,11 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                     <button
                       type="button"
                       onClick={goToCheckout}
-                      className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-(--brand-navy) px-6 py-3.5 font-poppins text-base font-bold text-white shadow-lg shadow-(--brand-navy)/20 transition hover:bg-(--brand-navy)/90"
+                      disabled={tiers.length > 0 && totalQty === 0}
+                      className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-(--brand-navy) px-6 py-3.5 font-poppins text-base font-bold text-white shadow-lg shadow-(--brand-navy)/20 transition hover:bg-(--brand-navy)/90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Ticket className="h-5 w-5" />
-                      Book Tickets
+                      {tiers.length > 0 && totalQty === 0 ? "Select tickets" : "Book Tickets"}
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </button>
                     <p className="mt-2.5 text-center text-[11px] text-(--gray-500)">Secure checkout · Instant e-tickets</p>

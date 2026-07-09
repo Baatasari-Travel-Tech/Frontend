@@ -30,12 +30,6 @@ export default function GrievanceRedressal() {
               grievance@baatasari.com
             </a>
           </dd>
-          <dt className="font-semibold text-slate-600">Phone</dt>
-          <dd>
-            <a className="text-blue-600 hover:underline" href="tel:+919550993024">
-              +91&nbsp;95509&nbsp;93024
-            </a>
-          </dd>
           <dt className="font-semibold text-slate-600">Address</dt>
           <dd>
             28/1A-4-145/41, Sathyamjee Layout, Navalak Gardens, Nellore,

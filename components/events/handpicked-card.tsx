@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, Clock, MapPin, Users, Music, ArrowRight } from "lucide-react"
 import Image from "next/image"
@@ -45,11 +45,12 @@ export function HandpickedEventCard({
     status,
     cancelled = false,
 }: HandpickedEventCardProps) {
-    const [errored, setErrored] = useState(false)
-
-    useEffect(() => {
-        setErrored(false)
-    }, [image])
+    // Tracked per-src (YouTube-style): the card renders its data immediately
+    // and the thumbnail box shimmers until this image has actually loaded.
+    const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
+    const [erroredSrc, setErroredSrc] = useState<string | null>(null)
+    const loaded = loadedSrc === image
+    const errored = erroredSrc === image
 
     const isPast = status === "past"
     // Both cancelled and completed events render dimmed/greyed.
@@ -61,16 +62,22 @@ export function HandpickedEventCard({
                 {/* Cover — fills flush to the rounded top edge (no card padding) */}
                 <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden sm:aspect-[4/5]">
                     {image && !errored ? (
-                        <Image
-                            src={image}
-                            alt={title}
-                            fill
-                            sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
-                            className={`object-cover transition-transform duration-500 group-hover:scale-105 ${
-                                dimmed ? "grayscale opacity-60" : ""
-                            }`}
-                            onError={() => setErrored(true)}
-                        />
+                        <>
+                            {!loaded && (
+                                <div className="absolute inset-0 animate-pulse bg-slate-200" aria-hidden />
+                            )}
+                            <Image
+                                src={image}
+                                alt={title}
+                                fill
+                                sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
+                                className={`object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
+                                    !loaded ? "opacity-0" : dimmed ? "grayscale opacity-60" : "opacity-100"
+                                }`}
+                                onLoad={() => setLoadedSrc(image)}
+                                onError={() => setErroredSrc(image)}
+                            />
+                        </>
                     ) : (
                         <div className="absolute inset-0 bg-slate-100" />
                     )}

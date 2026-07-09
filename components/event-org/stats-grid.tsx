@@ -2,8 +2,15 @@ import { useMemo } from "react"
 import { CalendarDays, IndianRupee, Star, Users } from "lucide-react"
 import { formatCurrency } from "@/lib/format"
 import type { EventDetail, OrganizerAnalytics } from "@/types/api"
-import { STATS_DATA } from "./data/dashboard-data"
 import { StatCard } from "./stat-card"
+
+// Loading-skeleton config only — real values always come from analytics/events.
+const SKELETON_STATS = [
+  { icon: Users, iconBgColor: "bg-orange-100", iconColor: "text-orange-600", label: "Total Tickets Sold" },
+  { icon: CalendarDays, iconBgColor: "bg-purple-100", iconColor: "text-purple-600", label: "Total Events" },
+  { icon: IndianRupee, iconBgColor: "bg-blue-100", iconColor: "text-blue-600", label: "Total Revenue" },
+  { icon: Star, iconBgColor: "bg-yellow-100", iconColor: "text-yellow-600", label: "Capacity Utilization" },
+]
 
 type StatsGridProps = {
   analytics?: OrganizerAnalytics | null
@@ -77,12 +84,10 @@ export function StatsGrid({ analytics = null, events = [], isLoading = false }: 
     ]
   }, [analytics, events])
 
-  const fallbackStats = !analytics && events.length === 0
-
   return (
     <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
       {isLoading
-        ? STATS_DATA.map((stat, index) => (
+        ? SKELETON_STATS.map((stat, index) => (
             <StatCard
               key={index}
               icon={stat.icon}
@@ -93,29 +98,17 @@ export function StatsGrid({ analytics = null, events = [], isLoading = false }: 
               context="Loading..."
             />
           ))
-        : fallbackStats
-          ? STATS_DATA.map((stat, index) => (
-              <StatCard
-                key={index}
-                icon={stat.icon}
-                iconBgColor={stat.iconBgColor}
-                iconColor={stat.iconColor}
-                value={stat.value}
-                label={stat.label}
-                trend={stat.trend}
-              />
-            ))
-          : metrics.map((stat) => (
-              <StatCard
-                key={stat.label}
-                icon={stat.icon}
-                iconBgColor={stat.iconBgColor}
-                iconColor={stat.iconColor}
-                value={stat.value}
-                label={stat.label}
-                context={stat.context}
-              />
-            ))}
+        : metrics.map((stat) => (
+            <StatCard
+              key={stat.label}
+              icon={stat.icon}
+              iconBgColor={stat.iconBgColor}
+              iconColor={stat.iconColor}
+              value={stat.value}
+              label={stat.label}
+              context={stat.context}
+            />
+          ))}
     </div>
   )
 }

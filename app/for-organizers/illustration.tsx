@@ -25,6 +25,10 @@ export function Illustration({
   className?: string
 }) {
   const [failed, setFailed] = useState(false)
+  // Per-src load tracking: the holder shimmers until the artwork is in,
+  // then the image fades over it.
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
+  const loaded = loadedSrc === src
 
   if (failed) {
     return (
@@ -41,14 +45,17 @@ export function Illustration({
   }
 
   return (
-    <div className={`overflow-hidden ${className}`}>
+    <div
+      className={`overflow-hidden ${loaded ? '' : 'animate-pulse rounded-3xl bg-[#f3ead6]'} ${className}`}
+    >
       <Image
         src={src}
         alt={alt}
         width={width}
         height={height}
-        className="h-auto w-full"
+        className={`h-auto w-full transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
         sizes="(max-width: 768px) 100vw, 50vw"
+        onLoad={() => setLoadedSrc(src)}
         onError={() => setFailed(true)}
       />
     </div>

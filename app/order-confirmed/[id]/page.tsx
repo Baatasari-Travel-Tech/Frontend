@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -22,7 +22,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Button } from "@/components/ui/button"
 import { apiRequest } from "@/lib/api/client"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
-import type { TicketRecord } from "@/types/api"
+import type { OrderTicket, TicketRecord } from "@/types/api"
 
 // Sequence (seconds, relative to mount):
 //   0.0 – 2.4   Ball bounces 3x, third bounce floats to top and locks
@@ -156,6 +156,9 @@ function OrderConfirmedContent() {
   const ticketId = params.id
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  // ticketId → QR data-url for every ticket on the order (multi-tier orders
+  // carry one entry pass per tier line).
+  const [qrMap, setQrMap] = useState<Record<string, string>>({})
   const [introDone, setIntroDone] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const totalRef = useRef<HTMLSpanElement>(null)
@@ -177,12 +180,47 @@ function OrderConfirmedContent() {
     return () => clearTimeout(t)
   }, [])
 
+  // Every ticket on the order — one per tier line. Older single-ticket records
+  // (no `tickets` array) fall back to the top-level fields.
+  const orderTickets = useMemo<OrderTicket[]>(() => {
+    const t = query.data
+    if (!t) return []
+    if (t.tickets && t.tickets.length > 0) return t.tickets
+    return [
+      {
+        ticketId: t.ticketId,
+        tierName: null,
+        quantity: t.quantity,
+        ticketCode: t.ticketCode,
+        qrPayload: t.qrPayload,
+        ticketStatus: t.ticketStatus,
+      },
+    ]
+  }, [query.data])
+
   useEffect(() => {
-    if (!query.data?.qrPayload) return
-    QRCode.toDataURL(query.data.qrPayload, { width: 180, margin: 2 })
-      .then((url) => setQrDataUrl(url))
-      .catch(() => undefined)
-  }, [query.data?.qrPayload])
+    let cancelled = false
+    const withQr = orderTickets.filter((t) => t.qrPayload)
+    if (withQr.length === 0) return
+    void Promise.all(
+      withQr.map(async (t) => {
+        const url = await QRCode.toDataURL(t.qrPayload as string, { width: 180, margin: 2 }).catch(
+          () => null,
+        )
+        return [t.ticketId, url] as const
+      }),
+    ).then((entries) => {
+      if (cancelled) return
+      const map: Record<string, string> = {}
+      for (const [id, url] of entries) if (url) map[id] = url
+      setQrMap(map)
+      const first = orderTickets[0]
+      if (first && map[first.ticketId]) setQrDataUrl(map[first.ticketId])
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [orderTickets])
 
   // anime.js: stagger summary rows + count-up total once card is visible AND data is loaded
   useEffect(() => {
@@ -228,14 +266,20 @@ function OrderConfirmedContent() {
   const handleDownload = async () => {
     if (!ticket) return
     try {
-      // Ensure the QR is available even if the user downloads immediately
-      // (before the render-time generation finishes) — otherwise the PDF would
-      // be missing its QR code.
-      const qr =
-        qrDataUrl ??
-        (ticket.qrPayload
-          ? await QRCode.toDataURL(ticket.qrPayload, { width: 180, margin: 2 }).catch(() => null)
-          : null)
+      // Ensure every pass's QR is available even if the user downloads
+      // immediately (before the render-time generation finishes).
+      const passes = await Promise.all(
+        orderTickets.map(async (pass) => ({
+          pass,
+          qr:
+            qrMap[pass.ticketId] ??
+            (pass.qrPayload
+              ? await QRCode.toDataURL(pass.qrPayload, { width: 180, margin: 2 }).catch(() => null)
+              : null),
+        })),
+      )
+      const singlePass = passes.length === 1
+      const qr = singlePass ? passes[0]?.qr ?? null : null
       const { jsPDF } = await import("jspdf")
       const pdf = new jsPDF({ unit: "pt", format: "a4" })
       const pageWidth = pdf.internal.pageSize.getWidth()
@@ -291,8 +335,15 @@ function OrderConfirmedContent() {
       writeRow("Date", formatDate(ticket.eventDate))
       writeRow("Venue", ticket.venue ?? "—")
       writeRow("Attendee", `${ticket.attendeeName}${ticket.attendeeEmail ? "  ·  " + ticket.attendeeEmail : ""}`)
-      writeRow("Ticket code", ticket.ticketCode)
-      writeRow("Quantity", `${ticket.quantity} ticket${ticket.quantity === 1 ? "" : "s"}`)
+      if (singlePass) {
+        writeRow("Ticket code", ticket.ticketCode)
+        writeRow("Quantity", `${ticket.quantity} ticket${ticket.quantity === 1 ? "" : "s"}`)
+      } else {
+        writeRow(
+          "Tickets",
+          passes.map(({ pass }) => `${pass.quantity} × ${pass.tierName ?? "Ticket"}`).join(", "),
+        )
+      }
       writeRow(
         "Total paid",
         Number(ticket.totalAmount) === 0
@@ -300,6 +351,39 @@ function OrderConfirmedContent() {
           : formatCurrency(Number(ticket.totalAmount), ticket.currency)
       )
       if (ticket.paidAt) writeRow("Paid on", formatDateTime(ticket.paidAt))
+
+      // Multi-tier orders: one entry-pass block (QR + tier + code) per ticket.
+      if (!singlePass) {
+        const pageHeight = pdf.internal.pageSize.getHeight()
+        for (const { pass, qr: passQr } of passes) {
+          if (y + 130 > pageHeight - 60) {
+            pdf.addPage()
+            y = 60
+          }
+          pdf.setDrawColor(220, 220, 220)
+          pdf.roundedRect(margin, y, pageWidth - margin * 2, 120, 8, 8)
+          if (passQr) {
+            try {
+              pdf.addImage(passQr, "PNG", margin + 10, y + 10, 100, 100)
+            } catch {
+              // ignore image embed errors
+            }
+          }
+          pdf.setTextColor(12, 29, 55)
+          pdf.setFontSize(14)
+          pdf.text(pass.tierName ?? "Ticket", margin + 125, y + 38)
+          pdf.setFontSize(11)
+          pdf.setTextColor(90, 90, 90)
+          pdf.text(`Admits ${pass.quantity}`, margin + 125, y + 58)
+          pdf.setFontSize(11)
+          pdf.setTextColor(12, 29, 55)
+          pdf.text(pass.ticketCode, margin + 125, y + 78)
+          pdf.setFontSize(8)
+          pdf.setTextColor(120, 120, 120)
+          pdf.text("Scan at entry", margin + 125, y + 96)
+          y += 132
+        }
+      }
 
       // Footer
       const footerY = pdf.internal.pageSize.getHeight() - 40
@@ -446,7 +530,7 @@ function OrderConfirmedContent() {
                     </div>
                   </div>
 
-                  {qrDataUrl ? (
+                  {qrDataUrl && orderTickets.length === 1 ? (
                     <div className="shrink-0 rounded-2xl border border-(--gray-200) bg-white p-3 text-center shadow-sm">
                       <img src={qrDataUrl} alt="Ticket QR code" width={120} height={120} className="block" />
                       <p className="mt-1 text-[10px] uppercase tracking-wider text-(--gray-400)">
@@ -455,6 +539,46 @@ function OrderConfirmedContent() {
                     </div>
                   ) : null}
                 </div>
+
+                {/* Entry passes — one QR per ticket type (multi-tier orders) */}
+                {orderTickets.length > 1 ? (
+                  <div className="mt-6">
+                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-(--gray-400)">
+                      Entry passes · one QR per ticket type
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {orderTickets.map((pass) => (
+                        <div
+                          key={pass.ticketId}
+                          className="flex items-center gap-4 rounded-2xl border border-(--gray-200) bg-white p-4 shadow-sm"
+                        >
+                          {qrMap[pass.ticketId] ? (
+                            <img
+                              src={qrMap[pass.ticketId]}
+                              alt={`QR code for ${pass.tierName ?? "ticket"}`}
+                              width={110}
+                              height={110}
+                              className="shrink-0"
+                            />
+                          ) : (
+                            <div className="h-[110px] w-[110px] shrink-0 animate-pulse rounded-lg bg-slate-100" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-(--brand-navy)">
+                              {pass.tierName ?? "Ticket"}
+                            </p>
+                            <p className="text-sm text-(--gray-500)">
+                              Admits {pass.quantity}
+                            </p>
+                            <p className="mt-1 font-mono text-xs font-semibold text-(--brand-navy)">
+                              {pass.ticketCode}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Summary grid */}
                 <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -476,9 +600,17 @@ function OrderConfirmedContent() {
 
                   <div className="summary-row flex items-start gap-3 rounded-2xl border border-(--gray-100) bg-(--gray-50)/60 p-4 opacity-0">
                     <Ticket className="mt-0.5 h-4 w-4 text-(--brand-blue)" />
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-(--gray-400)">Ticket code</p>
-                      <p className="mt-0.5 font-mono font-semibold text-(--brand-navy)">{ticket.ticketCode}</p>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-(--gray-400)">
+                        {orderTickets.length > 1 ? "Tickets" : "Ticket code"}
+                      </p>
+                      {orderTickets.length > 1 ? (
+                        <p className="mt-0.5 truncate font-semibold text-(--brand-navy)">
+                          {orderTickets.map((p) => `${p.quantity} × ${p.tierName ?? "Ticket"}`).join(" · ")}
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 font-mono font-semibold text-(--brand-navy)">{ticket.ticketCode}</p>
+                      )}
                     </div>
                   </div>
 

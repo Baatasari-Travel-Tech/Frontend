@@ -121,18 +121,44 @@ function InvoiceContent() {
               <td className="py-2 text-right">{money(inv.platformFee.tax)}</td>
               <td className="py-2 text-right">{money(inv.platformFee.inclusive)}</td>
             </tr>
-            {/* Ticket — organizer's supply, memo only */}
-            <tr className="border-b border-slate-100 text-slate-500">
-              <td className="py-2">
-                Event ticket × {inv.quantity}
-                <span className="block text-xs text-slate-400">
-                  Supplied by the event organizer — GST (if any) is the organizer’s
-                </span>
-              </td>
-              <td className="py-2 text-right">—</td>
-              <td className="py-2 text-right">—</td>
-              <td className="py-2 text-right">{money(inv.ticketSubtotal)}</td>
-            </tr>
+            {/* Tickets — organizer's supply, memo only. One row per tier line
+                for cart orders; a single aggregate row for legacy orders. */}
+            {inv.items && inv.items.length > 0 && inv.items.some((i) => i.ticketTierName) ? (
+              inv.items.map((item, index) => (
+                <tr
+                  key={`${item.ticketTierId}-${index}`}
+                  className="border-b border-slate-100 text-slate-500"
+                >
+                  <td className="py-2">
+                    {item.ticketTierName || "Event ticket"} × {item.quantity}
+                    {index === 0 ? (
+                      <span className="block text-xs text-slate-400">
+                        Supplied by the event organizer — GST (if any) is the organizer’s
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="py-2 text-right">—</td>
+                  <td className="py-2 text-right">—</td>
+                  <td className="py-2 text-right">
+                    {item.unitPrice
+                      ? money((Number(item.unitPrice) * item.quantity).toFixed(2))
+                      : "—"}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr className="border-b border-slate-100 text-slate-500">
+                <td className="py-2">
+                  Event ticket × {inv.quantity}
+                  <span className="block text-xs text-slate-400">
+                    Supplied by the event organizer — GST (if any) is the organizer’s
+                  </span>
+                </td>
+                <td className="py-2 text-right">—</td>
+                <td className="py-2 text-right">—</td>
+                <td className="py-2 text-right">{money(inv.ticketSubtotal)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
 
