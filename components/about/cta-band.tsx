@@ -46,33 +46,28 @@ export default function CtaBand() {
         className="relative z-10 mx-auto w-full max-w-3xl px-6 text-center"
       >
         <p className="font-poppins text-xs font-semibold uppercase tracking-[0.28em] text-(--gold) mb-5">
-          Ready when you are
+          For artists &amp; performers
         </p>
 
         <h2 className="font-bricolage font-bold text-4xl md:text-6xl tracking-tight text-(--white) leading-[1.05]">
-          Your next experience is{" "}
+          Your{" "}
           <span className="bg-gradient-to-r from-(--gold) via-amber-200 to-(--white) bg-clip-text text-transparent">
-            one tap away
-          </span>
+            stage
+          </span>{" "}
+          is waiting
         </h2>
 
         <p className="font-poppins text-lg md:text-xl text-(--white)/65 mt-6 max-w-xl mx-auto">
-          Events, food, workshops, and the people who make them. Discover what&apos;s
-          happening around you tonight.
+          Singers, anchors, dancers, photographers — get discovered by organizers
+          booking talent for events near you.
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/events"
+            href="/talent"
             className="font-poppins font-bold text-lg px-12 py-4 rounded-full bg-(--gold) text-(--brand-navy) shadow-[0_14px_40px_-10px_rgba(194,150,46,0.7)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_18px_50px_-8px_rgba(194,150,46,0.85)]"
           >
-            Start exploring
-          </Link>
-          <Link
-            href="/for-organizers"
-            className="font-poppins font-semibold text-lg px-8 py-4 rounded-full border border-(--white)/25 text-(--white) transition-all duration-300 hover:border-(--white)/60 hover:bg-(--white)/[0.06]"
-          >
-            List your event
+            Showcase your talent
           </Link>
         </div>
       </motion.div>

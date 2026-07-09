@@ -128,15 +128,15 @@ export default function Hero() {
         <motion.div variants={rise} className="mb-8 flex justify-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-(--gold-bar-border) bg-(--gold-bar-bg)/80 px-4 py-1.5 text-sm font-medium text-(--gold-text) backdrop-blur-sm">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-(--gold) opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-(--gold)" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
             Curated events, venues &amp; experiences
           </span>
         </motion.div>
 
         {/* Title — springy word-by-word woosh */}
-        <h1 className="hero-title font-bricolage font-bold tracking-tight leading-[1.04] text-5xl md:text-7xl lg:text-[5.5rem] mb-8">
+        <h1 className="hero-title font-bricolage font-bold tracking-tight leading-[1.04] text-4xl md:text-6xl lg:text-[4.75rem] mb-8">
           {HEADLINE.map((w, i) => (
             <motion.span key={i} variants={word} className="inline-block mr-[0.25em]">
               {w === "city" ? (
@@ -179,10 +179,10 @@ export default function Hero() {
           </Link>
 
           <Link
-            href="/talent"
+            href="/for-organizers"
             className="font-poppins font-semibold text-lg px-8 py-4 rounded-full border border-(--brand-blue)/30 text-(--brand-navy) transition-all duration-300 hover:border-(--brand-blue) hover:bg-(--brand-navy)/[0.04]"
           >
-            Showcase your talent
+            List your event
           </Link>
         </motion.div>
       </motion.div>
