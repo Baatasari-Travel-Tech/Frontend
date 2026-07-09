@@ -7,27 +7,6 @@ import { Share2, Copy, Check, X, Loader2 } from "lucide-react"
 
 const LOGO_SRC = "/qr_logo.png"
 
-// Brand-theme presets for the QR foreground (mirrors globals.css brand tokens:
-// navy, blue, deep-blue) plus plain black; any other color via the custom picker.
-const QR_FG_PRESETS = ["#0c1d37", "#2b4570", "#122848", "#000000"]
-const DEFAULT_QR_FG = QR_FG_PRESETS[0]
-const DEFAULT_QR_BG = "#ffffff"
-
-// WCAG relative luminance → contrast ratio, to warn when a chosen color
-// combination is too low-contrast for scanners to read reliably.
-function contrastRatio(hexA: string, hexB: string): number {
-  const lum = (hex: string) => {
-    const n = parseInt(hex.slice(1), 16)
-    const chan = (v: number) => {
-      const c = v / 255
-      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-    }
-    return 0.2126 * chan((n >> 16) & 255) + 0.7152 * chan((n >> 8) & 255) + 0.0722 * chan(n & 255)
-  }
-  const [la, lb] = [lum(hexA), lum(hexB)]
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
-}
-
 function triggerDownload(href: string, filename: string) {
   const a = document.createElement("a")
   a.href = href
@@ -74,11 +53,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
   const [copied, setCopied] = useState(false)
   const [link, setLink] = useState("")
   const [qrReady, setQrReady] = useState(false)
-  const [qrFg, setQrFg] = useState(DEFAULT_QR_FG)
-  const [qrBg, setQrBg] = useState(DEFAULT_QR_BG)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  const lowContrast = contrastRatio(qrFg, qrBg) < 3
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -100,7 +75,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
       width: 464,
       margin: 1,
       errorCorrectionLevel: "H",
-      color: { dark: qrFg, light: qrBg },
+      color: { dark: "#0f172a", light: "#ffffff" },
     })
       .then(() => {
         if (cancelled) return
@@ -127,7 +102,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
           const bh = h + pad * 2
           const r = Math.min(bw, bh) * 0.3
 
-          ctx.fillStyle = qrBg
+          ctx.fillStyle = "#ffffff"
           ctx.beginPath()
           ctx.moveTo(bx + r, by)
           ctx.arcTo(bx + bw, by, bx + bw, by + bh, r)
@@ -153,7 +128,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
     return () => {
       cancelled = true
     }
-  }, [open, link, qrFg, qrBg])
+  }, [open, link])
 
   const handleCopy = async () => {
     try {
@@ -182,7 +157,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
         type: "svg",
         errorCorrectionLevel: "H",
         margin: 1,
-        color: { dark: qrFg, light: qrBg },
+        color: { dark: "#0f172a", light: "#ffffff" },
       })
       const { dataUri, aspect } = await loadLogoDataUri()
       const viewBoxMatch = svg.match(/viewBox="0 0 ([\d.]+) /)
@@ -198,7 +173,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
       const bh = h + pad * 2
       const r = Math.min(bw, bh) * 0.3
       const overlay =
-        `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${r}" fill="${qrBg}"/>` +
+        `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${r}" fill="#ffffff"/>` +
         `<image x="${x}" y="${y}" width="${w}" height="${h}" href="${dataUri}" preserveAspectRatio="xMidYMid meet"/>`
       const finalSvg = svg.replace("</svg>", `${overlay}</svg>`)
       const blob = new Blob([finalSvg], { type: "image/svg+xml" })
@@ -267,72 +242,6 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
                   qrReady ? "opacity-100" : "opacity-0"
                 }`}
               />
-            </div>
-
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="w-14 shrink-0 text-xs text-slate-400">QR color</span>
-                {QR_FG_PRESETS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setQrFg(c)}
-                    style={{ backgroundColor: c }}
-                    className={`h-6 w-6 rounded-full transition ${
-                      qrFg === c ? "ring-2 ring-slate-400 ring-offset-1" : "border border-slate-200"
-                    }`}
-                    aria-label={`QR color ${c}`}
-                  />
-                ))}
-                <label
-                  className="relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-slate-300"
-                  title="Custom color"
-                >
-                  <span
-                    className="absolute inset-0"
-                    style={{ background: "conic-gradient(#ef4444, #f59e0b, #22c55e, #06b6d4, #3b82f6, #a855f7, #ef4444)" }}
-                  />
-                  <input
-                    type="color"
-                    value={qrFg}
-                    onChange={(e) => setQrFg(e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    aria-label="Custom QR color"
-                  />
-                </label>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-14 shrink-0 text-xs text-slate-400">Backdrop</span>
-                <button
-                  type="button"
-                  onClick={() => setQrBg(DEFAULT_QR_BG)}
-                  className={`h-6 w-6 rounded-full bg-white transition ${
-                    qrBg === DEFAULT_QR_BG ? "ring-2 ring-slate-400 ring-offset-1" : "border border-slate-300"
-                  }`}
-                  aria-label="White backdrop"
-                />
-                <label
-                  className="relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-slate-300"
-                  title="Custom backdrop"
-                >
-                  <span
-                    className="absolute inset-0"
-                    style={{ background: "linear-gradient(135deg, #ffffff 50%, #e2e8f0 50%)" }}
-                  />
-                  <input
-                    type="color"
-                    value={qrBg}
-                    onChange={(e) => setQrBg(e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    aria-label="Custom backdrop color"
-                  />
-                </label>
-              </div>
-              {lowContrast ? (
-                <p className="text-[11px] font-medium text-amber-600">
-                  Low contrast — this QR may not scan reliably. Pick a darker QR color or lighter backdrop.
-                </p>
-              ) : null}
             </div>
 
             <div className="mt-4">
