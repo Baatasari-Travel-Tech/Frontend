@@ -107,6 +107,7 @@ export const INITIAL_EVENT_FORM_DATA: EventFormData = {
   sponsors: {
     titleSponsors: [],
     coPartners: [],
+    venuePartners: [],
     mediaPartners: [],
   },
   contactInfo: {

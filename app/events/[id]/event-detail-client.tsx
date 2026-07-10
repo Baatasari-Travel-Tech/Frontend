@@ -189,6 +189,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     const groups: [string, { name: string; website?: string | null }[]][] = [
       ["Title sponsors", (s.titleSponsors ?? []).filter((x) => x.name?.trim())],
       ["Co-partners", (s.coPartners ?? []).filter((x) => x.name?.trim())],
+      ["Venue partners", (s.venuePartners ?? []).filter((x) => x.name?.trim())],
       ["Media partners", (s.mediaPartners ?? []).filter((x) => x.name?.trim())],
     ]
     return groups.filter(([, names]) => names.length > 0)

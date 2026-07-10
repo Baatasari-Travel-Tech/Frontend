@@ -136,16 +136,20 @@ const normalizeSponsors = (sponsors: EventFormData["sponsors"]) => {
     const coPartners = sanitizeSponsorList(
       sponsors.filter((item) => item?.type === "coPartners")
     )
+    const venuePartners = sanitizeSponsorList(
+      sponsors.filter((item) => item?.type === "venuePartners")
+    )
     const mediaPartners = sanitizeSponsorList(
       sponsors.filter((item) => item?.type === "mediaPartners")
     )
 
-    return { titleSponsors, coPartners, mediaPartners }
+    return { titleSponsors, coPartners, venuePartners, mediaPartners }
   }
 
   return {
     titleSponsors: sanitizeSponsorList(sponsors?.titleSponsors),
     coPartners: sanitizeSponsorList(sponsors?.coPartners),
+    venuePartners: sanitizeSponsorList(sponsors?.venuePartners),
     mediaPartners: sanitizeSponsorList(sponsors?.mediaPartners),
   }
 }

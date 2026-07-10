@@ -79,28 +79,40 @@ const DualThumbSlider: React.FC<{
   const minLeft = `calc(${percent(valueMin)}% - 10px)`
   const maxLeft = `calc(${percent(valueMax)}% - 10px)`
 
+  // Track: top 18px + 6px tall → centre at 21px. Thumbs are 20px tall, so
+  // top = 21 - 10 = 11px keeps them vertically centred on the line.
   return (
     <div className={`relative h-10 my-5 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
-      <div ref={trackRef} className="absolute top-4.5 left-0 right-0 h-1.5 bg-slate-200 rounded-[3px] z-1" />
+      <div ref={trackRef} className="absolute top-[18px] left-0 right-0 h-1.5 bg-slate-200 rounded-[3px] z-1" />
       <div
-        className="absolute top-4.5 h-1.5 rounded-[3px] z-2 transition-all duration-100 bg-(--gold)"
+        className="absolute top-[18px] h-1.5 rounded-[3px] z-2 transition-all duration-100 bg-(--gold)"
         style={{
           left: `${percent(valueMin)}%`,
           width: `${percent(valueMax) - percent(valueMin)}%`,
         }}
       />
+      {/* Min thumb + value bubble */}
       <div
-        className="absolute top-3.5 w-5 h-5 bg-white rounded-full cursor-grab shadow-[0_2px_6px_rgb(0_0_0/0.2)] z-3 transition-all duration-200 border-[3px] border-(--gold)"
+        className="absolute top-[11px] w-5 h-5 bg-white rounded-full cursor-grab shadow-[0_2px_6px_rgb(0_0_0/0.2)] z-3 transition-all duration-200 border-[3px] border-(--gold)"
         style={{ left: minLeft }}
         onMouseDown={startDrag("min")}
         onTouchStart={startDrag("min")}
-      />
+      >
+        <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 rounded-md bg-(--brand-navy) px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
+          {valueMin}
+        </span>
+      </div>
+      {/* Max thumb + value bubble */}
       <div
-        className="absolute top-3.5 w-5 h-5 bg-white rounded-full cursor-grab shadow-[0_2px_6px_rgb(0_0_0/0.2)] z-3 transition-all duration-200 border-[3px] border-(--gold)"
+        className="absolute top-[11px] w-5 h-5 bg-white rounded-full cursor-grab shadow-[0_2px_6px_rgb(0_0_0/0.2)] z-3 transition-all duration-200 border-[3px] border-(--gold)"
         style={{ left: maxLeft }}
         onMouseDown={startDrag("max")}
         onTouchStart={startDrag("max")}
-      />
+      >
+        <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 rounded-md bg-(--brand-navy) px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
+          {valueMax}
+        </span>
+      </div>
     </div>
   )
 }
@@ -226,19 +238,34 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
     setFormData((prev) => ({ ...prev, ticketType: allFree ? "free" : "paid" }))
   }
 
-  const handleAgePreset = (preset: { label: string; min: number; max: number } | null) => {
-    if (preset === null) {
-      setFormData((prev) => ({ ...prev, ageGroupPreset: "" }))
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        ageGroupPreset: preset.label,
-        audienceRange: { min: preset.min, max: preset.max },
-      }))
-    }
-  }
+  // Presets are MULTI-select (stored comma-joined in the same string field so
+  // drafts/edits stay compatible). The slider range becomes the union of the
+  // selected presets: lowest min → highest max.
+  const selectedPresets = (formData.ageGroupPreset ?? "").split(",").filter(Boolean)
 
-  const selectedPreset = formData.ageGroupPreset ?? ""
+  const handleAgePresetToggle = (preset: { label: string; min: number; max: number }) => {
+    setFormData((prev) => {
+      const current = (prev.ageGroupPreset ?? "").split(",").filter(Boolean)
+      const next = current.includes(preset.label)
+        ? current.filter((label) => label !== preset.label)
+        : [...current, preset.label]
+
+      if (next.length === 0) {
+        // Nothing selected — keep the current slider range, just clear presets.
+        return { ...prev, ageGroupPreset: "" }
+      }
+
+      const active = AGE_GROUP_PRESETS.filter((p) => next.includes(p.label))
+      return {
+        ...prev,
+        ageGroupPreset: next.join(","),
+        audienceRange: {
+          min: Math.min(...active.map((p) => p.min)),
+          max: Math.max(...active.map((p) => p.max)),
+        },
+      }
+    })
+  }
 
   return (
     <div className="flex w-full flex-col gap-5">
@@ -512,20 +539,21 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
                   ageGroupPreset: "",
                 }))
               }}
-              disabled={!!selectedPreset}
             />
           </div>
 
-          <p className="-mt-4 m-0 mb-1 text-[11px] text-slate-400">Or select a preset — it slides the slider</p>
+          <p className="-mt-4 m-0 mb-1 text-[11px] text-slate-400">
+            Or pick one or more presets — the slider covers all of them
+          </p>
 
           <div className="flex flex-wrap gap-2">
             {AGE_GROUP_PRESETS.map((preset) => {
-              const isActive = selectedPreset === preset.label
+              const isActive = selectedPresets.includes(preset.label)
               return (
                 <button
                   key={preset.label}
                   type="button"
-                  onClick={() => handleAgePreset(isActive ? null : preset)}
+                  onClick={() => handleAgePresetToggle(preset)}
                   className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
                     isActive
                       ? "border-(--gold) bg-(--gold-soft-bg) text-(--gold-text)"

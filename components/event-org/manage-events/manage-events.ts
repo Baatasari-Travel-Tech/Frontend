@@ -212,6 +212,7 @@ export const toEventFormDraft = (event: EventDetail): Partial<EventFormData> => 
     sponsors: {
       titleSponsors: sanitizeSponsorList(sponsors.titleSponsors),
       coPartners: sanitizeSponsorList(sponsors.coPartners),
+      venuePartners: sanitizeSponsorList(sponsors.venuePartners),
       mediaPartners: sanitizeSponsorList(sponsors.mediaPartners),
     },
     postEventFollowUp: {

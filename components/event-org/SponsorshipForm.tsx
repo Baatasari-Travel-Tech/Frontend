@@ -5,6 +5,7 @@ import {
   Award,
   Crown,
   Handshake,
+  MapPin,
   Megaphone,
   PackageOpen,
   Plus,
@@ -28,11 +29,12 @@ type SponsorItem = { name: string; website: string }
 type SponsorsState = {
   titleSponsors: SponsorItem[]
   coPartners: SponsorItem[]
+  venuePartners: SponsorItem[]
   mediaPartners: SponsorItem[]
   [key: string]: SponsorItem[]
 }
 
-type GroupKey = "titleSponsors" | "coPartners" | "mediaPartners"
+type GroupKey = "titleSponsors" | "coPartners" | "venuePartners" | "mediaPartners"
 
 const GROUPS: {
   key: GroupKey
@@ -59,6 +61,14 @@ const GROUPS: {
     iconCls: "bg-emerald-100 text-emerald-600",
   },
   {
+    key: "venuePartners",
+    title: "Venue Partners",
+    description: "Add venue partners hosting or providing the space.",
+    emptyNoun: "venue partners",
+    icon: MapPin,
+    iconCls: "bg-sky-100 text-sky-600",
+  },
+  {
     key: "mediaPartners",
     title: "Media Partners",
     description: "Add media partners who are promoting your event.",
@@ -79,6 +89,7 @@ const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   const sponsors = (formData.sponsors as SponsorsState) || {
     titleSponsors: [],
     coPartners: [],
+    venuePartners: [],
     mediaPartners: [],
   }
 
@@ -87,6 +98,7 @@ const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       const currentSponsors = (prev.sponsors as SponsorsState) || {
         titleSponsors: [],
         coPartners: [],
+        venuePartners: [],
         mediaPartners: [],
       }
       return {

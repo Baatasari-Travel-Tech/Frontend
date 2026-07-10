@@ -144,6 +144,7 @@ export type EventSponsor = {
 export type EventSponsorGroups = {
   titleSponsors?: EventSponsor[];
   coPartners?: EventSponsor[];
+  venuePartners?: EventSponsor[];
   mediaPartners?: EventSponsor[];
 };
 
