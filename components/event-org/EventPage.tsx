@@ -4,7 +4,9 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
+  CheckIcon,
   ChevronDownIcon,
+  SparklesIcon,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -33,6 +35,11 @@ interface EventPageProps {
   // Existing cover URL to show in the preview when editing an event.
   initialCoverPreview?: string | null;
   onSubmit?: (formData: EventFormData) => Promise<void>;
+  // Publishing preference (create flow only): lifted to the page so the
+  // submit handler can send `published: publishMode === "publish"`.
+  publishMode?: "publish" | "draft";
+  onPublishModeChange?: (mode: "publish" | "draft") => void;
+  showPublishingPreferences?: boolean;
 }
 
 const SCROLL_OFFSET = 100;
@@ -108,6 +115,9 @@ const EventPage: React.FC<EventPageProps> = ({
   contactInfoPrefill,
   initialCoverPreview = null,
   onSubmit,
+  publishMode = "publish",
+  onPublishModeChange,
+  showPublishingPreferences = false,
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -484,14 +494,14 @@ const EventPage: React.FC<EventPageProps> = ({
   return (
     <div
       ref={mainContainerRef}
-      className={`flex flex-col w-full bg-white ${isDashboardMode
-          ? "h-auto overflow-y-visible bg-transparent!"
+      className={`flex flex-col w-full bg-[#fdfaf5] ${isDashboardMode
+          ? "h-auto overflow-y-visible rounded-3xl"
           : "h-screen overflow-y-auto"
         }`}
     >
       <div className="grow">
         <section
-          className={`flex flex-col items-center gap-13 w-full bg-white min-h-screen ${isDashboardMode ? "bg-transparent! min-h-0!" : ""
+          className={`flex flex-col items-center gap-13 w-full min-h-screen ${isDashboardMode ? "min-h-0!" : ""
             }`}
         >
           <div className="flex flex-col items-start gap-13 w-full">
@@ -548,34 +558,32 @@ const EventPage: React.FC<EventPageProps> = ({
             <div
               id="create"
               ref={formRef}
-              className="flex flex-col w-full max-w-310 items-center gap-18 p-[30px_16px] rounded-4xl bg-card min-h-200 scroll-mt-25 max-[900px]:p-[16px_4vw] max-[900px]:rounded-xl max-[900px]:gap-8 max-[768px]:pt-6 max-[700px]:p-[8px_2vw] max-[700px]:rounded-lg max-[700px]:gap-4.5 max-[480px]:p-[16px_12px] max-[480px]:gap-6 max-[480px]:rounded-lg max-[480px]:min-h-0"
+              className="flex flex-col w-full max-w-310 items-center gap-8 px-4 py-6 sm:px-6 sm:py-8 scroll-mt-25 max-[480px]:px-3 max-[480px]:gap-6"
               aria-hidden={!showCreateEvent}
             >
-              <div className="flex flex-col items-center gap-8 w-full">
+              <div className="flex flex-col items-center gap-7 w-full">
                 <div className="flex items-center justify-between w-full">
-                  <h2 className="text-[28px] font-bold text-foreground m-0">Create Event</h2>
-                </div>
-
-                <div className="hidden max-[768px]:flex max-[768px]:flex-col max-[768px]:items-center text-center mb-6 w-full">
-                  <h3 className="text-xl font-bold text-(--upcoming-primary-900) m-0">{progressSteps[currentStep - 1]?.label}</h3>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Step {currentStep} of {progressSteps.length}
-                  </div>
+                  <h2 className="font-bricolage font-bold text-2xl sm:text-3xl text-(--brand-navy) m-0 inline-flex items-center gap-2">
+                    Create Event
+                    <SparklesIcon className="h-5 w-5 text-(--gold)" aria-hidden="true" />
+                  </h2>
                 </div>
 
                 <div
-                  className="relative w-full max-w-250 h-17.5 flex items-start justify-between max-[900px]:max-w-[98vw] max-[900px]:h-14 max-[768px]:hidden"
+                  className="relative w-full max-w-250 flex items-start justify-between gap-1.5 sm:gap-2"
                   role="progressbar"
                   aria-label={`Event creation progress, step ${currentStep} of 4`}
                 >
                   {progressSteps.map((step, index) => {
-                    const done = index + 1 < currentStep;
+                    const stepNumber = index + 1;
+                    const done = stepNumber < currentStep;
+                    const isCurrent = stepNumber === currentStep;
                     const active = step.active;
 
                     return (
                       <React.Fragment key={step.number}>
                         <div
-                          className="flex flex-col items-center min-w-20 z-2 cursor-pointer"
+                          className="flex flex-col items-center z-2 cursor-pointer"
                           onClick={() => handleStepClick(Number(step.number))}
                           role="button"
                           tabIndex={0}
@@ -584,31 +592,18 @@ const EventPage: React.FC<EventPageProps> = ({
                           }}
                         >
                           <div
-                            className={`w-8.5 h-8.5 rounded-full flex items-center justify-center border-2 border-(--upcoming-primary-800) bg-gray-100 text-(--upcoming-primary-800) transition-all duration-200 ${active
-                                ? "border-(--upcoming-primary-900) bg-card text-(--upcoming-primary-900)"
-                                : ""
-                              } ${done
-                                ? "border-green-600 bg-green-50 text-green-700"
-                                : ""
+                            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-200 ${active
+                                ? "bg-(--gold) text-white"
+                                : "bg-white border border-slate-300 text-slate-400"
                               }`}
                           >
-                            {done ? (
-                              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                <path
-                                  d="M6 10.5L9 13.5L14 8.5"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            ) : (
-                              <span style={{ fontSize: 14, fontWeight: 500 }}>{step.number}</span>
-                            )}
+                            {done ? <CheckIcon className="h-4 w-4" aria-hidden="true" /> : stepNumber}
                           </div>
 
                           <span
-                            className={`mt-3 text-center text-base text-(--upcoming-primary-800) max-w-25 wrap-break-word ${active ? "text-(--upcoming-primary-900)" : ""
+                            className={`mt-2 text-center text-[11px] max-w-24 wrap-break-word ${isCurrent
+                                ? "text-(--gold-text) font-bold"
+                                : "text-slate-400 max-[480px]:hidden"
                               }`}
                           >
                             {step.label}
@@ -616,10 +611,7 @@ const EventPage: React.FC<EventPageProps> = ({
                         </div>
 
                         {index < progressSteps.length - 1 && (
-                          <div
-                            className={`flex-1 h-1 bg-(--upcoming-gray-200) min-w-6 max-w-full z-1 mt-3.75 ${done ? "bg-green-600" : ""
-                              }`}
-                          />
+                          <div className="h-px bg-slate-200 flex-1 z-1 mt-[18px] min-w-4" />
                         )}
                       </React.Fragment>
                     );
@@ -677,6 +669,10 @@ const EventPage: React.FC<EventPageProps> = ({
                     setFormData={setFormData}
                     handleInputChange={handleInputChange}
                     formErrors={formErrors}
+                    publishMode={publishMode}
+                    onPublishModeChange={onPublishModeChange}
+                    showPublishingPreferences={showPublishingPreferences}
+                    coverPreview={photoPreview}
                   />
                 )}
               </div>
@@ -686,7 +682,7 @@ const EventPage: React.FC<EventPageProps> = ({
       </div>
 
       {showCreateEvent && (
-        <div className="flex justify-center py-2 px-[7%] bg-white">
+        <div className="flex justify-center py-2 px-4 sm:px-[7%]">
           <div className="w-full max-w-200 mt-8 pb-25 max-[480px]:pb-20">
             {submitError ? (
               <p className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{submitError}</p>
@@ -694,27 +690,40 @@ const EventPage: React.FC<EventPageProps> = ({
             {submitSuccess ? (
               <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{submitSuccess}</p>
             ) : null}
-            <div className="flex justify-between w-full">
+            <div className="flex justify-between items-start w-full gap-3">
             <button
               onClick={handlePrevious}
               disabled={currentStep === 1 || isSubmitting}
-              className={`flex items-center gap-2 py-3 px-6 rounded-full border border-border bg-white text-gray-700 cursor-pointer text-base font-medium ${currentStep === 1
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed invisible"
+              className={`inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3 text-sm font-bold text-slate-700 cursor-pointer transition hover:bg-slate-50 active:scale-[0.98] ${currentStep === 1
+                  ? "cursor-not-allowed invisible"
                   : ""
                 }`}
             >
-              <ArrowLeftIcon size={20} />
+              <ArrowLeftIcon size={16} />
               Previous
             </button>
 
-            <button
-              onClick={() => void handleNext()}
-              disabled={isSubmitting}
-              className="flex items-center gap-2 py-3 px-8 rounded-full bg-(--upcoming-primary-900) text-white border-none cursor-pointer text-base font-medium shadow-[0_4px_6px_-1px_rgb(0_0_0/0.1),0_2px_4px_-1px_rgb(0_0_0/0.06)] hover:bg-(--upcoming-primary-800) disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Submitting..." : currentStep === 4 ? "Submit" : "Proceed"}
-              {currentStep !== 4 && <ArrowRightIcon size={20} />}
-            </button>
+            <div className="flex flex-col items-end gap-2">
+              <button
+                onClick={() => void handleNext()}
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 rounded-full bg-(--brand-navy) px-7 py-3 text-sm font-bold text-white cursor-pointer transition hover:bg-(--brand-navy)/90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmitting
+                  ? "Submitting..."
+                  : currentStep === 4
+                    ? showPublishingPreferences
+                      ? publishMode === "publish"
+                        ? "Publish Event"
+                        : "Save Draft"
+                      : "Submit"
+                    : "Proceed"}
+                <ArrowRightIcon size={16} />
+              </button>
+              {currentStep === 1 ? (
+                <p className="m-0 text-[11px] text-slate-400">You can review and publish in the next step.</p>
+              ) : null}
+            </div>
             </div>
           </div>
         </div>

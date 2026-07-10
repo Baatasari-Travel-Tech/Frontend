@@ -1,7 +1,16 @@
 "use client"
 
 import React, { useState } from "react"
-import { CalendarIcon, ChevronDownIcon, ChevronUpIcon, ClockIcon, PlusIcon, Trash2, X, Upload } from "lucide-react"
+import {
+  CalendarIcon,
+  ClockIcon,
+  InfoIcon,
+  PlusIcon,
+  StarIcon,
+  Trash2,
+  UploadCloud,
+  X,
+} from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -10,6 +19,13 @@ import TimePicker from "@/components/ui/time-picker"
 import { cn } from "@/lib/utils"
 import type { EventFormData } from "./validateEventform"
 import { EVENT_CATEGORY_GROUPS } from "@/lib/event-categories"
+import SectionCard, {
+  FieldError,
+  FieldLabel,
+  GOLD_PILL_BUTTON_CLASS,
+  GOLD_TEXT_BUTTON_CLASS,
+  fieldInputClass,
+} from "./SectionCard"
 
 interface EventFormProps {
   formData: EventFormData
@@ -50,461 +66,472 @@ const EventForm: React.FC<EventFormProps> = ({
   const [activeSlotPicker, setActiveSlotPicker] = useState<{ index: number; field: "startTime" | "endTime" } | null>(null)
 
   return (
-    <div className="flex flex-col items-start gap-8 w-full">
-      <div className="w-full bg-card rounded-2xl border border-ring mb-8">
-        <div
-          onClick={() => toggleSection("event-info")}
-          className="px-8 py-7.5 flex items-start justify-between w-full cursor-pointer"
-        >
-          <h3 className="text-2xl font-medium text-upcoming-primary-700">Event Information</h3>
-          {openSections["event-info"] ? <ChevronUpIcon className="w-6 h-6" /> : <ChevronDownIcon className="w-6 h-6" />}
-        </div>
+    <div className="flex w-full flex-col gap-5">
+      {/* ============ Event Information ============ */}
+      <SectionCard
+        icon={<InfoIcon className="h-4.5 w-4.5" />}
+        title="Event Information"
+        open={!!openSections["event-info"]}
+        onToggle={() => toggleSection("event-info")}
+      >
+        <div className="flex flex-col gap-5">
+          {/* Banner / cover dropzone */}
+          <div className="relative">
+            <FieldLabel htmlFor="eventPhoto" required>Event Banner / Image</FieldLabel>
+            <label htmlFor="eventPhoto" className="block w-full cursor-pointer">
+              <div
+                className={`flex w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-center transition ${
+                  formErrors.eventPhoto ? "border-rose-400 bg-rose-50/40" : "border-(--gold) bg-(--gold-bar-bg)/50"
+                }`}
+              >
+                <input
+                  id="eventPhoto"
+                  type="file"
+                  name="eventPhoto"
+                  onChange={handleInputChange}
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden"
+                />
 
-        {openSections["event-info"] && (
-          <div className="px-8 pb-8">
-            <div className="flex flex-col lg:flex-row w-full gap-8 items-start">
-              <div className="flex flex-col items-center gap-3 w-full lg:w-auto shrink-0">
-                <label htmlFor="eventPhoto" className="cursor-pointer block w-full max-w-[260px] mx-auto">
-                  <div className={`relative w-full aspect-[2/3] overflow-hidden flex flex-col items-center justify-center gap-2 bg-white rounded-2xl border border-dashed ${formErrors.eventPhoto ? "border-red-400" : "border-gray-400"}`}>
-                    <input
-                      id="eventPhoto"
-                      type="file"
-                      name="eventPhoto"
-                      onChange={handleInputChange}
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      className="hidden"
-                    />
-                    {photoPreview ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={photoPreview}
-                          alt="Event cover preview"
-                          className="absolute inset-0 h-full w-full object-cover"
-                          onError={() => setPhotoPreview(null)}
-                        />
-                        <span className="absolute bottom-3 right-3 z-10 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white">
-                          Change / adjust
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-6 h-6 text-gray-900" />
-                        <span className="font-normal text-gray-900 text-lg">Upload Image</span>
-                      </>
-                    )}
-                  </div>
-                </label>
-                <div className="text-center text-xs text-gray-500 max-w-[260px]">
-                  <p>Upload a high-quality image for your event</p>
-                  <p>Formats: PNG, JPG, JPEG</p>
-                  <p>Accepted aspect ratio: 2:3 (Portrait)</p>
-                </div>
-                {photoError ? <span className="text-danger-red text-xs block">{photoError}</span> : null}
-                {formErrors.eventPhoto ? <span className="text-danger-red text-xs block">{formErrors.eventPhoto}</span> : null}
-              </div>
-
-              <div className="flex flex-col flex-1 w-full min-w-0 gap-5">
-                <div className="flex w-full flex-wrap gap-6 items-center">
-                  <div className="relative w-full flex-1">
-                    <input
-                      className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.eventName ? "border-red-400" : "border-ring"}`}
-                      placeholder="Enter event title"
-                      name="eventName"
-                      value={formData.eventName}
-                      onChange={handleInputChange}
-                    />
-                    <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Event Name *</span>
-                    {formErrors.eventName ? <span className="text-danger-red text-xs">{formErrors.eventName}</span> : null}
-                  </div>
-
-                  <div className="relative w-full flex-1">
-                    <select
-                      className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.category ? "border-red-400" : "border-ring"}`}
-                      name="category"
-                      value={formData.category}
-                      onChange={handleInputChange}
-                    >
-                      <option value="">Select category</option>
-                      {EVENT_CATEGORY_GROUPS.map((group) => (
-                        <optgroup key={group.category} label={group.category}>
-                          {group.subcategories.map((sub) => (
-                            <option key={`${group.category}-${sub}`} value={sub}>
-                              {sub}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                    <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Category *</span>
-                    {formErrors.category ? <span className="text-danger-red text-xs">{formErrors.category}</span> : null}
-                  </div>
-                </div>
-
-                <div className="relative w-full">
-                  <textarea
-                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-white box-border min-h-16 resize-y"
-                    placeholder='Write a catchy tagline, e.g., "Unleash Your Inner Techie!"'
-                    name="tagline"
-                    value={formData.tagline}
-                    onChange={handleInputChange}
-                  />
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Tagline (Optional)</span>
-                  {formErrors.tagline ? <span className="text-danger-red text-xs">{formErrors.tagline}</span> : null}
-                </div>
-
-                <div className="relative w-full">
-                  <textarea
-                    className={`w-full border rounded px-4 py-2 text-base text-gray-800 bg-white box-border min-h-30 resize-y ${formErrors.description ? "border-red-400" : "border-ring"}`}
-                    placeholder="Describe the event purpose and attendee experience"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                  />
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Description *</span>
-                  {formErrors.description ? <span className="text-danger-red text-xs">{formErrors.description}</span> : null}
-                </div>
-
-                <div className="relative w-full">
-                  <textarea
-                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-white box-border min-h-20 resize-y"
-                    placeholder="List speakers, MCs, DJs, or custom personnel requirements"
-                    name="personnel"
-                    value={formData.personnel}
-                    onChange={handleInputChange}
-                  />
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Customized Personnel (Optional)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="w-full bg-card rounded-2xl border border-ring mb-8">
-        <div
-          onClick={() => toggleSection("date-time")}
-          className="px-8 py-7.5 flex items-start justify-between w-full cursor-pointer"
-        >
-          <h3 className="text-2xl font-medium text-upcoming-primary-700">Date &amp; Time</h3>
-          {openSections["date-time"] ? <ChevronUpIcon className="w-6 h-6" /> : <ChevronDownIcon className="w-6 h-6" />}
-        </div>
-
-        {openSections["date-time"] && (
-          <div className="px-8 pb-8">
-            <div className="flex flex-col gap-6">
-              <div className="flex w-full flex-wrap gap-4 items-start">
-                <div className="relative min-w-37.5 flex-[1_1_200px]">
-                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "h-14 px-4 py-1 border rounded text-base bg-transparent w-full justify-start text-left font-normal relative",
-                          formData.date ? "text-gray-800" : "text-muted-foreground",
-                          formErrors.date ? "border-red-400" : "border-ring"
-                        )}
-                      >
-                        {formData.date && !Number.isNaN(new Date(formData.date).getTime())
-                          ? format(new Date(formData.date), "dd/MM/yyyy")
-                          : <span>Pick a date</span>}
-                        <CalendarIcon className="absolute right-4 top-4 w-6 h-6 text-gray-500 opacity-75" />
-                      </Button>
-                    </PopoverTrigger>
-
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.date && !Number.isNaN(new Date(formData.date).getTime()) ? new Date(formData.date) : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            setFormData((prev) => ({ ...prev, date: format(date, "yyyy-MM-dd") }))
-                            setDatePickerOpen(false)
-                          }
-                        }}
-                        startMonth={new Date()}
-                        endMonth={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
-                        disabled={(date) => {
-                          const today = new Date()
-                          today.setHours(0, 0, 0, 0)
-                          const fiveYearsOut = new Date()
-                          fiveYearsOut.setFullYear(today.getFullYear() + 5)
-                          return date < today || date > fiveYearsOut
-                        }}
-                        autoFocus
+                {photoPreview ? (
+                  <div className="relative w-full max-w-[180px]">
+                    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl border border-(--gold-bar-border)">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photoPreview}
+                        alt="Event cover preview"
+                        className="absolute inset-0 h-full w-full object-cover"
+                        onError={() => setPhotoPreview(null)}
                       />
-                    </PopoverContent>
-                  </Popover>
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Start Date *</span>
-                  {formErrors.date ? <span className="text-danger-red text-xs">{formErrors.date}</span> : null}
-                </div>
-
-                {/* End Date — optional; for multi-day events */}
-                <div className="relative min-w-37.5 flex-[1_1_200px]">
-                  <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "h-14 px-4 py-1 border rounded text-base bg-transparent w-full justify-start text-left font-normal relative border-ring",
-                          formData.endDate ? "text-gray-800" : "text-muted-foreground"
-                        )}
-                      >
-                        {formData.endDate && !Number.isNaN(new Date(formData.endDate).getTime())
-                          ? format(new Date(formData.endDate), "dd/MM/yyyy")
-                          : <span>Same day</span>}
-                        <CalendarIcon className="absolute right-4 top-4 w-6 h-6 text-gray-500 opacity-75" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.endDate && !Number.isNaN(new Date(formData.endDate).getTime()) ? new Date(formData.endDate) : undefined}
-                        onSelect={(date) => {
-                          setFormData((prev) => ({ ...prev, endDate: date ? format(date, "yyyy-MM-dd") : "" }))
-                          setEndDatePickerOpen(false)
-                        }}
-                        startMonth={new Date()}
-                        endMonth={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
-                        disabled={(date) => {
-                          // End date can't be before the start date.
-                          const start = formData.date ? new Date(formData.date) : new Date()
-                          start.setHours(0, 0, 0, 0)
-                          return date < start
-                        }}
-                        autoFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">End Date (optional)</span>
-                </div>
-
-                <div className="relative min-w-37.5 flex-[1_1_200px]">
-                  <input
-                    type="text"
-                    readOnly
-                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.time ? "border-red-400" : "border-ring"}`}
-                    value={formData.time || ""}
-                    onClick={() => setShowStartTimePicker(true)}
-                    placeholder="HH:MM AM/PM"
-                    style={{ cursor: "pointer" }}
-                  />
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Start Time *</span>
-                  <ClockIcon className="absolute right-4 top-4 w-6 h-6 text-gray-500 pointer-events-none" />
-                  {formErrors.time ? <span className="text-danger-red text-xs">{formErrors.time}</span> : null}
-                  {showStartTimePicker ? (
-                    <TimePicker
-                      initialTime={formData.time}
-                      onTimeChange={(val) => setFormData((prev) => ({ ...prev, time: val }))}
-                      onClose={() => setShowStartTimePicker(false)}
-                    />
-                  ) : null}
-                </div>
-
-                <div className="relative min-w-37.5 flex-[1_1_200px]">
-                  <input
-                    type="text"
-                    readOnly
-                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.endTime ? "border-red-400" : "border-ring"}`}
-                    value={formData.endTime || ""}
-                    onClick={() => setShowEndTimePicker(true)}
-                    placeholder="HH:MM AM/PM"
-                    style={{ cursor: "pointer" }}
-                  />
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">End Time *</span>
-                  <ClockIcon className="absolute right-4 top-4 w-6 h-6 text-gray-500 pointer-events-none" />
-                  {formErrors.endTime ? <span className="text-danger-red text-xs">{formErrors.endTime}</span> : null}
-                  {showEndTimePicker ? (
-                    <TimePicker
-                      initialTime={formData.endTime}
-                      onTimeChange={(val) => setFormData((prev) => ({ ...prev, endTime: val }))}
-                      onClose={() => setShowEndTimePicker(false)}
-                    />
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="flex w-full flex-wrap gap-6 items-start">
-                <div className="relative min-w-62.5 flex-[1_1_250px]">
-                  <input
-                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.venue ? "border-red-400" : "border-ring"}`}
-                    placeholder="Enter venue address or name"
-                    name="venue"
-                    value={formData.venue}
-                    onChange={handleInputChange}
-                  />
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Venue *</span>
-                  {formErrors.venue ? <span className="text-danger-red text-xs">{formErrors.venue}</span> : null}
-                </div>
-
-                <div className="relative min-w-62.5 flex-[1_1_250px]">
-                  <input
-                    className={`w-full border rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14 ${formErrors.googleMapsUrl ? "border-red-400" : "border-ring"}`}
-                    placeholder="Paste Google Maps URL"
-                    name="googleMapsUrl"
-                    value={formData.googleMapsUrl}
-                    onChange={handleInputChange}
-                  />
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Google Maps URL *</span>
-                  {formErrors.googleMapsUrl ? <span className="text-danger-red text-xs">{formErrors.googleMapsUrl}</span> : null}
-                </div>
-              </div>
-
-              <div className="flex w-full flex-wrap gap-6 items-start">
-                <div className="relative min-w-62.5 flex-[1_1_250px]">
-                  <input
-                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14"
-                    placeholder="How attendees can reach the event"
-                    name="transportToEvent"
-                    value={formData.transportToEvent || ""}
-                    onChange={handleInputChange}
-                  />
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Transport To Event (Optional)</span>
-                </div>
-
-                <div className="relative min-w-62.5 flex-[1_1_250px]">
-                  <input
-                    className="w-full border border-ring rounded px-4 py-1 text-base text-gray-800 bg-white box-border h-14"
-                    placeholder="Entry gate/side details"
-                    name="entrySide"
-                    value={formData.entrySide || ""}
-                    onChange={handleInputChange}
-                  />
-                  <span className="absolute -top-3 -left-1 px-1 bg-card text-muted-foreground text-sm z-10">Entry Side (Optional)</span>
-                </div>
-              </div>
-
-              {/* Time Slots / Schedule */}
-              <div className="border-t border-ring pt-5 mt-2">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-sm font-semibold text-upcoming-primary-700">Event Schedule (Optional)</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Break the event into named time slots (e.g. 7 AM–12 PM: Dance)</p>
+                    </div>
+                    <span className="absolute bottom-2 right-2 z-10 rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-white">
+                      Change / adjust
+                    </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => addArrayItem("timeSlots")}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-upcoming-primary-700 border border-upcoming-primary-700 rounded-full px-3 py-1 hover:bg-upcoming-primary-50 transition-colors"
-                  >
-                    <PlusIcon size={14} /> Add Slot
-                  </button>
-                </div>
-
-                {(formData.timeSlots ?? []).length === 0 ? (
-                  <p className="text-xs text-gray-400 italic">No slots added yet.</p>
                 ) : (
-                  <div className="flex flex-col gap-3">
-                    {(formData.timeSlots ?? []).map((slot, index) => (
-                      <div key={index} className="flex flex-wrap items-start gap-3 p-3 rounded-xl border border-ring bg-white">
-                        <div className="relative flex-[2_1_160px] min-w-36">
-                          <input
-                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-white box-border h-10"
-                            placeholder="Slot name (e.g. Dance)"
-                            value={slot.name}
-                            onChange={(e) => updateArrayField("timeSlots", index, "name", e.target.value)}
-                          />
-                          <span className="absolute -top-2.5 left-2 px-1 bg-white text-muted-foreground text-xs">Name</span>
-                        </div>
-                        <div className="relative flex-[1_1_120px] min-w-28">
-                          <input
-                            type="text"
-                            readOnly
-                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-white box-border h-10 cursor-pointer pr-8"
-                            value={slot.startTime || ""}
-                            onClick={() => setActiveSlotPicker({ index, field: "startTime" })}
-                            placeholder="Start time"
-                          />
-                          <span className="absolute -top-2.5 left-2 px-1 bg-white text-muted-foreground text-xs">From</span>
-                          <ClockIcon className="absolute right-2 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
-                          {activeSlotPicker?.index === index && activeSlotPicker.field === "startTime" ? (
-                            <TimePicker
-                              initialTime={slot.startTime}
-                              onTimeChange={(val) => updateArrayField("timeSlots", index, "startTime", val)}
-                              onClose={() => setActiveSlotPicker(null)}
-                            />
-                          ) : null}
-                        </div>
-                        <div className="relative flex-[1_1_120px] min-w-28">
-                          <input
-                            type="text"
-                            readOnly
-                            className="w-full border border-ring rounded px-3 py-2 text-sm text-gray-800 bg-white box-border h-10 cursor-pointer pr-8"
-                            value={slot.endTime || ""}
-                            onClick={() => setActiveSlotPicker({ index, field: "endTime" })}
-                            placeholder="End time"
-                          />
-                          <span className="absolute -top-2.5 left-2 px-1 bg-white text-muted-foreground text-xs">To</span>
-                          <ClockIcon className="absolute right-2 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
-                          {activeSlotPicker?.index === index && activeSlotPicker.field === "endTime" ? (
-                            <TimePicker
-                              initialTime={slot.endTime}
-                              onTimeChange={(val) => updateArrayField("timeSlots", index, "endTime", val)}
-                              onClose={() => setActiveSlotPicker(null)}
-                            />
-                          ) : null}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeArrayItem?.("timeSlots", index)}
-                          className="mt-0.5 p-2 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-100 h-10 w-10 flex items-center justify-center"
-                          aria-label={`Remove slot ${index + 1}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  <>
+                    <UploadCloud className="h-7 w-7 text-(--gold-icon)" />
+                    <p className="m-0 text-sm font-semibold text-slate-700">
+                      Drag &amp; Drop or <span className="text-(--gold-text) underline underline-offset-2">Browse</span>
+                    </p>
+                  </>
                 )}
+
+                <p className="m-0 text-[11px] text-slate-400">
+                  Recommended: PNG, JPG, JPEG &middot; Aspect ratio 2:3 (Portrait) &middot; Max size 5MB
+                </p>
               </div>
+            </label>
+            <FieldError message={photoError || undefined} />
+            <FieldError message={formErrors.eventPhoto} />
+          </div>
+
+          {/* Name + Category */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="relative">
+              <FieldLabel required>Event Name</FieldLabel>
+              <input
+                className={fieldInputClass(!!formErrors.eventName)}
+                placeholder="Enter event title"
+                name="eventName"
+                value={formData.eventName}
+                onChange={handleInputChange}
+              />
+              <FieldError message={formErrors.eventName} />
+            </div>
+
+            <div className="relative">
+              <FieldLabel required>Category</FieldLabel>
+              <select
+                className={`${fieldInputClass(!!formErrors.category)} appearance-none`}
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+              >
+                <option value="">Select category</option>
+                {EVENT_CATEGORY_GROUPS.map((group) => (
+                  <optgroup key={group.category} label={group.category}>
+                    {group.subcategories.map((sub) => (
+                      <option key={`${group.category}-${sub}`} value={sub}>
+                        {sub}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <FieldError message={formErrors.category} />
             </div>
           </div>
-        )}
-      </div>
 
-      <div className="w-full bg-card rounded-2xl border border-ring mb-8">
-        <div
-          onClick={() => toggleSection("event-highlights")}
-          className="px-8 py-7.5 flex items-start justify-between w-full cursor-pointer"
-        >
-          <h3 className="text-2xl font-medium text-upcoming-primary-700">Event Highlights (Optional)</h3>
-          {openSections["event-highlights"] ? <ChevronUpIcon className="w-6 h-6" /> : <ChevronDownIcon className="w-6 h-6" />}
+          {/* Tagline */}
+          <div className="relative">
+            <FieldLabel>Tagline (Optional)</FieldLabel>
+            <textarea
+              className={`${fieldInputClass(!!formErrors.tagline)} min-h-16 resize-y`}
+              placeholder='Write a catchy tagline, e.g., "Unleash Your Inner Techie!"'
+              name="tagline"
+              value={formData.tagline}
+              onChange={handleInputChange}
+            />
+            <FieldError message={formErrors.tagline} />
+          </div>
+
+          {/* Description */}
+          <div className="relative">
+            <FieldLabel required>Description</FieldLabel>
+            <div className="relative">
+              <textarea
+                className={`${fieldInputClass(!!formErrors.description)} min-h-30 resize-y pb-6`}
+                placeholder="Describe the event purpose and attendee experience"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+              />
+              <span className="pointer-events-none absolute bottom-3 right-3 text-[10px] text-slate-400">
+                {(formData.description || "").length} characters
+              </span>
+            </div>
+            <FieldError message={formErrors.description} />
+          </div>
+
+          {/* Personnel */}
+          <div className="relative">
+            <FieldLabel>Customized Personnel (Optional)</FieldLabel>
+            <textarea
+              className={`${fieldInputClass(false)} min-h-20 resize-y`}
+              placeholder="List speakers, MCs, DJs, or custom personnel requirements"
+              name="personnel"
+              value={formData.personnel}
+              onChange={handleInputChange}
+            />
+          </div>
         </div>
+      </SectionCard>
 
-        {openSections["event-highlights"] && (
-          <div className="px-8 pb-8">
-            <div className="flex flex-col gap-4">
-              {formData.artists.map((artist, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <input
-                    className="w-full border border-ring rounded px-4 py-2 text-base text-gray-800 bg-white box-border h-12"
-                    placeholder={`Highlight ${index + 1}`}
-                    value={artist.name}
-                    onChange={(e) => updateArrayField("artists", index, "name", e.target.value)}
+      {/* ============ Date & Time ============ */}
+      <SectionCard
+        icon={<CalendarIcon className="h-4.5 w-4.5" />}
+        title="Date & Time"
+        open={!!openSections["date-time"]}
+        onToggle={() => toggleSection("date-time")}
+      >
+        <div className="flex flex-col gap-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Start date */}
+            <div className="relative">
+              <FieldLabel required>Start Date</FieldLabel>
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      `${fieldInputClass(!!formErrors.date)} h-auto justify-start text-left font-normal shadow-none hover:bg-white`,
+                      formData.date ? "text-slate-800" : "text-slate-400"
+                    )}
+                  >
+                    {formData.date && !Number.isNaN(new Date(formData.date).getTime())
+                      ? format(new Date(formData.date), "dd/MM/yyyy")
+                      : <span>Pick a date</span>}
+                    <CalendarIcon className="ml-auto h-4 w-4 text-slate-400" />
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.date && !Number.isNaN(new Date(formData.date).getTime()) ? new Date(formData.date) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setFormData((prev) => ({ ...prev, date: format(date, "yyyy-MM-dd") }))
+                        setDatePickerOpen(false)
+                      }
+                    }}
+                    startMonth={new Date()}
+                    endMonth={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
+                    disabled={(date) => {
+                      const today = new Date()
+                      today.setHours(0, 0, 0, 0)
+                      const fiveYearsOut = new Date()
+                      fiveYearsOut.setFullYear(today.getFullYear() + 5)
+                      return date < today || date > fiveYearsOut
+                    }}
+                    autoFocus
                   />
-                  {formData.artists.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => removeArrayItem?.("artists", index)}
-                      className="p-2 rounded-md border border-slate-200 text-slate-700 hover:bg-slate-100"
-                      aria-label={`Remove highlight ${index + 1}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  ) : null}
-                </div>
-              ))}
+                </PopoverContent>
+              </Popover>
+              <FieldError message={formErrors.date} />
+            </div>
 
+            {/* End date — optional; for multi-day events */}
+            <div className="relative">
+              <FieldLabel>End Date (Optional)</FieldLabel>
+              <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      `${fieldInputClass(false)} h-auto justify-start text-left font-normal shadow-none hover:bg-white`,
+                      formData.endDate ? "text-slate-800" : "text-slate-400"
+                    )}
+                  >
+                    {formData.endDate && !Number.isNaN(new Date(formData.endDate).getTime())
+                      ? format(new Date(formData.endDate), "dd/MM/yyyy")
+                      : <span>Same day</span>}
+                    <CalendarIcon className="ml-auto h-4 w-4 text-slate-400" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.endDate && !Number.isNaN(new Date(formData.endDate).getTime()) ? new Date(formData.endDate) : undefined}
+                    onSelect={(date) => {
+                      setFormData((prev) => ({ ...prev, endDate: date ? format(date, "yyyy-MM-dd") : "" }))
+                      setEndDatePickerOpen(false)
+                    }}
+                    startMonth={new Date()}
+                    endMonth={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
+                    disabled={(date) => {
+                      // End date can't be before the start date.
+                      const start = formData.date ? new Date(formData.date) : new Date()
+                      start.setHours(0, 0, 0, 0)
+                      return date < start
+                    }}
+                    autoFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Start time */}
+            <div className="relative">
+              <FieldLabel required>Start Time</FieldLabel>
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly
+                  className={`${fieldInputClass(!!formErrors.time)} cursor-pointer pr-10`}
+                  value={formData.time || ""}
+                  onClick={() => setShowStartTimePicker(true)}
+                  placeholder="HH:MM AM/PM"
+                />
+                <ClockIcon className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                {showStartTimePicker ? (
+                  <TimePicker
+                    initialTime={formData.time}
+                    onTimeChange={(val) => setFormData((prev) => ({ ...prev, time: val }))}
+                    onClose={() => setShowStartTimePicker(false)}
+                  />
+                ) : null}
+              </div>
+              <FieldError message={formErrors.time} />
+            </div>
+
+            {/* End time */}
+            <div className="relative">
+              <FieldLabel required>End Time</FieldLabel>
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly
+                  className={`${fieldInputClass(!!formErrors.endTime)} cursor-pointer pr-10`}
+                  value={formData.endTime || ""}
+                  onClick={() => setShowEndTimePicker(true)}
+                  placeholder="HH:MM AM/PM"
+                />
+                <ClockIcon className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                {showEndTimePicker ? (
+                  <TimePicker
+                    initialTime={formData.endTime}
+                    onTimeChange={(val) => setFormData((prev) => ({ ...prev, endTime: val }))}
+                    onClose={() => setShowEndTimePicker(false)}
+                  />
+                ) : null}
+              </div>
+              <FieldError message={formErrors.endTime} />
+            </div>
+          </div>
+
+          {/* Venue + Maps */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="relative">
+              <FieldLabel required>Venue</FieldLabel>
+              <input
+                className={fieldInputClass(!!formErrors.venue)}
+                placeholder="Enter venue address or name"
+                name="venue"
+                value={formData.venue}
+                onChange={handleInputChange}
+              />
+              <FieldError message={formErrors.venue} />
+            </div>
+
+            <div className="relative">
+              <FieldLabel required>Google Maps URL</FieldLabel>
+              <input
+                className={fieldInputClass(!!formErrors.googleMapsUrl)}
+                placeholder="Paste Google Maps URL"
+                name="googleMapsUrl"
+                value={formData.googleMapsUrl}
+                onChange={handleInputChange}
+              />
+              <FieldError message={formErrors.googleMapsUrl} />
+            </div>
+          </div>
+
+          {/* Transport + Entry side */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="relative">
+              <FieldLabel>Transport to Event (Optional)</FieldLabel>
+              <input
+                className={fieldInputClass(false)}
+                placeholder="How attendees can reach the event"
+                name="transportToEvent"
+                value={formData.transportToEvent || ""}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="relative">
+              <FieldLabel>Entry Side (Optional)</FieldLabel>
+              <input
+                className={fieldInputClass(false)}
+                placeholder="Entry gate/side details"
+                name="entrySide"
+                value={formData.entrySide || ""}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+
+          {/* Time Slots / Schedule */}
+          <div className="mt-1 border-t border-(--gold-bar-border) pt-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="m-0 text-xs font-semibold text-slate-700">Event Schedule (Optional)</p>
+                <p className="m-0 mt-0.5 text-[11px] text-slate-400">
+                  Break the event into named time slots (e.g. 7 AM - 12 PM: Dance)
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={() => addArrayItem("artists")}
-                className="inline-flex items-center gap-2 text-sm font-medium text-upcoming-primary-700"
+                onClick={() => addArrayItem("timeSlots")}
+                className={GOLD_PILL_BUTTON_CLASS}
               >
-                <PlusIcon size={16} /> Add highlight
+                <PlusIcon size={14} /> Add Slot
               </button>
             </div>
+
+            {(formData.timeSlots ?? []).length === 0 ? (
+              <p className="m-0 text-xs italic text-slate-400">No slots added yet.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {(formData.timeSlots ?? []).map((slot, index) => (
+                  <div key={index} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="relative min-w-36 flex-[2_1_160px]">
+                      <FieldLabel>Name</FieldLabel>
+                      <input
+                        className={`${fieldInputClass(false)} px-3 py-2`}
+                        placeholder="Slot name (e.g. Dance)"
+                        value={slot.name}
+                        onChange={(e) => updateArrayField("timeSlots", index, "name", e.target.value)}
+                      />
+                    </div>
+                    <div className="relative min-w-28 flex-[1_1_120px]">
+                      <FieldLabel>From</FieldLabel>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          readOnly
+                          className={`${fieldInputClass(false)} cursor-pointer px-3 py-2 pr-8`}
+                          value={slot.startTime || ""}
+                          onClick={() => setActiveSlotPicker({ index, field: "startTime" })}
+                          placeholder="Start time"
+                        />
+                        <ClockIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        {activeSlotPicker?.index === index && activeSlotPicker.field === "startTime" ? (
+                          <TimePicker
+                            initialTime={slot.startTime}
+                            onTimeChange={(val) => updateArrayField("timeSlots", index, "startTime", val)}
+                            onClose={() => setActiveSlotPicker(null)}
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="relative min-w-28 flex-[1_1_120px]">
+                      <FieldLabel>To</FieldLabel>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          readOnly
+                          className={`${fieldInputClass(false)} cursor-pointer px-3 py-2 pr-8`}
+                          value={slot.endTime || ""}
+                          onClick={() => setActiveSlotPicker({ index, field: "endTime" })}
+                          placeholder="End time"
+                        />
+                        <ClockIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        {activeSlotPicker?.index === index && activeSlotPicker.field === "endTime" ? (
+                          <TimePicker
+                            initialTime={slot.endTime}
+                            onTimeChange={(val) => updateArrayField("timeSlots", index, "endTime", val)}
+                            onClose={() => setActiveSlotPicker(null)}
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeArrayItem?.("timeSlots", index)}
+                      className="flex h-9.5 w-9.5 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-100"
+                      aria-label={`Remove slot ${index + 1}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      </SectionCard>
+
+      {/* ============ Event Highlights ============ */}
+      <SectionCard
+        icon={<StarIcon className="h-4.5 w-4.5" />}
+        title="Event Highlights (Optional)"
+        open={!!openSections["event-highlights"]}
+        onToggle={() => toggleSection("event-highlights")}
+      >
+        <div className="flex flex-col gap-4">
+          {formData.artists.map((artist, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <input
+                className={fieldInputClass(false)}
+                placeholder={`Highlight ${index + 1}`}
+                value={artist.name}
+                onChange={(e) => updateArrayField("artists", index, "name", e.target.value)}
+              />
+              {formData.artists.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => removeArrayItem?.("artists", index)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-100"
+                  aria-label={`Remove highlight ${index + 1}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => addArrayItem("artists")}
+            className={GOLD_TEXT_BUTTON_CLASS}
+          >
+            <PlusIcon size={16} /> Add highlight
+          </button>
+        </div>
+      </SectionCard>
     </div>
   )
 }

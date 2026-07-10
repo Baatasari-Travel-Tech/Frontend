@@ -1,8 +1,19 @@
 "use client"
 
-import React from "react"
-import { ChevronDownIcon, PlusIcon, TrashIcon } from "lucide-react"
+import React, { useState } from "react"
+import {
+  Award,
+  Crown,
+  Handshake,
+  Megaphone,
+  PackageOpen,
+  Plus,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react"
 import type { EventFormData } from "./validateEventform"
+import SectionCard, { fieldInputClass } from "./SectionCard"
 
 interface SponsorshipFormProps {
   formData: EventFormData
@@ -21,19 +32,57 @@ type SponsorsState = {
   [key: string]: SponsorItem[]
 }
 
+type GroupKey = "titleSponsors" | "coPartners" | "mediaPartners"
+
+const GROUPS: {
+  key: GroupKey
+  title: string
+  description: string
+  emptyNoun: string
+  icon: React.ElementType
+  iconCls: string
+}[] = [
+  {
+    key: "titleSponsors",
+    title: "Title Sponsors",
+    description: "Add your main sponsors who are presenting your event.",
+    emptyNoun: "title sponsors",
+    icon: Crown,
+    iconCls: "bg-amber-100 text-amber-600",
+  },
+  {
+    key: "coPartners",
+    title: "Co-Partners",
+    description: "Add co-partners who are collaborating with your event.",
+    emptyNoun: "co-partners",
+    icon: Users,
+    iconCls: "bg-emerald-100 text-emerald-600",
+  },
+  {
+    key: "mediaPartners",
+    title: "Media Partners",
+    description: "Add media partners who are promoting your event.",
+    emptyNoun: "media partners",
+    icon: Megaphone,
+    iconCls: "bg-violet-100 text-violet-600",
+  },
+]
+
 const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   formData,
   setFormData,
   openSections,
   toggleSection,
 }) => {
+  const [introDismissed, setIntroDismissed] = useState(false)
+
   const sponsors = (formData.sponsors as SponsorsState) || {
     titleSponsors: [],
     coPartners: [],
     mediaPartners: [],
   }
 
-  const handleAddSponsor = (typeId: string) => {
+  const handleAddSponsor = (typeId: GroupKey) => {
     setFormData((prev) => {
       const currentSponsors = (prev.sponsors as SponsorsState) || {
         titleSponsors: [],
@@ -50,7 +99,7 @@ const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
     })
   }
 
-  const handleRemoveSponsor = (typeId: string, index: number) => {
+  const handleRemoveSponsor = (typeId: GroupKey, index: number) => {
     setFormData((prev) => {
       const currentSponsors = prev.sponsors as SponsorsState
       return {
@@ -63,7 +112,7 @@ const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
     })
   }
 
-  const handleSponsorChange = (typeId: string, index: number, field: string, value: string) => {
+  const handleSponsorChange = (typeId: GroupKey, index: number, field: string, value: string) => {
     setFormData((prev) => {
       const currentSponsors = prev.sponsors as SponsorsState
       const updatedList = [...(currentSponsors[typeId] || [])]
@@ -78,66 +127,126 @@ const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
     })
   }
 
-  const renderSponsorSection = (title: string, key: "titleSponsors" | "coPartners" | "mediaPartners") => (
-    <div className="mb-6">
-      <div className="flex justify-between items-center mb-3">
-        <label className="text-base font-medium text-foreground">{title}</label>
-        <button type="button" onClick={() => handleAddSponsor(key)} className="flex items-center gap-1 bg-none border-none text-revenue text-sm font-medium cursor-pointer">
-          <PlusIcon size={16} /> Add
-        </button>
-      </div>
-
-      {sponsors[key]?.map((sponsor, index) => (
-        <div key={index} className="relative flex gap-4 mb-3 items-start flex-wrap pr-10">
-          <div className="flex-1 min-w-50">
-            <input
-              type="text"
-              placeholder="Sponsor Name"
-              value={sponsor.name}
-              onChange={(e) => handleSponsorChange(key, index, "name", e.target.value)}
-              className="w-full p-3 rounded-lg border border-border text-sm outline-none box-border text-gray-800 bg-white"
-            />
+  return (
+    <div className="flex w-full flex-col gap-5">
+      {/* Intro banner — dismissible */}
+      {!introDismissed ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-(--gold-soft-border) bg-(--gold-bar-bg) p-4 sm:p-5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--gold-soft-bg) text-(--gold-icon)">
+            <Handshake className="h-4.5 w-4.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-slate-900">Partnerships make a bigger impact</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
+              Add sponsors and partners to increase your reach, build credibility and unlock more
+              visibility for your event.
+            </p>
           </div>
-
-          <div className="flex-1 min-w-50">
-            <input
-              type="text"
-              placeholder="Website (Optional)"
-              value={sponsor.website}
-              onChange={(e) => handleSponsorChange(key, index, "website", e.target.value)}
-              className="w-full p-3 rounded-lg border border-border text-sm outline-none box-border text-gray-800 bg-white"
-            />
-          </div>
-
           <button
             type="button"
-            onClick={() => handleRemoveSponsor(key, index)}
-            className="absolute top-0 right-0 p-2 text-destructive bg-none border-none cursor-pointer flex items-center justify-center h-10 w-10"
-            aria-label={`Remove ${title} sponsor`}
+            aria-label="Dismiss"
+            onClick={() => setIntroDismissed(true)}
+            className="shrink-0 rounded-full p-1 text-slate-400 transition hover:bg-white hover:text-slate-600"
           >
-            <TrashIcon className="w-5 h-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
-      ))}
+      ) : null}
 
-      {sponsors[key]?.length === 0 ? <p className="text-sm text-gray-500 italic m-0">No entries yet.</p> : null}
-    </div>
-  )
+      <SectionCard
+        icon={<Handshake className="h-4.5 w-4.5" />}
+        title="Sponsorship (Optional)"
+        open={!!openSections.sponsorship}
+        onToggle={() => toggleSection("sponsorship")}
+      >
+        <p className="-mt-1 mb-4 text-xs text-slate-500">
+          Add sponsors and partners who are supporting your event.
+        </p>
 
-  return (
-    <div className="flex flex-col gap-8 w-full">
-      <div className="w-full bg-card rounded-2xl border border-ring p-0 shadow-none max-w-full">
-        <div onClick={() => toggleSection("sponsorship")} className="px-8 py-7.5 flex items-start justify-between w-full cursor-pointer">
-          <h3 className="text-2xl font-medium text-upcoming-primary-700 m-0">Sponsorship (Optional)</h3>
-          <ChevronDownIcon className={`w-6 h-6 transition-transform duration-300 ${openSections.sponsorship ? "rotate-180" : ""}`} />
+        <div className="flex flex-col gap-6">
+          {GROUPS.map(({ key, title, description, emptyNoun, icon: Icon, iconCls }) => {
+            const rows = sponsors[key] ?? []
+            return (
+              <div key={key}>
+                {/* Group header */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconCls}`}>
+                      <Icon className="h-4.5 w-4.5" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{title}</p>
+                      <p className="mt-0.5 max-w-52 text-xs leading-snug text-slate-500 sm:max-w-none">
+                        {description}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddSponsor(key)}
+                    className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-(--gold-text) transition hover:text-(--gold)"
+                  >
+                    <Plus className="h-4 w-4" /> Add
+                  </button>
+                </div>
+
+                {/* Rows or empty state */}
+                {rows.length > 0 ? (
+                  <div className="mt-3 flex flex-col gap-3">
+                    {rows.map((sponsor, index) => (
+                      <div key={index} className="flex flex-wrap items-center gap-3">
+                        <input
+                          type="text"
+                          placeholder="Sponsor name"
+                          value={sponsor.name}
+                          onChange={(e) => handleSponsorChange(key, index, "name", e.target.value)}
+                          className={`${fieldInputClass(false)} min-w-40 flex-1`}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Website (optional)"
+                          value={sponsor.website}
+                          onChange={(e) => handleSponsorChange(key, index, "website", e.target.value)}
+                          className={`${fieldInputClass(false)} min-w-40 flex-1`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSponsor(key, index)}
+                          aria-label={`Remove ${title.replace(/s$/, "").toLowerCase()}`}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 flex flex-col items-center gap-1 rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center">
+                    <PackageOpen className="h-5 w-5 text-slate-300" />
+                    <p className="text-sm font-semibold text-slate-500">No {emptyNoun} added yet</p>
+                    <p className="text-xs text-slate-400">
+                      Click &ldquo;Add&rdquo; to include {emptyNoun}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
-        {openSections.sponsorship ? (
-          <div className="px-8 pb-8 max-[768px]:px-4 max-[768px]:pb-4">
-            {renderSponsorSection("Title Sponsors", "titleSponsors")}
-            {renderSponsorSection("Co-Partners", "coPartners")}
-            {renderSponsorSection("Media Partners", "mediaPartners")}
-          </div>
-        ) : null}
+      </SectionCard>
+
+      {/* Why add sponsors — info banner */}
+      <div className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 sm:p-5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <Award className="h-4.5 w-4.5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-emerald-800">Why add sponsors?</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
+            Sponsors help you increase event visibility, credibility and can support with prizes,
+            promotions and more.
+          </p>
+        </div>
       </div>
     </div>
   )

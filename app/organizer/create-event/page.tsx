@@ -151,7 +151,8 @@ const normalizeSponsors = (sponsors: EventFormData["sponsors"]) => {
 }
 
 const buildCreateEventPayload = (
-  formData: EventFormData
+  formData: EventFormData,
+  published: boolean
 ) => {
   const tiers = buildTicketTiers(formData)
   const capacity = tiers.reduce((total, tier) => total + tier.quantity, 0)
@@ -198,7 +199,7 @@ const buildCreateEventPayload = (
     guidelines: {
       text: formData.guidelines || "",
     },
-    published: true,
+    published,
     ticketTiers: tiers,
   }
 }
@@ -222,6 +223,11 @@ function CreateEventContent() {
   const eventId = searchParams.get("eventId")
   const action = searchParams.get("action")?.toLowerCase() ?? null
   const isUpdateFlow = Boolean(eventId) && (action === "edit" || action === "reschedule")
+  // Pure create flow (no edit / reschedule / repeat): the organizer can pick
+  // between publishing immediately and saving as a draft.
+  const isCreateMode =
+    !eventId && action !== "edit" && action !== "reschedule" && action !== "repeat"
+  const [publishMode, setPublishMode] = useState<"publish" | "draft">("publish")
   const [isHydratingEvent, setIsHydratingEvent] = useState(() => Boolean(eventId))
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [storedCoverPreview, setStoredCoverPreview] = useState<string | null>(null)
@@ -321,8 +327,16 @@ function CreateEventContent() {
         action={action}
         contactInfoPrefill={!eventId ? contactInfoPrefill : undefined}
         initialCoverPreview={storedCoverPreview}
+        publishMode={publishMode}
+        onPublishModeChange={setPublishMode}
+        showPublishingPreferences={isCreateMode}
         onSubmit={async (formData) => {
-          const payload = buildCreateEventPayload(formData)
+          // Only the pure create flow honours the draft/publish choice —
+          // edit / reschedule / repeat keep the previous behaviour (true).
+          const payload = buildCreateEventPayload(
+            formData,
+            isCreateMode ? publishMode === "publish" : true
+          )
           let persistedEventId = eventId ?? ""
 
           if (isUpdateFlow && eventId) {

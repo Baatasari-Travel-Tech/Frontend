@@ -1,13 +1,19 @@
 "use client"
 
 import React, { useCallback, useRef } from "react"
-import { ChevronDownIcon, PlusIcon, TrashIcon } from "lucide-react"
+import { GiftIcon, PlusIcon, ScrollIcon, TicketIcon, TrashIcon, UsersIcon } from "lucide-react"
 import {
   EventFormData,
   ADD_ON_OPTIONS,
   TARGET_AUDIENCE_OPTIONS,
   AGE_GROUP_PRESETS,
 } from "./data/create-event-data"
+import SectionCard, {
+  FieldError,
+  FieldLabel,
+  GOLD_TEXT_BUTTON_CLASS,
+  fieldInputClass,
+} from "./SectionCard"
 
 interface TicketingFormProps {
   formData: EventFormData
@@ -75,23 +81,22 @@ const DualThumbSlider: React.FC<{
 
   return (
     <div className={`relative h-10 my-5 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
-      <div ref={trackRef} className="absolute top-4.5 left-0 right-0 h-1.5 bg-gray-300 rounded-[3px] z-1" />
+      <div ref={trackRef} className="absolute top-4.5 left-0 right-0 h-1.5 bg-slate-200 rounded-[3px] z-1" />
       <div
-        className="absolute top-4.5 h-1.5 rounded-[3px] z-2 transition-all duration-100"
+        className="absolute top-4.5 h-1.5 rounded-[3px] z-2 transition-all duration-100 bg-(--gold)"
         style={{
           left: `${percent(valueMin)}%`,
           width: `${percent(valueMax) - percent(valueMin)}%`,
-          background: "linear-gradient(90deg, var(--royal-blue) 0%, var(--revenue-color) 100%)",
         }}
       />
       <div
-        className="absolute top-3.5 w-5 h-5 bg-card rounded-full cursor-grab shadow-[0_2px_6px_rgb(0_0_0/0.2)] z-3 transition-all duration-200 border-[3px] border-royal-blue"
+        className="absolute top-3.5 w-5 h-5 bg-white rounded-full cursor-grab shadow-[0_2px_6px_rgb(0_0_0/0.2)] z-3 transition-all duration-200 border-[3px] border-(--gold)"
         style={{ left: minLeft }}
         onMouseDown={startDrag("min")}
         onTouchStart={startDrag("min")}
       />
       <div
-        className="absolute top-3.5 w-5 h-5 bg-card rounded-full cursor-grab shadow-[0_2px_6px_rgb(0_0_0/0.2)] z-3 transition-all duration-200 border-[3px] border-revenue"
+        className="absolute top-3.5 w-5 h-5 bg-white rounded-full cursor-grab shadow-[0_2px_6px_rgb(0_0_0/0.2)] z-3 transition-all duration-200 border-[3px] border-(--gold)"
         style={{ left: maxLeft }}
         onMouseDown={startDrag("max")}
         onTouchStart={startDrag("max")}
@@ -115,33 +120,33 @@ function PriceSummaryTable({ price, gatewayBearer, onGatewayBearerToggle }: {
   const totalCharges = PLATFORM_FEE + gatewayFee
 
   return (
-    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-      <p className="font-semibold text-slate-700 mb-3">Fee Summary</p>
+    <div className="mt-1 rounded-xl border border-(--gold-bar-border) bg-(--gold-bar-bg)/40 p-4 text-sm">
+      <p className="m-0 mb-3 text-xs font-bold uppercase tracking-wide text-slate-700">Fee Summary</p>
       <table className="w-full text-xs">
         <tbody>
-          <tr className="border-b border-slate-200">
+          <tr className="border-b border-(--gold-bar-border)">
             <td className="py-2 text-slate-600">Platform Fee</td>
-            <td className="py-2 text-center font-medium">₹10/-</td>
+            <td className="py-2 text-center font-medium text-slate-800">₹10/-</td>
             <td className="py-2 text-right text-slate-500">Organizer</td>
           </tr>
-          <tr className="border-b border-slate-200">
+          <tr className="border-b border-(--gold-bar-border)">
             <td className="py-2 text-slate-600">Payment Gateway Fee <span className="text-slate-400">(2% + 18% GST)</span></td>
-            <td className="py-2 text-center font-medium">
+            <td className="py-2 text-center font-medium text-slate-800">
               {price > 0 ? `₹${gatewayFee.toFixed(2)}` : "—"}
             </td>
             <td className="py-2 text-right">
-              <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-0.5 text-[11px] font-medium">
+              <div className="inline-flex rounded-full border border-(--gold-soft-border) bg-white p-0.5 text-[11px] font-medium">
                 <button
                   type="button"
                   onClick={() => gatewayBearer !== "organizer" && onGatewayBearerToggle()}
-                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "organizer" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "organizer" ? "bg-(--gold) text-white shadow-sm" : "text-slate-500"}`}
                 >
                   Organizer
                 </button>
                 <button
                   type="button"
                   onClick={() => gatewayBearer !== "customer" && onGatewayBearerToggle()}
-                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "customer" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                  className={`rounded-full px-2 py-0.5 transition-colors duration-150 ${gatewayBearer === "customer" ? "bg-(--gold) text-white shadow-sm" : "text-slate-500"}`}
                 >
                   Customer
                 </button>
@@ -151,7 +156,7 @@ function PriceSummaryTable({ price, gatewayBearer, onGatewayBearerToggle }: {
         </tbody>
       </table>
 
-      <div className="mt-3 pt-3 border-t border-slate-300 space-y-1.5">
+      <div className="mt-3 space-y-1.5 border-t border-(--gold-soft-border) pt-3">
         <div className="flex justify-between text-xs">
           <span className="text-slate-600">Customer pays</span>
           <span className="font-semibold text-slate-800">{price > 0 ? `₹${customerPays.toFixed(2)}` : "Free"}</span>
@@ -164,7 +169,7 @@ function PriceSummaryTable({ price, gatewayBearer, onGatewayBearerToggle }: {
           <span className="text-slate-600">Charges (Platform + Gateway)</span>
           <span className="font-medium text-slate-600">{price > 0 ? `₹${totalCharges.toFixed(2)}` : "₹10.00 (on organizer)"}</span>
         </div>
-        <div className="flex justify-between text-xs border-t border-slate-200 pt-1.5 mt-1">
+        <div className="mt-1 flex justify-between border-t border-(--gold-soft-border) pt-1.5 text-xs">
           <span className="font-semibold text-slate-800">Total</span>
           <span className="font-bold text-slate-900">{price > 0 ? `₹${customerPays.toFixed(2)}` : "Free"}</span>
         </div>
@@ -172,6 +177,19 @@ function PriceSummaryTable({ price, gatewayBearer, onGatewayBearerToggle }: {
     </div>
   )
 }
+
+const Toggle: React.FC<{ on: boolean; onClick: () => void; label: string }> = ({ on, onClick, label }) => (
+  <button
+    type="button"
+    className={`relative h-6 w-12 shrink-0 cursor-pointer rounded-full transition-colors duration-300 ${on ? "bg-(--gold)" : "bg-slate-300"}`}
+    onClick={onClick}
+    aria-checked={on}
+    aria-label={label}
+    role="switch"
+  >
+    <div className={`absolute top-0.75 h-4.5 w-4.5 rounded-full bg-white transition-[left] duration-300 ${on ? "left-6.75" : "left-0.75"}`} />
+  </button>
+)
 
 const TicketingForm: React.FC<TicketingFormProps> = ({
   formData,
@@ -223,380 +241,328 @@ const TicketingForm: React.FC<TicketingFormProps> = ({
   const selectedPreset = formData.ageGroupPreset ?? ""
 
   return (
-    <div className="w-full">
-      <div className="w-full bg-card rounded-2xl border border-ring p-0 mb-8 shadow-none max-w-full">
-        <div
-          onClick={() => toggleSection("ticketing")}
-          onKeyDown={(e) => e.key === "Enter" && toggleSection("ticketing")}
-          className="px-8 py-7.5 flex items-start justify-between w-full cursor-pointer"
-          role="button"
-          tabIndex={0}
-        >
-          <h3 className="text-2xl font-medium text-upcoming-primary-700 m-0">Ticketing</h3>
-          <ChevronDownIcon className="w-6 h-6" />
-        </div>
+    <div className="flex w-full flex-col gap-5">
+      {/* ============ Ticketing ============ */}
+      <SectionCard
+        icon={<TicketIcon className="h-4.5 w-4.5" />}
+        title="Ticketing"
+        required
+        open={!!openSections.ticketing}
+        onToggle={() => toggleSection("ticketing")}
+      >
+        <FieldError message={formErrors.ticketType} />
 
-        <div className="overflow-hidden transition-[max-height] duration-500 ease-in-out" style={{ maxHeight: openSections.ticketing ? "4000px" : "0" }}>
-          <div className="px-8 pb-8">
-            {formErrors.ticketType ? <span className="text-danger-red text-xs">{formErrors.ticketType}</span> : null}
-
-            <div className="flex flex-col gap-4 mt-4">
-              {audienceCategory.map((tier, index) => (
-                <div key={index} className="flex flex-col gap-4 relative border border-slate-100 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-medium text-foreground m-0">Category {index + 1}</h3>
-                    {audienceCategory.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => removeArrayItem("audienceCategory", index)}
-                        className="p-2 text-destructive bg-none border-none cursor-pointer"
-                        aria-label={`Remove audience category ${index + 1}`}
-                      >
-                        <TrashIcon className="w-5 h-5" />
-                      </button>
-                    ) : null}
-                  </div>
-
-                  {/* Ticket name */}
-                  <div className="relative">
-                    <label className="block text-xs font-medium text-gray-700 bg-card -mt-2.5 ml-3 px-1 absolute">
-                      Ticket Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={tier.category || ""}
-                      onChange={(e) => updateArrayField("audienceCategory", index, "category", e.target.value)}
-                      className={`w-full h-12 px-4 py-3 border rounded-md text-sm text-gray-800 bg-white ${formErrors[`audienceCategory.${index}.category`] ? "border-red-400" : "border-gray-400"}`}
-                      placeholder="Ex: Gold Pass"
-                    />
-                    {formErrors[`audienceCategory.${index}.category`] ? (
-                      <span className="text-danger-red text-xs">{formErrors[`audienceCategory.${index}.category`]}</span>
-                    ) : null}
-                  </div>
-
-                  {/* Limited tickets row: toggle on left, if limited — number input on right (half width) */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 w-1/2">
-                      <span className="text-sm font-medium text-slate-700">Limited tickets</span>
-                      <button
-                        type="button"
-                        className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors duration-300 ml-3 ${tier.isLimited ? "bg-blue-soft" : "bg-gray-300"}`}
-                        onClick={() => updateArrayField("audienceCategory", index, "isLimited", !tier.isLimited)}
-                        aria-checked={tier.isLimited}
-                        role="switch"
-                      >
-                        <div className={`w-4.5 h-4.5 rounded-full bg-card absolute top-0.75 transition-[left] duration-300 ${tier.isLimited ? "left-6.75" : "left-0.75"}`} />
-                      </button>
-                    </div>
-
-                    {tier.isLimited ? (
-                      <div className="relative w-1/2">
-                        <label className="block text-xs font-medium text-gray-700 bg-card -mt-2.5 ml-3 px-1 absolute">
-                          Number of Tickets *
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={tier.numberOfTickets || ""}
-                          onChange={(e) => updateArrayField("audienceCategory", index, "numberOfTickets", e.target.value)}
-                          className={`w-full h-12 px-4 py-3 border rounded-md text-sm text-gray-800 bg-white ${formErrors[`audienceCategory.${index}.numberOfTickets`] ? "border-red-400" : "border-gray-400"}`}
-                          placeholder="Ex: 100"
-                        />
-                        {formErrors[`audienceCategory.${index}.numberOfTickets`] ? (
-                          <span className="text-danger-red text-xs">{formErrors[`audienceCategory.${index}.numberOfTickets`]}</span>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {/* Price row: input + Free toggle */}
-                  <div className="flex items-start gap-3">
-                    {!tier.isFree ? (
-                      <div className="relative flex-1">
-                        <label className="block text-xs font-medium text-gray-700 bg-card -mt-2.5 ml-3 px-1 absolute z-10">
-                          Price *
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-600">₹</span>
-                          <input
-                            type="number"
-                            min="10"
-                            max="15000"
-                            step="1"
-                            value={tier.price || ""}
-                            onChange={(e) => updateArrayField("audienceCategory", index, "price", e.target.value)}
-                            className={`w-full h-12 pl-8 pr-4 py-3 border rounded-md text-sm text-gray-800 bg-white ${formErrors[`audienceCategory.${index}.price`] ? "border-red-400" : "border-gray-400"}`}
-                            placeholder="Min ₹10"
-                          />
-                        </div>
-                        {formErrors[`audienceCategory.${index}.price`] ? (
-                          <span className="text-danger-red text-xs">{formErrors[`audienceCategory.${index}.price`]}</span>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <div className="flex-1 h-12 flex items-center px-4 rounded-md border border-dashed border-gray-300 bg-white">
-                        <span className="text-sm text-gray-400 italic">Free ticket — no charge to attendee</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 h-12 mt-0">
-                      <button
-                        type="button"
-                        className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors duration-300 ${tier.isFree ? "bg-blue-soft" : "bg-gray-300"}`}
-                        onClick={() => handleTierFreeToggle(index, !tier.isFree)}
-                        aria-checked={tier.isFree}
-                        role="switch"
-                      >
-                        <div className={`w-4.5 h-4.5 rounded-full bg-card absolute top-0.75 transition-[left] duration-300 ${tier.isFree ? "left-6.75" : "left-0.75"}`} />
-                      </button>
-                      <span className="text-sm font-medium text-slate-700 whitespace-nowrap">Free</span>
-                    </div>
-                  </div>
-
-                  {/* Note + price range */}
-                  {!tier.isFree && (
-                    <p className="text-xs text-slate-500 -mt-2">
-                      Price range: ₹10 – ₹15,000 &nbsp;·&nbsp;
-                      <span className="text-slate-600 font-medium">
-                        Note: A platform fee of ₹10 will be included in the ticket price.
-                      </span>
-                    </p>
-                  )}
-
-                  {/* Fee summary table */}
-                  {!tier.isFree && (
-                    <PriceSummaryTable
-                      price={Number(tier.price) || 0}
-                      gatewayBearer={gatewayBearer}
-                      onGatewayBearerToggle={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          gatewayBearer: prev.gatewayBearer === "customer" ? "organizer" : "customer",
-                        }))
-                      }
-                    />
-                  )}
-
-                  {/* Description */}
-                  <div className="relative w-full">
-                    <label className="block text-xs font-medium text-gray-700 bg-card -mt-2.5 ml-3 px-1 absolute">
-                      Description *
-                    </label>
-                    <textarea
-                      value={tier.description || ""}
-                      onChange={(e) => updateArrayField("audienceCategory", index, "description", e.target.value)}
-                      className={`w-full min-h-20 px-4 py-3 border rounded-md text-sm text-gray-800 bg-white resize-y ${formErrors[`audienceCategory.${index}.description`] ? "border-red-400" : "border-gray-400"}`}
-                      placeholder="Describe this ticket category"
-                    />
-                    {formErrors[`audienceCategory.${index}.description`] ? (
-                      <span className="text-danger-red text-xs">{formErrors[`audienceCategory.${index}.description`]}</span>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-
-              <button type="button" onClick={() => addArrayItem("audienceCategory")} className="flex items-center gap-1 bg-none border-none text-revenue text-sm font-medium cursor-pointer">
-                <PlusIcon size={16} /> Add category
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full bg-card rounded-2xl border border-ring p-0 mb-8 shadow-none max-w-full">
-        <div
-          onClick={() => toggleSection("guidelines")}
-          onKeyDown={(e) => e.key === "Enter" && toggleSection("guidelines")}
-          className="px-8 py-7.5 flex items-start justify-between w-full cursor-pointer"
-          role="button"
-          tabIndex={0}
-        >
-          <h3 className="text-2xl font-medium text-upcoming-primary-700 m-0">Guidelines / Rules (Optional)</h3>
-          <ChevronDownIcon className="w-6 h-6" />
-        </div>
-        <div className="overflow-hidden transition-[max-height] duration-500 ease-in-out" style={{ maxHeight: openSections.guidelines ? "1000px" : "0" }}>
-          <div className="px-8 pb-8">
-            <div className="relative w-full mt-2">
-              <textarea
-                name="guidelines"
-                value={formData.guidelines || ""}
-                onChange={(e) => setFormData((prev) => ({ ...prev, guidelines: e.target.value }))}
-                className="w-full min-h-28 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-white resize-y"
-                placeholder="Add entry rules, restrictions, age policy, etc."
-              />
-              {formErrors.guidelines ? <span className="text-danger-red text-xs">{formErrors.guidelines}</span> : null}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {formData.ticketType === "paid" ? (
-        <div className="w-full bg-card rounded-2xl border border-ring p-0 mb-8 shadow-none max-w-full">
-          <div
-            onClick={() => toggleSection("addOns")}
-            onKeyDown={(e) => e.key === "Enter" && toggleSection("addOns")}
-            className="px-8 py-7.5 flex items-start justify-between w-full cursor-pointer"
-            role="button"
-            tabIndex={0}
-          >
-            <h3 className="text-2xl font-medium text-upcoming-primary-700 m-0">Add-ons (Optional)</h3>
-            <ChevronDownIcon className="w-6 h-6" />
-          </div>
-          <div className="overflow-hidden transition-[max-height] duration-500 ease-in-out" style={{ maxHeight: openSections.addOns ? "1000px" : "0" }}>
-            <div className="px-8 pb-8">
-              <div className="flex gap-3 flex-wrap">
-                {ADD_ON_OPTIONS.map((option) => {
-                  const active = !!formData.addOns?.[option.id]
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          addOns: { ...prev.addOns, [option.id]: !active },
-                        }))
-                      }
-                      className={`px-3 py-2 rounded-full border text-sm ${active ? "bg-blue-soft text-white border-blue-soft" : "bg-white border-gray-200 text-slate-700"}`}
-                    >
-                      {option.label}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {!!formData.addOns?.giftHampers ? (
-                <div className="mt-4">
-                  <textarea
-                    value={(formData.addOns.giftHampersDescription as string) || ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        addOns: { ...prev.addOns, giftHampersDescription: e.target.value },
-                      }))
-                    }
-                    className="w-full min-h-20 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-white resize-y"
-                    placeholder="Describe gift hampers"
-                  />
-                  {formErrors["addOns.giftHampersDescription"] ? (
-                    <span className="text-danger-red text-xs">{formErrors["addOns.giftHampersDescription"]}</span>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {!!formData.addOns?.addOther ? (
-                <div className="mt-4">
-                  <textarea
-                    value={(formData.addOns.addOtherDescription as string) || ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        addOns: { ...prev.addOns, addOtherDescription: e.target.value },
-                      }))
-                    }
-                    className="w-full min-h-20 px-4 py-3 border border-gray-400 rounded-md text-sm text-gray-800 bg-white resize-y"
-                    placeholder="Describe other add-ons"
-                  />
-                  {formErrors["addOns.addOtherDescription"] ? (
-                    <span className="text-danger-red text-xs">{formErrors["addOns.addOtherDescription"]}</span>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="w-full bg-card rounded-2xl border border-ring p-0 mb-8 shadow-none max-w-full">
-        <div
-          onClick={() => toggleSection("audience")}
-          onKeyDown={(e) => e.key === "Enter" && toggleSection("audience")}
-          className="px-8 py-7.5 flex items-start justify-between w-full cursor-pointer"
-          role="button"
-          tabIndex={0}
-        >
-          <h3 className="text-2xl font-medium text-upcoming-primary-700 m-0">Audience</h3>
-          <ChevronDownIcon className="w-6 h-6" />
-        </div>
-        <div className="overflow-hidden transition-[max-height] duration-500 ease-in-out" style={{ maxHeight: openSections.audience ? "1200px" : "0" }}>
-          <div className="px-8 pb-8">
-            <div className="flex flex-col gap-3 mt-4">
+        <div className="flex flex-col gap-4">
+          {audienceCategory.map((tier, index) => (
+            <div key={index} className="relative flex flex-col gap-4 rounded-xl border border-slate-200 p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-medium text-foreground m-0">Age Range</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-blue-soft">{formData.audienceRange?.min ?? 18}</span>
-                  <span className="text-xs text-muted-foreground">–</span>
-                  <span className="text-sm font-semibold text-revenue">{formData.audienceRange?.max ?? 60}</span>
-                  <span className="text-xs text-muted-foreground">years</span>
+                <h4 className="m-0 text-sm font-bold text-slate-900">Category {index + 1}</h4>
+                {audienceCategory.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeArrayItem("audienceCategory", index)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-rose-500 transition hover:bg-rose-50"
+                    aria-label={`Remove audience category ${index + 1}`}
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+
+              {/* Ticket name */}
+              <div className="relative">
+                <FieldLabel required>Ticket Name</FieldLabel>
+                <input
+                  type="text"
+                  value={tier.category || ""}
+                  onChange={(e) => updateArrayField("audienceCategory", index, "category", e.target.value)}
+                  className={fieldInputClass(!!formErrors[`audienceCategory.${index}.category`])}
+                  placeholder="Ex: Gold Pass"
+                />
+                <FieldError message={formErrors[`audienceCategory.${index}.category`]} />
+              </div>
+
+              {/* Limited tickets toggle + quantity */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
+                  <span className="text-sm font-medium text-slate-700">Limited tickets</span>
+                  <Toggle
+                    on={!!tier.isLimited}
+                    onClick={() => updateArrayField("audienceCategory", index, "isLimited", !tier.isLimited)}
+                    label="Limited tickets"
+                  />
+                </div>
+
+                {tier.isLimited ? (
+                  <div className="relative">
+                    <FieldLabel required>Number of Tickets</FieldLabel>
+                    <input
+                      type="number"
+                      min="1"
+                      value={tier.numberOfTickets || ""}
+                      onChange={(e) => updateArrayField("audienceCategory", index, "numberOfTickets", e.target.value)}
+                      className={fieldInputClass(!!formErrors[`audienceCategory.${index}.numberOfTickets`])}
+                      placeholder="Ex: 100"
+                    />
+                    <FieldError message={formErrors[`audienceCategory.${index}.numberOfTickets`]} />
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Price row: input + Free toggle */}
+              <div className="flex items-start gap-3">
+                {!tier.isFree ? (
+                  <div className="relative flex-1">
+                    <FieldLabel required>Price</FieldLabel>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">₹</span>
+                      <input
+                        type="number"
+                        min="10"
+                        max="15000"
+                        step="1"
+                        value={tier.price || ""}
+                        onChange={(e) => updateArrayField("audienceCategory", index, "price", e.target.value)}
+                        className={`${fieldInputClass(!!formErrors[`audienceCategory.${index}.price`])} pl-9`}
+                        placeholder="Min ₹10"
+                      />
+                    </div>
+                    <FieldError message={formErrors[`audienceCategory.${index}.price`]} />
+                  </div>
+                ) : (
+                  <div className="flex flex-1 items-center self-end rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3">
+                    <span className="text-sm italic text-slate-400">Free ticket — no charge to attendee</span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 self-end py-3">
+                  <Toggle
+                    on={!!tier.isFree}
+                    onClick={() => handleTierFreeToggle(index, !tier.isFree)}
+                    label="Free ticket"
+                  />
+                  <span className="whitespace-nowrap text-sm font-medium text-slate-700">Free</span>
                 </div>
               </div>
 
-              <div className="w-[80%] mx-auto py-2" style={{ paddingBottom: 28 }}>
-                <DualThumbSlider
-                  min={0}
-                  max={100}
-                  valueMin={formData.audienceRange?.min ?? 18}
-                  valueMax={formData.audienceRange?.max ?? 60}
-                  onChange={({ min, max }) => {
+              {/* Note + price range */}
+              {!tier.isFree && (
+                <p className="-mt-2 m-0 text-xs text-slate-500">
+                  Price range: ₹10 – ₹15,000 &nbsp;·&nbsp;
+                  <span className="font-medium text-slate-600">
+                    Note: A platform fee of ₹10 will be included in the ticket price.
+                  </span>
+                </p>
+              )}
+
+              {/* Fee summary table */}
+              {!tier.isFree && (
+                <PriceSummaryTable
+                  price={Number(tier.price) || 0}
+                  gatewayBearer={gatewayBearer}
+                  onGatewayBearerToggle={() =>
                     setFormData((prev) => ({
                       ...prev,
-                      audienceRange: { min, max },
-                      ageGroupPreset: "",
+                      gatewayBearer: prev.gatewayBearer === "customer" ? "organizer" : "customer",
                     }))
-                  }}
-                  disabled={!!selectedPreset}
+                  }
                 />
-              </div>
+              )}
 
-              <p className="text-xs text-muted-foreground -mt-4 mb-1">Or select a preset — disables the slider</p>
-
-              <div className="flex flex-wrap gap-2">
-                {AGE_GROUP_PRESETS.map((preset) => {
-                  const isActive = selectedPreset === preset.label
-                  return (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => handleAgePreset(isActive ? null : preset)}
-                      className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors duration-150 ${
-                        isActive
-                          ? "bg-blue-soft text-white border-blue-soft"
-                          : "bg-white border-gray-200 text-slate-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {preset.label}
-                      <span className="ml-1 text-[10px] opacity-70">({preset.min}–{preset.max})</span>
-                    </button>
-                  )
-                })}
-              </div>
-
-              <h3 className="text-base font-medium text-foreground mt-4 mb-0">Audience Category</h3>
-              <div className="flex flex-wrap gap-2 w-full">
-                {TARGET_AUDIENCE_OPTIONS.map((audience) => {
-                  const active = !!formData.targetAudience?.[audience]
-                  return (
-                    <div
-                      key={audience}
-                      className={`px-3 py-1.5 rounded-full border cursor-pointer transition-all duration-200 text-sm font-medium ${
-                        active
-                          ? "border-blue-soft bg-blue-soft text-white"
-                          : "border-gray-200 bg-white text-slate-700 hover:bg-gray-200"
-                      }`}
-                      onClick={() => handleAudienceSelection(audience)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAudienceSelection(audience)}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      {audience}
-                    </div>
-                  )
-                })}
+              {/* Description */}
+              <div className="relative w-full">
+                <FieldLabel required>Description</FieldLabel>
+                <textarea
+                  value={tier.description || ""}
+                  onChange={(e) => updateArrayField("audienceCategory", index, "description", e.target.value)}
+                  className={`${fieldInputClass(!!formErrors[`audienceCategory.${index}.description`])} min-h-20 resize-y`}
+                  placeholder="Describe this ticket category"
+                />
+                <FieldError message={formErrors[`audienceCategory.${index}.description`]} />
               </div>
             </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => addArrayItem("audienceCategory")}
+            className={GOLD_TEXT_BUTTON_CLASS}
+          >
+            <PlusIcon size={16} /> Add category
+          </button>
+        </div>
+      </SectionCard>
+
+      {/* ============ Guidelines ============ */}
+      <SectionCard
+        icon={<ScrollIcon className="h-4.5 w-4.5" />}
+        title="Guidelines / Rules (Optional)"
+        open={!!openSections.guidelines}
+        onToggle={() => toggleSection("guidelines")}
+      >
+        <div className="relative w-full">
+          <textarea
+            name="guidelines"
+            value={formData.guidelines || ""}
+            onChange={(e) => setFormData((prev) => ({ ...prev, guidelines: e.target.value }))}
+            className={`${fieldInputClass(!!formErrors.guidelines)} min-h-28 resize-y`}
+            placeholder="Add entry rules, restrictions, age policy, etc."
+          />
+          <FieldError message={formErrors.guidelines} />
+        </div>
+      </SectionCard>
+
+      {/* ============ Add-ons ============ */}
+      {formData.ticketType === "paid" ? (
+        <SectionCard
+          icon={<GiftIcon className="h-4.5 w-4.5" />}
+          title="Add-ons (Optional)"
+          open={!!openSections.addOns}
+          onToggle={() => toggleSection("addOns")}
+        >
+          <div className="flex flex-wrap gap-3">
+            {ADD_ON_OPTIONS.map((option) => {
+              const active = !!formData.addOns?.[option.id]
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      addOns: { ...prev.addOns, [option.id]: !active },
+                    }))
+                  }
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-150 ${
+                    active
+                      ? "border-(--gold) bg-(--gold-soft-bg) text-(--gold-text)"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {!!formData.addOns?.giftHampers ? (
+            <div className="relative mt-4">
+              <textarea
+                value={(formData.addOns.giftHampersDescription as string) || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    addOns: { ...prev.addOns, giftHampersDescription: e.target.value },
+                  }))
+                }
+                className={`${fieldInputClass(!!formErrors["addOns.giftHampersDescription"])} min-h-20 resize-y`}
+                placeholder="Describe gift hampers"
+              />
+              <FieldError message={formErrors["addOns.giftHampersDescription"]} />
+            </div>
+          ) : null}
+
+          {!!formData.addOns?.addOther ? (
+            <div className="relative mt-4">
+              <textarea
+                value={(formData.addOns.addOtherDescription as string) || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    addOns: { ...prev.addOns, addOtherDescription: e.target.value },
+                  }))
+                }
+                className={`${fieldInputClass(!!formErrors["addOns.addOtherDescription"])} min-h-20 resize-y`}
+                placeholder="Describe other add-ons"
+              />
+              <FieldError message={formErrors["addOns.addOtherDescription"]} />
+            </div>
+          ) : null}
+        </SectionCard>
+      ) : null}
+
+      {/* ============ Audience ============ */}
+      <SectionCard
+        icon={<UsersIcon className="h-4.5 w-4.5" />}
+        title="Audience"
+        open={!!openSections.audience}
+        onToggle={() => toggleSection("audience")}
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h4 className="m-0 text-xs font-semibold text-slate-700">Age Range</h4>
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-(--gold-text)">
+              <span>{formData.audienceRange?.min ?? 18}</span>
+              <span className="text-xs font-normal text-slate-400">–</span>
+              <span>{formData.audienceRange?.max ?? 60}</span>
+              <span className="text-xs font-normal text-slate-400">years</span>
+            </div>
+          </div>
+
+          <div className="mx-auto w-[92%] py-2 sm:w-[80%]" style={{ paddingBottom: 28 }}>
+            <DualThumbSlider
+              min={0}
+              max={100}
+              valueMin={formData.audienceRange?.min ?? 18}
+              valueMax={formData.audienceRange?.max ?? 60}
+              onChange={({ min, max }) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  audienceRange: { min, max },
+                  ageGroupPreset: "",
+                }))
+              }}
+              disabled={!!selectedPreset}
+            />
+          </div>
+
+          <p className="-mt-4 m-0 mb-1 text-[11px] text-slate-400">Or select a preset — it slides the slider</p>
+
+          <div className="flex flex-wrap gap-2">
+            {AGE_GROUP_PRESETS.map((preset) => {
+              const isActive = selectedPreset === preset.label
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => handleAgePreset(isActive ? null : preset)}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors duration-150 ${
+                    isActive
+                      ? "border-(--gold) bg-(--gold-soft-bg) text-(--gold-text)"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {preset.label}
+                  <span className="ml-1 text-[10px] opacity-70">({preset.min}–{preset.max})</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <h4 className="m-0 mt-4 text-xs font-semibold text-slate-700">Audience Category</h4>
+          <div className="flex w-full flex-wrap gap-2">
+            {TARGET_AUDIENCE_OPTIONS.map((audience) => {
+              const active = !!formData.targetAudience?.[audience]
+              return (
+                <div
+                  key={audience}
+                  className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                    active
+                      ? "border-(--gold) bg-(--gold-soft-bg) text-(--gold-text)"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  onClick={() => handleAudienceSelection(audience)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAudienceSelection(audience)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  {audience}
+                </div>
+              )
+            })}
           </div>
         </div>
-      </div>
+      </SectionCard>
     </div>
   )
 }
