@@ -36,18 +36,6 @@ export type UpcomingManageEvent = {
   analyticsData: AnalyticsEventData
 }
 
-export type AllManageEvent = {
-  id: string
-  slug: string | null
-  date: string
-  name: string
-  category: string
-  status: ManageEventStatus
-  action: "Edit" | "Repeat"
-  formData: Partial<EventFormData>
-  analyticsData: AnalyticsEventData
-}
-
 const DEFAULT_ADD_ONS = {
   freebies: false,
   giftHampers: false,
@@ -86,12 +74,6 @@ const asBoolean = (value: unknown): boolean => value === true
 
 const asArray = <T = unknown>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : [])
 
-const formatTableDate = (value: string) =>
-  new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value))
 
 const formatLongDate = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -304,28 +286,6 @@ const toUpcomingCard = (event: EventDetail): UpcomingManageEvent => {
   }
 }
 
-const toAllEventsRow = (event: EventDetail): AllManageEvent => {
-  const status = getStatusFromDate(event.date)
-
-  return {
-    id: event.id,
-    slug: event.slug,
-    date: formatTableDate(event.date),
-    name: event.title,
-    category: event.category ?? "Live Event",
-    status,
-    action: status === "Past" ? "Repeat" : "Edit",
-    formData: toEventFormDraft(event),
-    analyticsData: {
-      id: event.id,
-      eventName: event.title,
-      date: formatLongDate(event.date),
-      category: event.category ?? "Live Event",
-      status,
-    },
-  }
-}
-
 export const toUpcomingManageEvents = (events: EventDetail[]) =>
   events
     .map((event) => ({ event, status: getStatusFromDate(event.date) }))
@@ -333,7 +293,3 @@ export const toUpcomingManageEvents = (events: EventDetail[]) =>
     .sort((a, b) => new Date(a.event.date).getTime() - new Date(b.event.date).getTime())
     .map(({ event }) => toUpcomingCard(event))
 
-export const toAllManageEvents = (events: EventDetail[]) =>
-  [...events]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .map((event) => toAllEventsRow(event))

@@ -7,9 +7,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   CalendarClock,
   CalendarDays,
-  ChevronRight,
   Clock,
   Gift,
+  MapPin,
   Pencil,
   Sparkles,
   Trash2,
@@ -29,28 +29,35 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ShareEventButton } from "@/components/event-org/share-event-button"
 import type { UpcomingManageEvent } from "@/components/event-org/manage-events/manage-events"
+import { useDateChangeCount } from "@/hooks/use-date-change-count"
 import { apiRequest } from "@/lib/api/client"
 import type { EventDetail } from "@/types/api"
 
-type DashboardUpcomingEventProps = {
+type UpcomingEventPanelProps = {
   event?: UpcomingManageEvent | null
   // The raw event record behind the card — used for tier-level numbers the
   // mapped card shape doesn't carry (capacity, per-tier sold counts).
   raw?: EventDetail | null
   isLoading?: boolean
   errorMessage?: string | null
+  // Right side of the card header (dashboard: "View all", manage: carousel arrows).
+  headerRight?: React.ReactNode
 }
 
-export function DashboardUpcomingEvent({
+export function UpcomingEventPanel({
   event = null,
   raw = null,
   isLoading = false,
   errorMessage = null,
-}: DashboardUpcomingEventProps) {
+  headerRight = null,
+}: UpcomingEventPanelProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [cancelError, setCancelError] = useState<string | null>(null)
-  const [posterFailed, setPosterFailed] = useState(false)
+  const [failedPoster, setFailedPoster] = useState<string | null>(null)
+
+  // Pending date-change requests — real count from the date-requests endpoint.
+  const dateChangeQuery = useDateChangeCount(event?.id)
 
   const cancelMutation = useMutation({
     mutationFn: () =>
@@ -82,13 +89,7 @@ export function DashboardUpcomingEvent({
     <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-bold text-slate-900 sm:text-lg">Upcoming Event</h2>
-        <button
-          type="button"
-          onClick={() => router.push("/organizer/manage-events")}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
-        >
-          View all <ChevronRight className="h-4 w-4" />
-        </button>
+        {headerRight}
       </div>
       {body}
     </div>
@@ -126,8 +127,7 @@ export function DashboardUpcomingEvent({
     Number(raw?.capacity ?? 0)
   const bookedPct = capacity > 0 ? Math.round((registered / capacity) * 100) : 0
   const highlightChips = event.highlights.filter(Boolean)
-  const activeAddOns = event.stats.addOns
-  const dateChange = event.stats.dateChange
+  const dateChangeCount = dateChangeQuery.data
 
   return shell(
     <>
@@ -135,14 +135,14 @@ export function DashboardUpcomingEvent({
         {/* Left: poster + identity (click-through to analytics) */}
         <button type="button" onClick={goToAnalytics} className="flex gap-4 text-left sm:gap-5">
           <div className="relative aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:w-36">
-            {!posterFailed ? (
+            {failedPoster !== event.posterImage ? (
               <Image
                 src={event.posterImage}
                 alt={`${event.title} poster`}
                 fill
                 sizes="(min-width: 640px) 144px, 96px"
                 className="object-cover"
-                onError={() => setPosterFailed(true)}
+                onError={() => setFailedPoster(event.posterImage)}
               />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-xs text-slate-400">
@@ -170,6 +170,10 @@ export function DashboardUpcomingEvent({
                 {event.type}
               </span>
             </div>
+            <p className="mt-1.5 hidden items-center gap-1.5 text-sm text-slate-500 sm:flex">
+              <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
+              <span className="truncate">{event.venue}</span>
+            </p>
 
             {highlightChips.length > 0 ? (
               <>
@@ -217,14 +221,16 @@ export function DashboardUpcomingEvent({
             <p className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
               <Gift className="h-3.5 w-3.5 text-emerald-500" /> Add-ons
             </p>
-            <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">{activeAddOns}</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">{event.stats.addOns}</p>
             <p className="mt-1 text-[11px] text-slate-400">Active on this event</p>
           </div>
           <div className="border-r border-slate-200/80 p-4">
             <p className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
               <CalendarClock className="h-3.5 w-3.5 text-amber-500" /> Date Change Requests
             </p>
-            <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">{dateChange}</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">
+              {dateChangeQuery.isLoading ? "…" : (dateChangeCount ?? 0)}
+            </p>
             <p className="mt-1 text-[11px] text-slate-400">Pending</p>
           </div>
           <div className="p-4">

@@ -1,12 +1,13 @@
 "use client"
 
 import { useMemo } from "react"
+import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { CalendarDays, Play, TrendingUp, Users } from "lucide-react"
+import { CalendarDays, ChevronRight, Play, TrendingUp, Users } from "lucide-react"
 
 import { useAuth } from "@/app/providers"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { DashboardUpcomingEvent } from "@/components/event-org/dashboard-upcoming-event"
+import { UpcomingEventPanel } from "@/components/event-org/upcoming-event-panel"
 import { InsightsAnalytics } from "@/components/event-org/insights-analytics"
 import { GstThresholdBanner } from "@/components/event-org/gst-threshold-banner"
 import { toUpcomingManageEvents } from "@/components/event-org/manage-events/manage-events"
@@ -126,11 +127,19 @@ export default function Home() {
           ))}
         </div>
 
-        <DashboardUpcomingEvent
+        <UpcomingEventPanel
           event={upcomingEvent}
           raw={upcomingRaw}
           isLoading={isLoading}
           errorMessage={errorMessage}
+          headerRight={
+            <Link
+              href="/organizer/manage-events"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+            >
+              View all <ChevronRight className="h-4 w-4" />
+            </Link>
+          }
         />
 
         <InsightsAnalytics
