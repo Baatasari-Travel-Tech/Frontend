@@ -19,6 +19,10 @@ const PENDING_DELETION_URL_CODE = PENDING_DELETION_CODE.toLowerCase()
 const isPendingDeletionError = (err: unknown): boolean =>
   err instanceof ApiError && err.code === PENDING_DELETION_CODE
 
+// Registering with an email that already has an account (backend: 409 EMAIL_EXISTS).
+const isEmailExistsError = (err: unknown): boolean =>
+  err instanceof ApiError && err.code === 'EMAIL_EXISTS'
+
 // Shared banner for the pending-deletion case. Embeds a click-through
 // to the retrieve-account mailto template so the user can immediately
 // reach support without typing anything.
@@ -292,6 +296,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
   }
   const [error, setError] = useState<string | null>(null)
   const [pendingDeletion, setPendingDeletion] = useState(false)
+  const [existingAccount, setExistingAccount] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [isPasswordFocused, setIsPasswordFocused] = useState(false)
@@ -328,6 +333,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
 
     setLoading(true)
     setError(null)
+    setExistingAccount(false)
     setIsAuthenticating(true)
     logAuth('register:submit', { email: normalizedEmail, role: selectedRole })
 
@@ -345,6 +351,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       logAuthError('register:error', { message, role: selectedRole })
       setError(message)
       setPendingDeletion(isPendingDeletionError(authError))
+      setExistingAccount(isEmailExistsError(authError))
     } finally {
       setLoading(false)
       setIsAuthenticating(false)
@@ -496,6 +503,17 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
       {error && (
         pendingDeletion ? (
           <PendingDeletionBanner message={error} />
+        ) : existingAccount ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={onSwitchMode}
+              className="mt-1.5 font-semibold text-brand-800 underline underline-offset-2"
+            >
+              Sign in instead →
+            </button>
+          </div>
         ) : (
           <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
             {error}
