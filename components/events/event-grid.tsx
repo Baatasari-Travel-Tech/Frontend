@@ -24,7 +24,7 @@ export function EventGridSkeleton({ count = 10 }: { count?: number }) {
                         key={i}
                         className="overflow-hidden rounded-3xl border-t-2 border-(--brand-navy) bg-white shadow-sm"
                     >
-                        <div className="aspect-[4/3] w-full animate-pulse bg-slate-200 sm:aspect-[4/5]" />
+                        <div className="aspect-[2/3] w-full animate-pulse bg-slate-200" />
                         <div className="space-y-2.5 p-3">
                             <div className="h-3.5 w-24 animate-pulse rounded-full bg-slate-200" />
                             <div className="h-5 w-4/5 animate-pulse rounded-full bg-slate-200" />

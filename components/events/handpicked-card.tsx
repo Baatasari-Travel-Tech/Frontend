@@ -60,7 +60,9 @@ export function HandpickedEventCard({
     const card = (
             <Card className="flex h-full flex-col gap-0 overflow-hidden rounded-3xl border-x-0 border-b-0 border-t-2 border-(--brand-navy) bg-(--white) py-0 shadow-sm transition-all duration-300 hover:shadow-md">
                 {/* Cover — fills flush to the rounded top edge (no card padding) */}
-                <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden sm:aspect-[4/5]">
+                {/* Covers are contract-locked 2:3 portrait (1000×1500) at upload —
+                    the card shows the poster at its exact ratio, never cropped. */}
+                <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden">
                     {image && !errored ? (
                         <>
                             {!loaded && (
