@@ -8,6 +8,8 @@ import { useAuth } from '@/app/providers'
 import {
   ArrowLeftRight,
   Bell,
+  CalendarPlus,
+  ChevronDown,
   Home,
   LogOut,
   Menu,
@@ -17,6 +19,12 @@ import {
   UserRound,
   X,
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import LoadingScreen from '@/components/loading-screen'
 import { DEFAULT_AVATAR_IMAGE } from '@/lib/avatar'
 import {
@@ -474,20 +482,44 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                 >
                   Login
                 </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded-full bg-(--brand-navy) px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-(--brand-navy)/90"
-                  onClick={() => {
-                    // On the organizer landing page, "Get started" means organizer signup.
-                    if (pathname === '/for-organizers') {
-                      router.push('/for-organizers?auth=register&role=organizer')
-                    } else {
-                      openModal('register')
-                    }
-                  }}
-                >
-                  Get started
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full bg-(--brand-navy) px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-(--brand-navy)/90"
+                    >
+                      Get started
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2.5 py-2.5 font-medium"
+                      onClick={() => {
+                        // Plain user register — make sure no organizer role param lingers.
+                        const params = new URLSearchParams(searchParams.toString())
+                        params.delete('role')
+                        params.set('auth', 'register')
+                        router.push(`${pathname}?${params.toString()}`)
+                      }}
+                    >
+                      <UserRound className="h-4 w-4 text-slate-500" />
+                      For Users
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2.5 py-2.5 font-medium"
+                      onClick={() => {
+                        const params = new URLSearchParams(searchParams.toString())
+                        params.set('auth', 'register')
+                        params.set('role', 'organizer')
+                        router.push(`${pathname}?${params.toString()}`)
+                      }}
+                    >
+                      <CalendarPlus className="h-4 w-4 text-slate-500" />
+                      For Organizers
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <button
                   type="button"
                   className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 md:hidden"
