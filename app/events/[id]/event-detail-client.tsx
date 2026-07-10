@@ -56,7 +56,7 @@ const humanize = (key: string): string =>
     .replace(/\b\w/g, (c) => c.toUpperCase())
 
 // Max tickets per booking — mirrors the server-side per-identity cap (A9).
-const MAX_TICKETS_PER_ORDER = 6
+const MAX_TICKETS_PER_ORDER = 10
 
 const rise = {
   hidden: { opacity: 0, y: 24 },
@@ -194,15 +194,6 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     return groups.filter(([, names]) => names.length > 0)
   }, [event.sponsors])
 
-  const targetAudienceList = useMemo(
-    () =>
-      Object.entries(event.targetAudience ?? {})
-        .filter(([, on]) => on === true)
-        .map(([key]) => humanize(key))
-        .slice(0, 8),
-    [event.targetAudience],
-  )
-
   const guidelineItems = useMemo(() => {
     const guidelines = asRecord(event.guidelines)
     const text = typeof guidelines.text === "string" ? guidelines.text.trim() : ""
@@ -216,15 +207,6 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
       .filter(([, v]) => v === true)
       .map(([k]) => humanize(k))
   }, [event.transportOptions])
-
-  const ageRange = (() => {
-    const range = event.audienceRange
-    if (range && typeof range.min === "number" && typeof range.max === "number") {
-      if (range.min <= 0 && range.max >= 100) return "All Ages"
-      return `${range.min}–${range.max} yrs`
-    }
-    return "All Ages"
-  })()
 
   const dateLabel = (() => {
     const start = formatDate(event.date)
@@ -541,18 +523,6 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   ) : null}
                 </div>
               ) : null}
-            </div>
-            {/* Who it's for */}
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-semibold text-slate-500">Great for:</span>
-              {targetAudienceList.map((a) => (
-                <span key={a} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                  {a}
-                </span>
-              ))}
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                {ageRange}
-              </span>
             </div>
           </motion.section>
 

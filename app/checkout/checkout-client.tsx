@@ -77,7 +77,7 @@ type CreateOrderResponse = {
 
 // Cap enforced server-side per identity per event (A9); mirrored here so the
 // steppers stop at the limit instead of failing at submit.
-const MAX_TICKETS_PER_ORDER = 6
+const MAX_TICKETS_PER_ORDER = 10
 
 export default function CheckoutClient({ event }: { event: EventDetail }) {
   const router = useRouter()

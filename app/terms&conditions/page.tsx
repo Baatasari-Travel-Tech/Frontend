@@ -175,7 +175,7 @@ export default function TermsAndConditions() {
         </li>
         <li>
           <strong>Booking limits.</strong> To keep sales fair, the Platform enforces a limit of{" "}
-          <strong>6 tickets per person per Event</strong> (across all of that person&rsquo;s
+          <strong>10 tickets per person per Event</strong> (across all of that person&rsquo;s
           orders, by account or email).
         </li>
         <li>
