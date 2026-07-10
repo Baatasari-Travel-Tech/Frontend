@@ -243,6 +243,11 @@ export type OrganizerAnalytics = {
   nextEventDate: string | null;
   paidOrders: number;
   grossRevenue: number;
+  // Optional: present once the backend with the dashboard-insights extension
+  // is deployed; the dashboard renders ₹0 until then.
+  refundedAmount?: number;
+  revenueThisMonth?: number;
+  revenueLastMonth?: number;
   gstThreshold?: GstThresholdStatus;
 };
 
