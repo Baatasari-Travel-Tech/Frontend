@@ -7,8 +7,22 @@ import { animate, stagger } from "animejs";
 import Image from "next/image";
 import {
   Search,
+  Flame,
+  Music,
+  Ticket,
   MapPin,
   Calendar as CalendarIcon,
+  Palette,
+  Dumbbell,
+  Utensils,
+  Briefcase,
+  GraduationCap,
+  HeartPulse,
+  Baby,
+  Landmark,
+  TreePine,
+  ShoppingBag,
+  Gamepad2,
 } from "lucide-react";
 import {
   Select,
@@ -21,12 +35,31 @@ import { EVENT_CATEGORY_NAMES } from "@/lib/event-categories";
 
 const ROTATING_WORDS = ["Mood", "Crew", "Vibe", "Weekend"];
 
-// Friendly category chips (NewDesign look). The label IS the filter value —
-// eventMatchesCategoryGroup does a substring match for non-group labels, so
-// "Music" catches "Live Music", "Workshops" catches "* Workshops", etc.
+// Pill icons for each category group (events-mobile-view design). Names are
+// the EVENT_CATEGORY_NAMES groups, so filtering keeps matching exactly.
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  All: <Flame size={14} />,
+  "Entertainment & Social": <Ticket size={14} />,
+  "Arts & Creative": <Palette size={14} />,
+  "Music & Performance": <Music size={14} />,
+  "Sports & Fitness": <Dumbbell size={14} />,
+  "Food & Beverage": <Utensils size={14} />,
+  "Business & Professional": <Briefcase size={14} />,
+  "Education & Learning": <GraduationCap size={14} />,
+  "Wellness & Lifestyle": <HeartPulse size={14} />,
+  "Family & Kids": <Baby size={14} />,
+  "Culture & Heritage": <Landmark size={14} />,
+  "Nature & Outdoor": <TreePine size={14} />,
+  "Shopping & Lifestyle": <ShoppingBag size={14} />,
+  "Gaming & Technology": <Gamepad2 size={14} />,
+};
+
 // Full category set under the Discover hero: "All" + every real category group.
 // Filtering matches exactly (these ARE the group names eventMatchesCategoryGroup knows).
-const CATEGORIES = ["All", ...EVENT_CATEGORY_NAMES];
+const CATEGORIES = ["All", ...EVENT_CATEGORY_NAMES].map((name) => ({
+  name,
+  icon: CATEGORY_ICONS[name] ?? <Ticket size={14} />,
+}));
 
 // "Where" options — values are the literal city text matched against an event's
 // venue. "all" clears the filter.
@@ -116,34 +149,37 @@ export function EventsSearchHero() {
     <section className="relative isolate flex min-h-[88vh] w-full flex-col justify-center overflow-hidden">
       {/* Ambient backdrop */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        {/* Background image — desktop */}
+
+        {/* Background image — desktop/landscape */}
         <Image
           src="/events-hero.png"
           alt=""
           fill
           priority
           sizes="100vw"
-          className="hidden object-cover md:block"
+          className="hidden md:block object-cover object-[center_30%]"
         />
-        {/* Background image — mobile (purpose-built crop) */}
+
+        {/* Background image — mobile/portrait */}
         <Image
-          src="/events-hero-mobile.png"
+          src="/events-hero-mobile.jpeg"
           alt=""
           fill
           priority
           sizes="100vw"
-          className="object-cover md:hidden"
+          className="md:hidden object-cover object-top"
         />
-        {/* Cream overlay for readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
+
+        {/* Light cream wash — lets the image show through, just blends edges into the page */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/10 to-background/65" />
       </div>
 
-      <div className="mx-auto w-full max-w-[1680px] px-4 pt-24 pb-12 md:px-6 md:pt-36 md:pb-16 lg:px-10">
+      <div className="mx-auto w-full max-w-[1400px] px-4 pt-24 pb-6 md:px-6 md:pt-32 md:pb-10 lg:px-10">
         {/* Title with anime.js stagger */}
         <h1
           ref={titleRef}
-          className="mx-auto mt-6 max-w-4xl whitespace-nowrap text-center font-bricolage text-[clamp(1.4rem,7vw,4.5rem)] font-bold leading-[1.05] tracking-tight text-(--brand-navy)"
-          style={{ perspective: "1000px" }}
+          className="mx-auto -mt-18 max-w-4xl whitespace-nowrap text-center font-bricolage text-[clamp(1.4rem,7vw,4.5rem)] font-bold leading-[1.05] tracking-tight text-(--brand-navy) md:mt-20"
+          style={{ perspective: "1000px", textShadow: "0 1px 16px rgba(251,247,240,0.85)" }}
         >
           {titleText.split("").map((c, i) => (
             <span
@@ -161,7 +197,8 @@ export function EventsSearchHero() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.4, duration: 0.7, ease: "easeOut" }}
-          className="mt-5 text-center font-poppins text-base text-(--gray-600) md:text-lg"
+          className="mt-5 text-center font-poppins text-base font-medium text-(--gray-700) md:text-lg"
+          style={{ textShadow: "0 1px 12px rgba(251,247,240,0.9)" }}
         >
           Tailored for every{" "}
           <span className="relative inline-block min-w-[5.5rem] text-left align-baseline">
@@ -180,12 +217,14 @@ export function EventsSearchHero() {
           </span>
         </motion.p>
 
-        {/* Search bar — pushed down so the title/subtitle lead, then the image,
-            then search + categories sit lower in the hero. */}
-        <div ref={searchRef} className="mx-auto mt-20 w-full max-w-5xl opacity-0 md:mt-32">
-          <div className="flex flex-col gap-0 rounded-[2rem] border border-(--gray-200) bg-white/85 p-2 shadow-[0_20px_60px_-20px_rgba(12,29,55,0.18)] backdrop-blur-xl md:flex-row md:flex-wrap md:items-stretch md:rounded-3xl lg:flex-nowrap lg:rounded-full">
-            {/* Search input */}
-            <div className="group flex min-w-0 flex-1 items-center gap-2 rounded-2xl px-4 py-3 transition-colors hover:bg-(--gray-50) md:basis-[calc(50%-1px)] md:gap-3 md:px-5 lg:basis-0 lg:rounded-l-full lg:rounded-r-none lg:border-r lg:border-(--gray-100)">
+        {/* Search bar */}
+        <div
+          ref={searchRef}
+          className="mx-auto mt-40 w-full max-w-5xl opacity-0 sm:mt-46 md:mt-24"
+        >
+          <div className="flex flex-wrap items-stretch gap-2 rounded-3xl border border-(--gray-200) bg-white p-2 shadow-[0_20px_60px_-20px_rgba(12,29,55,0.18)] lg:flex-nowrap lg:gap-0 lg:rounded-full">
+            {/* Search input — full width on mobile */}
+            <div className="group order-1 flex min-w-0 basis-full items-center gap-2 rounded-2xl border border-(--gray-200) bg-white px-4 py-3 transition-colors hover:bg-(--gray-50) lg:order-none lg:basis-0 lg:flex-1 lg:gap-3 lg:rounded-none lg:rounded-l-full lg:border-0 lg:border-r lg:border-(--gray-100) lg:bg-transparent lg:px-5">
               <Search className="h-5 w-5 shrink-0 text-(--gray-400) transition-colors group-focus-within:text-(--blue-600)" />
               <div className="flex min-w-0 flex-1 flex-col text-left">
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
@@ -196,14 +235,14 @@ export function EventsSearchHero() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  placeholder="Concert, food fest, comedy..."
+                  placeholder="Search events..."
                   className="w-full min-w-0 bg-transparent text-sm font-semibold text-(--gray-800) outline-none placeholder:text-(--gray-400)"
                 />
               </div>
             </div>
 
-            {/* Location */}
-            <div className="group flex min-w-0 flex-1 items-center gap-2 px-4 py-3 transition-colors hover:bg-(--gray-50) md:basis-[calc(50%-1px)] md:gap-3 md:border-l md:border-(--gray-100) md:px-5 lg:basis-0 lg:border-l-0 lg:border-r lg:border-(--gray-100)">
+            {/* Where */}
+            <div className="group order-2 flex min-w-0 basis-[calc(50%-0.25rem)] items-center gap-2 rounded-2xl border border-(--gray-200) bg-white px-4 py-3 transition-colors hover:bg-(--gray-50) lg:order-none lg:basis-0 lg:flex-1 lg:gap-3 lg:rounded-none lg:border-0 lg:border-r lg:border-(--gray-100) lg:bg-transparent lg:px-5">
               <MapPin className="h-5 w-5 shrink-0 text-(--gray-400)" />
               <div className="flex min-w-0 flex-1 flex-col text-left">
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
@@ -228,8 +267,30 @@ export function EventsSearchHero() {
               </div>
             </div>
 
+            {/* What - mobile category list */}
+            <div className="group order-3 flex min-w-0 basis-[calc(50%-0.25rem)] items-center gap-2 rounded-2xl border border-(--gray-200) bg-white px-4 py-3 transition-colors hover:bg-(--gray-50) lg:hidden">
+              <Ticket className="h-5 w-5 shrink-0 text-(--gray-400)" />
+              <div className="flex min-w-0 flex-1 flex-col text-left">
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
+                  What
+                </span>
+                <Select value={activeCategory} onValueChange={setActiveCategory}>
+                  <SelectTrigger className="h-auto w-full border-0 bg-transparent p-0 text-sm font-semibold text-(--gray-800) shadow-none focus:ring-0">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent className="border-(--gray-200) bg-white text-(--gray-800) shadow-xl">
+                    {CATEGORIES.map((cat) => (
+                      <SelectItem key={cat.name} value={cat.name}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {/* When */}
-            <div className="group flex min-w-0 flex-1 items-center gap-2 px-4 py-3 transition-colors hover:bg-(--gray-50) md:basis-[calc(50%-1px)] md:gap-3 md:border-t md:border-(--gray-100) md:px-5 lg:basis-0 lg:border-t-0 lg:border-r lg:border-(--gray-100)">
+            <div className="group order-4 flex min-w-0 basis-[calc(50%-0.25rem)] items-center gap-2 rounded-2xl border border-(--gray-200) bg-white px-4 py-3 transition-colors hover:bg-(--gray-50) lg:order-none lg:basis-0 lg:flex-1 lg:gap-3 lg:rounded-none lg:border-0 lg:border-r lg:border-(--gray-100) lg:bg-transparent lg:px-5">
               <CalendarIcon className="h-5 w-5 shrink-0 text-(--gray-400)" />
               <div className="flex min-w-0 flex-1 flex-col text-left">
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
@@ -250,8 +311,8 @@ export function EventsSearchHero() {
             </div>
 
             {/* Budget */}
-            <div className="group flex min-w-0 flex-1 items-center gap-2 px-4 py-3 transition-colors hover:bg-(--gray-50) md:basis-[calc(50%-1px)] md:gap-3 md:border-l md:border-t md:border-(--gray-100) md:px-5 lg:basis-0 lg:border-l-0 lg:border-t-0 lg:border-r lg:border-(--gray-100)">
-              <span className="text-base font-bold text-(--gray-400)">₹</span>
+            <div className="group order-5 flex min-w-0 basis-[calc(50%-0.25rem)] items-center gap-2 rounded-2xl border border-(--gray-200) bg-white px-4 py-3 transition-colors hover:bg-(--gray-50) lg:order-none lg:basis-0 lg:flex-1 lg:gap-3 lg:rounded-none lg:border-0 lg:border-r lg:border-(--gray-100) lg:bg-transparent lg:px-5">
+              <span className="text-base font-bold text-(--gray-400)">&#8377;</span>
               <div className="flex min-w-0 flex-1 flex-col text-left">
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-(--gray-400)">
                   Budget
@@ -270,8 +331,8 @@ export function EventsSearchHero() {
               </div>
             </div>
 
-            {/* Button */}
-            <div className="w-full p-1 md:basis-full md:p-2 lg:w-auto lg:basis-auto lg:shrink-0">
+            {/* Button — full width on mobile */}
+            <div className="order-6 basis-full lg:order-none lg:w-auto lg:basis-auto lg:shrink-0 lg:p-1">
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
@@ -286,30 +347,31 @@ export function EventsSearchHero() {
           </div>
         </div>
 
-        {/* Category pills — click filters immediately */}
+        {/* Category pills — desktop only; click filters immediately */}
         <div
           ref={pillsRef}
-          className="mx-auto mt-8 flex max-w-4xl flex-wrap justify-center gap-2 md:gap-3"
+          className="mx-auto mt-8 hidden max-w-6xl flex-wrap justify-center gap-2 lg:flex lg:gap-3"
         >
           {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat;
+            const isActive = activeCategory === cat.name;
             return (
               <motion.button
-                key={cat}
+                key={cat.name}
                 whileHover={{ y: -3, scale: 1.04 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
-                  setActiveCategory(cat);
-                  applyFilters({ category: cat });
+                  setActiveCategory(cat.name);
+                  applyFilters({ category: cat.name });
                 }}
-                className={`pill flex items-center gap-2 rounded-full border px-4 py-2 font-poppins text-sm font-semibold transition-colors ${
+                className={`pill flex whitespace-nowrap items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
                   isActive
                     ? "border-(--brand-navy) bg-(--brand-navy) text-white shadow-md"
                     : "border-(--gray-200) bg-white/80 text-(--gray-700) backdrop-blur-sm hover:border-(--blue-200) hover:text-(--brand-blue)"
                 }`}
                 style={{ opacity: 0 }}
               >
-                {cat}
+                {cat.icon}
+                {cat.name}
               </motion.button>
             );
           })}
