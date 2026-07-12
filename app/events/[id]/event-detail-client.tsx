@@ -46,9 +46,6 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
 
-const asStringArray = (value: unknown): string[] =>
-  Array.isArray(value) ? value.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean) : []
-
 // "publicTransport" / "ample_parking" → "Public Transport" / "Ample Parking"
 const humanize = (key: string): string =>
   key
@@ -201,13 +198,6 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     [event.description],
   )
   const aboutLong = (event.description ?? "").length > 260 || descriptionParas.length > 1
-
-  const eventHighlights = useMemo(() => {
-    const requirements = asRecord(event.requirements)
-    const requirementHighlights = asStringArray(requirements.highlights)
-    const combined = [event.tagline ?? "", ...requirementHighlights].filter(Boolean)
-    return [...new Set(combined)].slice(0, 8)
-  }, [event])
 
   const artists = useMemo(
     () => (event.artists ?? []).filter((a) => a.name && a.name.trim()),
@@ -818,7 +808,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
           ) : null}
 
           {/* Highlights + perks */}
-          {eventHighlights.length > 0 || perks.length > 0 || audienceTags.length > 0 ? (
+          {perks.length > 0 || audienceTags.length > 0 ? (
             <motion.section
               variants={reduce ? undefined : rise}
               initial="hidden"
@@ -826,20 +816,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               viewport={{ once: true, margin: "-60px" }}
               className="rounded-3xl border border-(--gold-bar-border) bg-(--gold-bar-bg) p-6 sm:p-8"
             >
-              <SectionHead kicker="Highlights" title="Worth staying for" />
-              {eventHighlights.length > 0 ? (
-                <div className="mt-6 flex flex-wrap gap-2.5">
-                  {eventHighlights.map((h) => (
-                    <span
-                      key={h}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-(--gold-soft-border) bg-white px-4 py-2 text-sm font-semibold text-(--gold-text) shadow-sm transition hover:-translate-y-0.5 hover:border-(--gold)"
-                    >
-                      <Sparkles className="h-3.5 w-3.5 text-(--gold-icon)" />
-                      {h}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
+              <SectionHead kicker="Good to know" title="Who it's for & what's included" />
               {audienceTags.length > 0 ? (
                 <div className="mt-6">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--gold-text)">
@@ -987,75 +964,86 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             </motion.section>
           ) : null}
 
-          {/* Host + request-a-date */}
+          {/* Request a different date — a first-class feature */}
           <motion.section
             variants={reduce ? undefined : rise}
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-60px" }}
-            className="grid gap-4 sm:grid-cols-[1.4fr_1fr]"
+            className="rounded-3xl border border-(--gold-soft-border) bg-gradient-to-br from-(--gold-soft-bg) via-(--gold-bar-bg) to-white p-6 shadow-[0_24px_60px_-32px_rgba(12,29,55,0.35)] sm:p-8"
           >
-            {organizerName ? (
-              <div className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-[0_24px_60px_-32px_rgba(12,29,55,0.4)]">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-(--brand-navy) font-bricolage text-xl font-bold text-(--gold)">
-                  {organizerName.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Hosted by</p>
-                  <p className="mt-0.5 flex items-center gap-1.5 font-semibold text-(--brand-navy)">
-                    <span className="truncate">{organizerName}</span>
-                    <BadgeCheck className="h-4 w-4 shrink-0 text-(--brand-blue)" />
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-4">
+                <span className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-(--brand-navy) text-(--gold) shadow-[0_14px_30px_-14px_rgba(12,29,55,0.6)]">
+                  <CalendarPlus className="h-6 w-6" />
+                </span>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--gold-text)">
+                    Flexible dates
                   </p>
-                  <p className="text-xs text-slate-500">Verified organizer</p>
+                  <h2 className="mt-1 font-bricolage text-xl font-bold tracking-tight text-(--brand-navy) sm:text-2xl">
+                    Can&rsquo;t make it on this date?
+                  </h2>
+                  <p className="mt-1.5 max-w-md text-sm leading-relaxed text-(--gray-600)">
+                    Request a date that works for you — the organizer gets notified and you&rsquo;ll hear back.
+                  </p>
                 </div>
               </div>
-            ) : (
-              <div />
-            )}
-
-            {isLoggedIn ? (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button
-                    type="button"
-                    className="group flex items-center justify-between gap-3 rounded-3xl border border-(--gold-soft-border) bg-(--gold-soft-bg) p-5 text-left shadow-[0_18px_45px_-28px_rgba(12,29,55,0.3)] transition hover:-translate-y-0.5 hover:border-(--gold)"
-                  >
-                    <div>
-                      <p className="flex items-center gap-2 text-sm font-bold text-(--brand-navy)">
-                        <CalendarPlus className="h-4 w-4 text-(--gold-icon)" />
-                        Can&rsquo;t make it?
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">Request a different date</p>
+              {isLoggedIn ? (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-(--brand-navy) px-7 py-3.5 font-poppins text-sm font-bold text-white shadow-[0_18px_40px_-15px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--gold) active:scale-[0.98]"
+                    >
+                      Request a date
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-5xl flex-col items-center justify-center overflow-hidden rounded-3xl border-0 bg-(--white) p-0">
+                    <VisuallyHidden>
+                      <DialogTitle>Select Date and View Reviews</DialogTitle>
+                    </VisuallyHidden>
+                    <div className="flex h-full w-full items-center justify-center overflow-y-auto p-6 md:p-8">
+                      <DateReviewsSection eventId={event.id} />
                     </div>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-(--gold-icon) transition-transform group-hover:translate-x-1" />
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-5xl flex-col items-center justify-center overflow-hidden rounded-3xl border-0 bg-(--white) p-0">
-                  <VisuallyHidden>
-                    <DialogTitle>Select Date and View Reviews</DialogTitle>
-                  </VisuallyHidden>
-                  <div className="flex h-full w-full items-center justify-center overflow-y-auto p-6 md:p-8">
-                    <DateReviewsSection eventId={event.id} />
-                  </div>
-                </DialogContent>
-              </Dialog>
-            ) : (
-              <button
-                type="button"
-                onClick={() => openModal("register")}
-                className="group flex items-center justify-between gap-3 rounded-3xl border border-(--gold-soft-border) bg-(--gold-soft-bg) p-5 text-left shadow-[0_18px_45px_-28px_rgba(12,29,55,0.3)] transition hover:-translate-y-0.5 hover:border-(--gold)"
-              >
-                <div>
-                  <p className="flex items-center gap-2 text-sm font-bold text-(--brand-navy)">
-                    <CalendarPlus className="h-4 w-4 text-(--gold-icon)" />
-                    Can&rsquo;t make it?
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">Register to request a different date</p>
-                </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-(--gold-icon) transition-transform group-hover:translate-x-1" />
-              </button>
-            )}
+                  </DialogContent>
+                </Dialog>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openModal("register")}
+                  className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-(--brand-navy) px-7 py-3.5 font-poppins text-sm font-bold text-white shadow-[0_18px_40px_-15px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--gold) active:scale-[0.98]"
+                >
+                  Register to request
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </button>
+              )}
+            </div>
           </motion.section>
+
+          {/* Hosted by */}
+          {organizerName ? (
+            <motion.section
+              variants={reduce ? undefined : rise}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-60px" }}
+              className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-[0_24px_60px_-32px_rgba(12,29,55,0.4)]"
+            >
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-(--brand-navy) font-bricolage text-xl font-bold text-(--gold)">
+                {organizerName.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Hosted by</p>
+                <p className="mt-0.5 flex items-center gap-1.5 font-semibold text-(--brand-navy)">
+                  <span className="truncate">{organizerName}</span>
+                  <BadgeCheck className="h-4 w-4 shrink-0 text-(--brand-blue)" />
+                </p>
+                <p className="text-xs text-slate-500">Verified organizer</p>
+              </div>
+            </motion.section>
+          ) : null}
 
           {/* Quick links — refund · guidelines · contact */}
           <motion.section
