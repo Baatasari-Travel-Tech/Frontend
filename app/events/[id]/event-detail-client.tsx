@@ -6,6 +6,7 @@ import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { motion, useReducedMotion } from "framer-motion"
 import {
+  ArrowLeft,
   ArrowRight,
   BadgeCheck,
   Bus,
@@ -15,7 +16,6 @@ import {
   Clock,
   DoorOpen,
   Gift,
-  Hourglass,
   MapPin,
   Music,
   Navigation,
@@ -72,7 +72,7 @@ const parseTimeToMinutes = (t: string | null | undefined): number | null => {
   return h * 60 + min
 }
 
-// 1234 → "1.2k" (going count, BookMyShow-style)
+// 1234 → "1.2k"
 const formatCount = (n: number): string => {
   if (n >= 1000) {
     const k = n / 1000
@@ -84,26 +84,36 @@ const formatCount = (n: number): string => {
 // Max tickets per booking — mirrors the server-side per-identity cap (A9).
 const MAX_TICKETS_PER_ORDER = 10
 
+// Subtle film grain for the immersive header (breaks digital flatness).
+const NOISE_TEXTURE =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E\")"
+
 const rise = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } },
 }
 
-// Flat BMS-style section heading.
-function SectionHead({ title }: { title: string }) {
+// Section heading: gold kicker + display title — the page's rhythm device.
+function SectionHead({ kicker, title }: { kicker: string; title: string }) {
   return (
-    <h2 className="font-bricolage text-xl font-bold tracking-tight text-(--brand-navy) sm:text-2xl">
-      {title}
-    </h2>
+    <>
+      <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--gold-text)">{kicker}</p>
+      <h2 className="mt-1.5 font-bricolage text-2xl font-bold tracking-tight text-(--brand-navy)">{title}</h2>
+    </>
   )
 }
 
-// One label row inside the sidebar info card.
-function InfoRow({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+// One row of the ticket card: gold icon tile + label + value.
+function TicketRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3 text-sm text-(--gray-700)">
-      <span className="mt-0.5 shrink-0 text-(--gray-500)">{icon}</span>
-      <span className="min-w-0 font-medium">{children}</span>
+    <div className="flex items-center gap-3.5">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--gold-soft-bg) text-(--gold-icon)">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--gray-400)">{label}</p>
+        <p className="truncate text-sm font-semibold text-(--brand-navy)">{children}</p>
+      </div>
     </div>
   )
 }
@@ -183,11 +193,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
       const left = tierLeft(t)
       return left !== null && left <= 0
     })
-  const priceDisplay = isFreeEvent
-    ? "Free"
-    : minPrice !== null
-      ? `${formatCurrency(minPrice)} onwards`
-      : "—"
+  const priceDisplay = isFreeEvent ? "Free" : minPrice !== null ? formatCurrency(minPrice) : "—"
 
   // ── Content derived from the event record ──
   const descriptionParas = useMemo(
@@ -208,11 +214,9 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     [event.artists],
   )
 
-  // Unique artist genres — the "Folk, Indie, Rock" row of the info card.
+  // Unique artist genres — "Folk, Indie, Rock".
   const genres = useMemo(() => {
-    const list = artists
-      .map((a) => (a.genre ?? "").trim())
-      .filter(Boolean)
+    const list = artists.map((a) => (a.genre ?? "").trim()).filter(Boolean)
     return [...new Set(list)].slice(0, 4)
   }, [artists])
 
@@ -278,7 +282,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     if (start === null || end === null || end <= start) return null
     const hours = (end - start) / 60
     const rounded = Math.round(hours * 2) / 2
-    return `${rounded % 1 === 0 ? rounded : rounded.toFixed(1)} Hour${rounded !== 1 ? "s" : ""}`
+    return `${rounded % 1 === 0 ? rounded : rounded.toFixed(1)} hour${rounded !== 1 ? "s" : ""}`
   }, [event.startTime, event.endTime, isMultiDay])
 
   const contact = (event.contactInfo ?? {}) as { mobile?: string; email?: string; website?: string }
@@ -313,7 +317,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   const scrollToBooking = () =>
     document.getElementById("booking-panel")?.scrollIntoView({ behavior: "smooth", block: "center" })
 
-  // Sidebar CTA: logged out → login modal; logged in → reveal the tier picker.
+  // Ticket CTA: logged out → login modal; logged in → reveal the tier picker.
   const handleBookCta = () => {
     if (unavailable || allSoldOut || tiers.length === 0) return
     if (!isLoggedIn) {
@@ -327,122 +331,251 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   const bookCtaLabel = isLoggedIn ? "Book tickets" : "Login to book"
   const canBook = !unavailable && !allSoldOut && tiers.length > 0
 
-  // Dark tag chips under the banner: category + artist genres.
+  // Header chips: category + artist genres.
   const tagChips = useMemo(
     () => [...new Set([event.category ?? "", ...genres].map((t) => t.trim()).filter(Boolean))].slice(0, 4),
     [event.category, genres],
   )
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-background pb-28 lg:pb-16">
-      <div className="mx-auto w-full max-w-[1400px] px-4 pt-6 lg:px-10 lg:pt-10">
-        {/* ════ Title row — title left, round share button right ════ */}
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="min-w-0 font-bricolage text-2xl font-bold leading-tight tracking-tight text-(--brand-navy) [text-wrap:balance] sm:text-3xl lg:text-4xl">
-            {event.title}
-          </h1>
-          <ShareEventButton
-            eventId={event.id}
-            slug={event.slug}
-            title={event.title}
-            iconOnly
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--gray-100) text-(--gray-600) transition hover:bg-(--gray-200) hover:text-(--brand-navy) active:scale-95"
+    <div className="min-h-screen overflow-x-clip bg-background pb-32 lg:pb-20">
+      {/* ════ IMMERSIVE HEADER — each event's own artwork sets the atmosphere ════ */}
+      <header className="relative isolate overflow-hidden bg-(--brand-navy)">
+        {/* Ambient artwork wash */}
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <Image
+            src={coverImageSrc}
+            alt=""
+            aria-hidden
+            fill
+            sizes="1px"
+            className="scale-125 object-cover opacity-50 blur-3xl saturate-[1.2]"
+            onError={() => setCoverImageSrc("/an2.png")}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-(--brand-navy)/70 via-(--brand-navy)/55 to-(--brand-navy)/85" />
+          {/* Film grain */}
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-[0.05] mix-blend-overlay"
+            style={{ backgroundImage: NOISE_TEXTURE }}
           />
         </div>
 
-        {/* ════ Banner + sidebar card ════ */}
-        <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-10">
-          {/* Banner — wide slot; blurred poster backdrop keeps the portrait art uncropped */}
-          <div className="min-w-0">
-            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-(--brand-navy) sm:aspect-[2/1]">
+        <div className="mx-auto w-full max-w-[1400px] px-4 pb-36 pt-6 sm:px-6 md:pb-44 lg:px-10 lg:pt-8">
+          {/* Top row: back link + share */}
+          <div className="flex items-center justify-between gap-4">
+            <Link
+              href="/events"
+              className="group inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/85 backdrop-blur-md transition hover:bg-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+            >
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+              All events
+            </Link>
+            <ShareEventButton
+              eventId={event.id}
+              slug={event.slug}
+              title={event.title}
+              iconOnly
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white/85 backdrop-blur-md transition hover:bg-white/20 hover:text-white active:scale-95"
+            />
+          </div>
+
+          {/* Kicker chips + status */}
+          <motion.div
+            variants={reduce ? undefined : rise}
+            initial="hidden"
+            animate="show"
+            className="mt-10 flex flex-wrap items-center gap-2 md:mt-14"
+          >
+            {isCancelled ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
+                Cancelled
+              </span>
+            ) : isPast ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-500 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
+                Event ended
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-70" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+                </span>
+                Booking open
+              </span>
+            )}
+            {tagChips.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/80 backdrop-blur-md"
+              >
+                {tag}
+              </span>
+            ))}
+          </motion.div>
+
+          {/* Title */}
+          <motion.h1
+            variants={reduce ? undefined : rise}
+            initial="hidden"
+            animate="show"
+            className="mt-4 max-w-4xl font-bricolage text-[clamp(1.9rem,5vw,4rem)] font-bold leading-[1.04] tracking-tight text-white [text-wrap:balance]"
+          >
+            {event.title}
+          </motion.h1>
+          {event.tagline ? (
+            <motion.p
+              variants={reduce ? undefined : rise}
+              initial="hidden"
+              animate="show"
+              className="mt-4 max-w-xl text-base leading-relaxed text-white/70 md:text-lg"
+            >
+              {event.tagline}
+            </motion.p>
+          ) : null}
+
+          {/* Meta row */}
+          <motion.div
+            variants={reduce ? undefined : rise}
+            initial="hidden"
+            animate="show"
+            className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm text-white/80"
+          >
+            <span className="inline-flex items-center gap-2 font-semibold text-white">
+              <CalendarDays className="h-4 w-4 text-(--gold)" />
+              {dateLabel}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Clock className="h-4 w-4 text-(--gold)" />
+              {timeLabel}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-(--gold)" />
+              {event.venue ?? "TBA"}
+            </span>
+            {goingCount > 0 ? (
+              <span className="inline-flex items-center gap-2 font-semibold text-white">
+                <Users className="h-4 w-4 text-(--gold)" />
+                {formatCount(goingCount)} going
+              </span>
+            ) : null}
+          </motion.div>
+        </div>
+      </header>
+
+      {/* ════ OVERLAP ZONE — artwork + ticket rise out of the header ════ */}
+      <div className="relative z-10 mx-auto -mt-28 grid w-full max-w-[1400px] grid-cols-1 gap-8 px-4 sm:px-6 md:-mt-32 lg:grid-cols-[minmax(0,1fr)_408px] lg:grid-rows-[auto_1fr] lg:gap-12 lg:px-10">
+        {/* Artwork — framed object, portrait art never cropped */}
+        <motion.div
+          variants={reduce ? undefined : rise}
+          initial="hidden"
+          animate="show"
+          className="min-w-0"
+        >
+          <div className="rounded-[1.75rem] bg-white p-2 shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)]">
+            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[1.25rem] bg-(--brand-navy) sm:aspect-[2/1]">
               <Image
                 src={coverImageSrc}
                 alt=""
                 aria-hidden
                 fill
                 sizes="1px"
-                className={`scale-110 object-cover opacity-60 blur-2xl ${unavailable ? "grayscale-[0.35]" : ""}`}
+                className={`scale-110 object-cover opacity-70 blur-2xl ${unavailable ? "grayscale-[0.4]" : ""}`}
                 onError={() => setCoverImageSrc("/an2.png")}
               />
               <Image
                 src={coverImageSrc}
-                alt={event.title}
+                alt={`${event.title} poster`}
                 fill
                 priority
-                sizes="(min-width: 1024px) 900px, 100vw"
-                className={`object-contain ${unavailable ? "grayscale-[0.35]" : ""}`}
+                sizes="(min-width: 1024px) 880px, 100vw"
+                className={`object-contain drop-shadow-[0_16px_40px_rgba(4,12,28,0.5)] ${unavailable ? "grayscale-[0.4]" : ""}`}
                 onError={() => setCoverImageSrc("/an2.png")}
               />
-              {isCancelled ? (
-                <span className="absolute left-4 top-4 rounded-md bg-rose-600 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
-                  Cancelled
-                </span>
-              ) : isPast ? (
-                <span className="absolute left-4 top-4 rounded-md bg-slate-600 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
-                  Event ended
-                </span>
-              ) : null}
-            </div>
-
-            {/* Under the banner: tag chips left, going count right */}
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2">
-                {tagChips.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-md bg-(--brand-navy) px-2.5 py-1 text-xs font-semibold text-white"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              {goingCount > 0 ? (
-                <span className="inline-flex items-center gap-2 text-sm font-semibold text-(--gray-700)">
-                  <Users className="h-4 w-4 text-emerald-600" />
-                  {formatCount(goingCount)} going
-                </span>
-              ) : null}
             </div>
           </div>
+        </motion.div>
 
-          {/* Sidebar — info card + (revealed) tier picker */}
-          <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-            <div className="lg:sticky lg:top-24">
-              <motion.div
-                variants={reduce ? undefined : rise}
-                initial="hidden"
-                animate="show"
-                className="rounded-2xl border border-(--gray-200) bg-white p-5 shadow-[0_10px_40px_-20px_rgba(12,29,55,0.25)]"
-              >
-                <div className="space-y-3.5">
-                  <InfoRow icon={<CalendarDays className="h-4.5 w-4.5" />}>{dateLabel}</InfoRow>
-                  <InfoRow icon={<Clock className="h-4.5 w-4.5" />}>{timeLabel}</InfoRow>
-                  {durationLabel ? (
-                    <InfoRow icon={<Hourglass className="h-4.5 w-4.5" />}>{durationLabel}</InfoRow>
-                  ) : null}
-                  {genres.length > 0 ? (
-                    <InfoRow icon={<Music className="h-4.5 w-4.5" />}>{genres.join(", ")}</InfoRow>
-                  ) : null}
-                  <InfoRow icon={<MapPin className="h-4.5 w-4.5" />}>
-                    <span className="inline-flex flex-wrap items-center gap-1.5">
-                      {event.venue ?? "TBA"}
-                      {mapsUrl ? (
-                        <a
-                          href={mapsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label="Get directions"
-                          className="text-(--brand-blue) transition hover:text-(--brand-navy)"
-                        >
-                          <Navigation className="h-4 w-4" />
-                        </a>
-                      ) : null}
+        {/* ── The ticket ── */}
+        <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <div className="lg:sticky lg:top-24">
+            <motion.div
+              variants={reduce ? undefined : rise}
+              initial="hidden"
+              animate="show"
+              className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)]"
+            >
+              {/* Stub header: price */}
+              <div className="relative overflow-hidden bg-(--brand-navy) px-6 py-5">
+                <div
+                  aria-hidden
+                  className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
+                  style={{ backgroundImage: NOISE_TEXTURE }}
+                />
+                <div className="relative flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/65">
+                      {isFreeEvent ? "Entry" : "Tickets from"}
+                    </p>
+                    <p className="font-bricolage text-3xl font-bold tabular-nums text-white">
+                      {priceDisplay}
+                    </p>
+                  </div>
+                  {unavailable ? null : allSoldOut ? (
+                    <span className="rounded-full bg-rose-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-rose-200">
+                      Sold out
                     </span>
-                  </InfoRow>
+                  ) : tiers.length > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                      Available
+                    </span>
+                  ) : null}
                 </div>
+              </div>
 
-                <div className="my-4 border-t border-(--gray-200)" />
+              {/* Event facts */}
+              <div className="space-y-4 px-6 py-5">
+                <TicketRow icon={<CalendarDays className="h-4.5 w-4.5" />} label="Date">
+                  {dateLabel}
+                </TicketRow>
+                <TicketRow icon={<Clock className="h-4.5 w-4.5" />} label="Time">
+                  {timeLabel}
+                  {durationLabel ? <span className="font-medium text-(--gray-500)"> · {durationLabel}</span> : null}
+                </TicketRow>
+                {genres.length > 0 ? (
+                  <TicketRow icon={<Music className="h-4.5 w-4.5" />} label="Genre">
+                    {genres.join(", ")}
+                  </TicketRow>
+                ) : null}
+                <TicketRow icon={<MapPin className="h-4.5 w-4.5" />} label="Venue">
+                  {event.venue ?? "TBA"}
+                  {mapsUrl ? (
+                    <>
+                      {" "}
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex translate-y-[2px] text-(--brand-blue) transition hover:text-(--brand-navy)"
+                        aria-label="Get directions"
+                      >
+                        <Navigation className="h-4 w-4" />
+                      </a>
+                    </>
+                  ) : null}
+                </TicketRow>
+              </div>
 
+              {/* Perforation */}
+              <div className="relative" aria-hidden>
+                <div className="mx-6 border-t-2 border-dashed border-(--gray-200)" />
+                <span className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-background" />
+                <span className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-background" />
+              </div>
+
+              {/* Stub: CTA / state */}
+              <div className="px-6 pb-6 pt-5">
                 {unavailable ? (
                   <div className="flex items-center gap-3">
                     <CalendarX2 className={`h-6 w-6 shrink-0 ${isCancelled ? "text-rose-600" : "text-slate-500"}`} />
@@ -458,524 +591,513 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                 ) : tiers.length === 0 ? (
                   <p className="text-sm text-(--gray-500)">Tickets for this event aren&rsquo;t on sale yet.</p>
                 ) : (
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="font-bricolage text-lg font-bold tabular-nums text-(--brand-navy)">
-                        {priceDisplay}
-                      </p>
-                      {allSoldOut ? (
-                        <p className="text-sm font-semibold text-rose-600">Sold out</p>
-                      ) : (
-                        <p className="text-sm font-semibold text-emerald-600">Available</p>
-                      )}
-                    </div>
+                  <>
                     <button
                       type="button"
                       onClick={handleBookCta}
                       disabled={!canBook}
-                      className="shrink-0 rounded-xl bg-(--brand-navy) px-6 py-3 font-poppins text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                      className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-(--brand-navy) px-6 py-4 font-poppins text-base font-bold text-white shadow-[0_18px_40px_-15px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--gold) active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
                     >
-                      {bookCtaLabel}
+                      <span className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                      <Ticket className="relative h-5 w-5" />
+                      <span className="relative">{bookCtaLabel}</span>
                     </button>
-                  </div>
-                )}
-              </motion.div>
-
-              {/* Tier picker — revealed by the CTA once logged in */}
-              {canBook && isLoggedIn && showTiers ? (
-                <motion.div
-                  variants={reduce ? undefined : rise}
-                  initial="hidden"
-                  animate="show"
-                  id="booking-panel"
-                  className="mt-4 scroll-mt-24 overflow-hidden rounded-2xl border border-(--gray-200) bg-white shadow-[0_10px_40px_-20px_rgba(12,29,55,0.25)]"
-                >
-                  <div className="flex items-center justify-between border-b border-(--gray-100) px-5 py-3.5">
-                    <p className="font-poppins text-sm font-bold text-(--brand-navy)">Select tickets</p>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-(--gray-100) px-2.5 py-1 text-[11px] font-semibold text-(--gray-600)">
-                      <Ticket className="h-3.5 w-3.5" />
-                      {tiers.length} type{tiers.length > 1 ? "s" : ""}
-                    </span>
-                  </div>
-
-                  <div className="px-3 py-2">
-                    {tiers.map((tier) => {
-                      const id = tier.id ?? ""
-                      const n = tierQty[id] ?? 0
-                      const selected = n > 0
-                      const left = tierLeft(tier)
-                      const soldOut = left !== null && left <= 0
-                      const price = Number(tier.price ?? 0)
-                      return (
-                        <div
-                          key={id || tier.name}
-                          className={`relative flex items-center justify-between gap-3 rounded-xl px-3 py-4 transition ${
-                            selected ? "bg-(--gold-soft-bg)/60" : ""
-                          } ${soldOut ? "opacity-55" : ""} [&:not(:last-child)]:border-b [&:not(:last-child)]:border-slate-100`}
-                        >
-                          {selected ? (
-                            <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-full bg-(--gold)" />
-                          ) : null}
-                          <div className="min-w-0 pl-2">
-                            <p className="font-semibold text-(--brand-navy)">{tier.name}</p>
-                            {tier.description ? (
-                              <p className="truncate text-xs text-slate-500">{tier.description}</p>
-                            ) : null}
-                            <p className="mt-1 text-sm font-bold tabular-nums text-(--brand-navy)">
-                              {price === 0 ? "Free" : formatCurrency(price)}
-                              {soldOut ? (
-                                <span className="ml-2 text-[11px] font-semibold uppercase text-rose-500">Sold out</span>
-                              ) : left !== null && left <= 10 ? (
-                                <span className="ml-2 text-[11px] font-semibold text-rose-500">only {left} left</span>
-                              ) : null}
-                            </p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2.5">
-                            <button
-                              type="button"
-                              onClick={() => adjustTierQty(id, -1, left)}
-                              disabled={n === 0}
-                              aria-label={`Remove one ${tier.name} ticket`}
-                              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-bold text-(--brand-navy) transition hover:border-(--brand-navy) active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
-                            >
-                              −
-                            </button>
-                            <span className="w-5 text-center font-bold tabular-nums text-(--brand-navy)" aria-live="polite">
-                              {n}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => adjustTierQty(id, 1, left)}
-                              disabled={soldOut || totalQty >= MAX_TICKETS_PER_ORDER || (left !== null && n >= left)}
-                              aria-label={`Add one ${tier.name} ticket`}
-                              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-bold text-(--brand-navy) transition hover:border-(--brand-navy) active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Summary + CTA */}
-                  <div className="border-t border-slate-100 px-5 pb-5 pt-4">
-                    {totalQty > 0 ? (
-                      <div className="mb-4 space-y-1.5 text-sm">
-                        {tiers
-                          .filter((t) => (tierQty[t.id ?? ""] ?? 0) > 0)
-                          .map((t) => (
-                            <div key={t.id ?? t.name} className="flex justify-between text-slate-600">
-                              <span>
-                                {t.name} × {tierQty[t.id ?? ""]}
-                              </span>
-                              <span className="font-medium tabular-nums">
-                                {Number(t.price ?? 0) === 0
-                                  ? "Free"
-                                  : formatCurrency(Number(t.price ?? 0) * (tierQty[t.id ?? ""] ?? 0))}
-                              </span>
-                            </div>
-                          ))}
-                        <div className="flex justify-between border-t border-dashed border-slate-200 pt-2 font-bold text-(--brand-navy)">
-                          <span>Total</span>
-                          <span className="tabular-nums">{totalPrice === 0 ? "Free" : formatCurrency(totalPrice)}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="mb-4 text-center text-xs text-slate-400">
-                        Pick your tickets — up to {MAX_TICKETS_PER_ORDER} per booking
-                      </p>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={goToCheckout}
-                      disabled={totalQty === 0}
-                      className="group flex w-full items-center justify-center gap-2 rounded-xl bg-(--brand-navy) px-6 py-3.5 font-poppins text-base font-bold text-white shadow-[0_18px_40px_-15px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
-                    >
-                      <Ticket className="h-5 w-5" />
-                      {totalQty === 0 ? "Select tickets" : `Book ${totalQty} ticket${totalQty > 1 ? "s" : ""}`}
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </button>
-                    <p className="mt-3 text-center text-[11px] text-slate-400">
+                    <p className="mt-3 text-center text-[11px] text-(--gray-400)">
                       Secure checkout · instant QR tickets · full refund if cancelled
                     </p>
-                  </div>
-                </motion.div>
-              ) : null}
-            </div>
-          </div>
+                  </>
+                )}
+              </div>
+            </motion.div>
 
-          {/* ════ Body content — flows under the banner, left of the sidebar ════ */}
-          <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-2">
-            {/* About The Event */}
-            {descriptionParas.length > 0 ? (
-              <motion.section
+            {/* Tier picker — revealed by the CTA once logged in */}
+            {canBook && isLoggedIn && showTiers ? (
+              <motion.div
                 variants={reduce ? undefined : rise}
                 initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-60px" }}
-                className="pt-2"
+                animate="show"
+                id="booking-panel"
+                className="mt-4 scroll-mt-24 overflow-hidden rounded-[1.75rem] bg-white shadow-[0_30px_70px_-30px_rgba(4,12,28,0.5)]"
               >
-                <SectionHead title="About The Event" />
-                {(aboutExpanded ? descriptionParas : descriptionParas.slice(0, 1)).map((para, i) => (
-                  <p key={i} className={`mt-4 max-w-[70ch] leading-relaxed text-slate-600 ${aboutExpanded ? "" : "line-clamp-4"}`}>
-                    {para}
-                  </p>
-                ))}
-                {aboutLong ? (
+                <div className="flex items-center justify-between border-b border-(--gray-100) px-6 py-4">
+                  <p className="font-poppins text-sm font-bold text-(--brand-navy)">Select tickets</p>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-(--gold-soft-bg) px-2.5 py-1 text-[11px] font-semibold text-(--gold-text)">
+                    <Ticket className="h-3.5 w-3.5" />
+                    {tiers.length} type{tiers.length > 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div className="px-3 py-2">
+                  {tiers.map((tier) => {
+                    const id = tier.id ?? ""
+                    const n = tierQty[id] ?? 0
+                    const selected = n > 0
+                    const left = tierLeft(tier)
+                    const soldOut = left !== null && left <= 0
+                    const price = Number(tier.price ?? 0)
+                    return (
+                      <div
+                        key={id || tier.name}
+                        className={`relative flex items-center justify-between gap-3 rounded-2xl px-3 py-4 transition ${
+                          selected ? "bg-(--gold-soft-bg)/60" : ""
+                        } ${soldOut ? "opacity-55" : ""} [&:not(:last-child)]:border-b [&:not(:last-child)]:border-slate-100`}
+                      >
+                        {selected ? (
+                          <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-full bg-(--gold)" />
+                        ) : null}
+                        <div className="min-w-0 pl-2">
+                          <p className="font-semibold text-(--brand-navy)">{tier.name}</p>
+                          {tier.description ? (
+                            <p className="truncate text-xs text-slate-500">{tier.description}</p>
+                          ) : null}
+                          <p className="mt-1 text-sm font-bold tabular-nums text-(--brand-navy)">
+                            {price === 0 ? "Free" : formatCurrency(price)}
+                            {soldOut ? (
+                              <span className="ml-2 text-[11px] font-semibold uppercase text-rose-500">Sold out</span>
+                            ) : left !== null && left <= 10 ? (
+                              <span className="ml-2 text-[11px] font-semibold text-rose-500">only {left} left</span>
+                            ) : null}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => adjustTierQty(id, -1, left)}
+                            disabled={n === 0}
+                            aria-label={`Remove one ${tier.name} ticket`}
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-bold text-(--brand-navy) transition hover:border-(--brand-navy) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--gold) active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            −
+                          </button>
+                          <span className="w-5 text-center font-bold tabular-nums text-(--brand-navy)" aria-live="polite">
+                            {n}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => adjustTierQty(id, 1, left)}
+                            disabled={soldOut || totalQty >= MAX_TICKETS_PER_ORDER || (left !== null && n >= left)}
+                            aria-label={`Add one ${tier.name} ticket`}
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-bold text-(--brand-navy) transition hover:border-(--brand-navy) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--gold) active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Summary + checkout */}
+                <div className="border-t border-slate-100 px-6 pb-6 pt-4">
+                  {totalQty > 0 ? (
+                    <div className="mb-4 space-y-1.5 text-sm">
+                      {tiers
+                        .filter((t) => (tierQty[t.id ?? ""] ?? 0) > 0)
+                        .map((t) => (
+                          <div key={t.id ?? t.name} className="flex justify-between text-slate-600">
+                            <span>
+                              {t.name} × {tierQty[t.id ?? ""]}
+                            </span>
+                            <span className="font-medium tabular-nums">
+                              {Number(t.price ?? 0) === 0
+                                ? "Free"
+                                : formatCurrency(Number(t.price ?? 0) * (tierQty[t.id ?? ""] ?? 0))}
+                            </span>
+                          </div>
+                        ))}
+                      <div className="flex justify-between border-t border-dashed border-slate-200 pt-2 font-bold text-(--brand-navy)">
+                        <span>Total</span>
+                        <span className="tabular-nums">{totalPrice === 0 ? "Free" : formatCurrency(totalPrice)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mb-4 text-center text-xs text-slate-400">
+                      Pick your tickets — up to {MAX_TICKETS_PER_ORDER} per booking
+                    </p>
+                  )}
+
                   <button
                     type="button"
-                    onClick={() => setAboutExpanded((v) => !v)}
-                    className="mt-2 text-sm font-semibold text-(--brand-blue) underline-offset-4 transition hover:underline"
+                    onClick={goToCheckout}
+                    disabled={totalQty === 0}
+                    className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-(--brand-navy) px-6 py-4 font-poppins text-base font-bold text-white shadow-[0_18px_40px_-15px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--gold) active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
                   >
-                    {aboutExpanded ? "Read less" : "Read more"}
+                    <Ticket className="h-5 w-5" />
+                    {totalQty === 0 ? "Select tickets" : `Book ${totalQty} ticket${totalQty > 1 ? "s" : ""}`}
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </button>
-                ) : null}
-              </motion.section>
-            ) : null}
-
-            {/* Lineup — artists with genres */}
-            {artists.length > 0 ? (
-              <motion.section
-                variants={reduce ? undefined : rise}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-60px" }}
-                className="border-t border-(--gray-200) pt-8"
-              >
-                <SectionHead title="On Stage" />
-                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {artists.map((artist) => (
-                    <div
-                      key={artist.name}
-                      className="rounded-2xl border border-(--gray-200) bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-24px_rgba(12,29,55,0.35)]"
-                    >
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-(--gold-soft-bg) font-bricolage text-lg font-bold text-(--gold-text)">
-                        {artist.name.charAt(0).toUpperCase()}
-                      </div>
-                      <p className="mt-3 text-sm font-bold leading-snug text-(--brand-navy)">{artist.name}</p>
-                      {artist.genre ? (
-                        <p className="mt-0.5 text-xs font-medium text-slate-500">{artist.genre}</p>
-                      ) : null}
-                    </div>
-                  ))}
                 </div>
-                {chiefGuest ? (
-                  <p className="mt-4 flex items-center gap-2 text-sm text-slate-500">
-                    <Sparkles className="h-4 w-4 text-(--gold-icon)" />
-                    {chiefGuest}
-                  </p>
-                ) : null}
-              </motion.section>
+              </motion.div>
             ) : null}
+          </div>
+        </div>
 
-            {/* Highlights + included-with-ticket perks */}
-            {eventHighlights.length > 0 || perks.length > 0 ? (
-              <motion.section
-                variants={reduce ? undefined : rise}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-60px" }}
-                className="border-t border-(--gray-200) pt-8"
-              >
-                <SectionHead title="Highlights" />
-                {eventHighlights.length > 0 ? (
-                  <div className="mt-5 flex flex-wrap gap-2.5">
-                    {eventHighlights.map((h) => (
-                      <span
-                        key={h}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-(--gold-soft-border) bg-(--gold-soft-bg) px-4 py-2 text-sm font-semibold text-(--gold-text) transition hover:border-(--gold)"
-                      >
-                        <Sparkles className="h-3.5 w-3.5 text-(--gold-icon)" />
-                        {h}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                {perks.length > 0 ? (
-                  <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
-                    <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
-                      <Gift className="h-4 w-4" /> Included with your ticket
-                    </p>
-                    <ul className="mt-2.5 space-y-1.5 text-sm text-slate-600">
-                      {perks.map((p) => (
-                        <li key={p} className="flex items-start gap-2">
-                          <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-500" />
-                          {p}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </motion.section>
-            ) : null}
-
-            {/* Venue & transport */}
+        {/* ════ STORY — content flows under the artwork ════ */}
+        <div className="min-w-0 space-y-14 pt-4 lg:col-start-1 lg:row-start-2 lg:pt-8">
+          {/* About */}
+          {descriptionParas.length > 0 ? (
             <motion.section
               variants={reduce ? undefined : rise}
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, margin: "-60px" }}
-              className="border-t border-(--gray-200) pt-8"
             >
-              <SectionHead title="Venue & Transport" />
-              <div className="mt-5 overflow-hidden rounded-2xl border border-(--gray-200) bg-white">
-                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-(--gold-icon)" />
-                    <p className="font-semibold text-(--brand-navy)">{event.venue ?? "TBA"}</p>
-                  </div>
-                  {mapsUrl ? (
-                    <a
-                      href={mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-(--brand-navy) px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_-12px_rgba(12,29,55,0.5)] transition hover:bg-(--brand-navy)/90 active:scale-[0.98]"
-                    >
-                      <Navigation className="h-4 w-4" /> Get directions
-                    </a>
-                  ) : null}
-                </div>
-                {event.entrySide || transportItems.length > 0 || event.transportToEvent ? (
-                  <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-(--gray-200) px-5 py-4 text-sm text-slate-600 sm:px-6">
-                    {event.entrySide ? (
-                      <span className="inline-flex items-center gap-2 font-medium text-(--brand-navy)">
-                        <DoorOpen className="h-4 w-4 text-(--gold-icon)" />
-                        {event.entrySide}
-                      </span>
-                    ) : null}
-                    {transportItems.map((t) => (
-                      <span key={t} className="inline-flex items-center gap-2">
-                        <Bus className="h-4 w-4 text-(--gold-icon)" />
-                        {t}
-                      </span>
-                    ))}
-                    {event.transportToEvent ? (
-                      <span className="inline-flex items-start gap-2">
-                        <Bus className="mt-0.5 h-4 w-4 shrink-0 text-(--gold-icon)" />
-                        {event.transportToEvent}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            </motion.section>
-
-            {/* Sponsors */}
-            {sponsorGroups.length > 0 ? (
-              <motion.section
-                variants={reduce ? undefined : rise}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-60px" }}
-                className="border-t border-(--gray-200) pt-8"
-              >
-                <SectionHead title="Made Possible By" />
-                <div className="mt-5 space-y-4">
-                  {sponsorGroups.map(([label, names]) => (
-                    <div key={label} className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-                      <span className="w-32 shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-                        {label}
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {names.map((sponsor) =>
-                          sponsor.website ? (
-                            <a
-                              key={sponsor.name}
-                              href={sponsor.website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-bricolage text-sm font-bold text-(--brand-navy) transition hover:border-(--gold)"
-                            >
-                              {sponsor.name}
-                            </a>
-                          ) : (
-                            <span
-                              key={sponsor.name}
-                              className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-bricolage text-sm font-bold text-(--brand-navy)"
-                            >
-                              {sponsor.name}
-                            </span>
-                          ),
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.section>
-            ) : null}
-
-            {/* Host + request-a-date */}
-            <motion.section
-              variants={reduce ? undefined : rise}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-60px" }}
-              className="grid gap-4 border-t border-(--gray-200) pt-8 sm:grid-cols-[1.4fr_1fr]"
-            >
-              {organizerName ? (
-                <div className="flex items-center gap-4 rounded-2xl border border-(--gray-200) bg-white p-5">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-(--brand-navy) font-bricolage text-xl font-bold text-white">
-                    {organizerName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Hosted by</p>
-                    <p className="mt-0.5 flex items-center gap-1.5 font-semibold text-(--brand-navy)">
-                      <span className="truncate">{organizerName}</span>
-                      <BadgeCheck className="h-4 w-4 shrink-0 text-(--brand-blue)" />
-                    </p>
-                    <p className="text-xs text-slate-500">Verified organizer</p>
-                  </div>
-                </div>
-              ) : (
-                <div />
-              )}
-
-              {isLoggedIn ? (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <button
-                      type="button"
-                      className="group flex items-center justify-between gap-3 rounded-2xl border border-dashed border-(--gold-soft-border) bg-transparent p-5 text-left transition hover:border-(--gold) hover:bg-(--gold-soft-bg)/50"
-                    >
-                      <div>
-                        <p className="flex items-center gap-2 text-sm font-bold text-(--brand-navy)">
-                          <CalendarPlus className="h-4 w-4 text-(--gold-icon)" />
-                          Can&rsquo;t make it?
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">Request a different date</p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 shrink-0 text-(--gold-icon) transition-transform group-hover:translate-x-1" />
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-5xl flex-col items-center justify-center overflow-hidden rounded-3xl border-0 bg-(--white) p-0">
-                    <VisuallyHidden>
-                      <DialogTitle>Select Date and View Reviews</DialogTitle>
-                    </VisuallyHidden>
-                    <div className="flex h-full w-full items-center justify-center overflow-y-auto p-6 md:p-8">
-                      <DateReviewsSection eventId={event.id} />
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              ) : (
+              <SectionHead kicker="About" title="What's happening" />
+              {(aboutExpanded ? descriptionParas : descriptionParas.slice(0, 1)).map((para, i) => (
+                <p key={i} className={`mt-4 max-w-[65ch] leading-relaxed text-slate-600 ${aboutExpanded ? "" : "line-clamp-4"}`}>
+                  {para}
+                </p>
+              ))}
+              {aboutLong ? (
                 <button
                   type="button"
-                  onClick={() => openModal("register")}
-                  className="group flex items-center justify-between gap-3 rounded-2xl border border-dashed border-(--gold-soft-border) bg-transparent p-5 text-left transition hover:border-(--gold) hover:bg-(--gold-soft-bg)/50"
+                  onClick={() => setAboutExpanded((v) => !v)}
+                  className="mt-2 text-sm font-semibold text-(--brand-blue) underline-offset-4 transition hover:underline"
                 >
-                  <div>
-                    <p className="flex items-center gap-2 text-sm font-bold text-(--brand-navy)">
-                      <CalendarPlus className="h-4 w-4 text-(--gold-icon)" />
-                      Can&rsquo;t make it?
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">Register to request a different date</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-(--gold-icon) transition-transform group-hover:translate-x-1" />
+                  {aboutExpanded ? "Read less" : "Read more"}
                 </button>
-              )}
+              ) : null}
             </motion.section>
+          ) : null}
 
-            {/* Quick links — refund · guidelines · contact */}
+          {/* Lineup */}
+          {artists.length > 0 ? (
             <motion.section
               variants={reduce ? undefined : rise}
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, margin: "-60px" }}
-              className="flex flex-wrap items-center gap-x-7 gap-y-3 border-t border-(--gray-200) pt-6 text-sm"
             >
-              <Link
-                href="/refund-policy"
-                className="inline-flex items-center gap-2 font-semibold text-slate-600 transition hover:text-(--brand-navy)"
-              >
-                <ShieldCheck className="h-4 w-4 text-(--gold-icon)" /> Refund policy
-              </Link>
-
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 font-semibold text-slate-600 transition hover:text-(--brand-navy)"
+              <SectionHead kicker="Lineup" title="On stage" />
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {artists.map((artist) => (
+                  <div
+                    key={artist.name}
+                    className="rounded-2xl bg-white p-4 shadow-[0_18px_45px_-28px_rgba(12,29,55,0.45)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_55px_-28px_rgba(12,29,55,0.55)]"
                   >
-                    <ScrollText className="h-4 w-4 text-(--gold-icon)" /> Guidelines &amp; rules
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="max-h-[80vh] w-[95vw] max-w-lg overflow-y-auto rounded-3xl border border-(--gray-200) bg-(--white) p-6">
-                  <DialogTitle className="mb-3 text-lg font-bold text-(--brand-navy)">Guidelines &amp; Rules</DialogTitle>
-                  <ul className="list-disc space-y-2 pl-5 text-sm text-(--gray-600)">
-                    {guidelineItems.length > 0 ? (
-                      guidelineItems.map((item) => <li key={item}>{item}</li>)
-                    ) : (
-                      <>
-                        <li>Tickets once booked cannot be exchanged or refunded.</li>
-                        <li>Please arrive at least 20 minutes before the event start time.</li>
-                        <li>Carry a valid ID; rights of admission reserved.</li>
-                      </>
-                    )}
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-(--gold-soft-bg) font-bricolage text-lg font-bold text-(--gold-text)">
+                      {artist.name.charAt(0).toUpperCase()}
+                    </div>
+                    <p className="mt-3 text-sm font-bold leading-snug text-(--brand-navy)">{artist.name}</p>
+                    {artist.genre ? (
+                      <p className="mt-0.5 text-xs font-medium text-slate-500">{artist.genre}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+              {chiefGuest ? (
+                <p className="mt-6 flex items-center gap-2 text-sm text-slate-500 sm:mt-8">
+                  <Sparkles className="h-4 w-4 text-(--gold-icon)" />
+                  {chiefGuest}
+                </p>
+              ) : null}
+            </motion.section>
+          ) : null}
+
+          {/* Highlights + perks */}
+          {eventHighlights.length > 0 || perks.length > 0 ? (
+            <motion.section
+              variants={reduce ? undefined : rise}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-60px" }}
+            >
+              <SectionHead kicker="Highlights" title="Worth staying for" />
+              {eventHighlights.length > 0 ? (
+                <div className="mt-6 flex flex-wrap gap-2.5">
+                  {eventHighlights.map((h) => (
+                    <span
+                      key={h}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-(--gold-soft-border) bg-(--gold-soft-bg) px-4 py-2 text-sm font-semibold text-(--gold-text) transition hover:border-(--gold)"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-(--gold-icon)" />
+                      {h}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {perks.length > 0 ? (
+                <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
+                  <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
+                    <Gift className="h-4 w-4" /> Included with your ticket
+                  </p>
+                  <ul className="mt-2.5 space-y-1.5 text-sm text-slate-600">
+                    {perks.map((p) => (
+                      <li key={p} className="flex items-start gap-2">
+                        <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-500" />
+                        {p}
+                      </li>
+                    ))}
                   </ul>
-                </DialogContent>
-              </Dialog>
+                </div>
+              ) : null}
+            </motion.section>
+          ) : null}
 
+          {/* Venue & transport */}
+          <motion.section
+            variants={reduce ? undefined : rise}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            <SectionHead kicker="Getting there" title="Venue & transport" />
+            <div className="mt-6 overflow-hidden rounded-3xl border border-(--gold-bar-border) bg-(--gold-bar-bg)">
+              <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="flex items-start gap-3">
+                  <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-(--gold-icon)" />
+                  <p className="font-semibold text-(--brand-navy)">{event.venue ?? "TBA"}</p>
+                </div>
+                {mapsUrl ? (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-(--brand-navy) px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_-12px_rgba(12,29,55,0.5)] transition hover:bg-(--brand-navy)/90 active:scale-[0.98]"
+                  >
+                    <Navigation className="h-4 w-4" /> Get directions
+                  </a>
+                ) : null}
+              </div>
+              {event.entrySide || transportItems.length > 0 || event.transportToEvent ? (
+                <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-(--gold-bar-border) px-5 py-4 text-sm text-slate-600 sm:px-6">
+                  {event.entrySide ? (
+                    <span className="inline-flex items-center gap-2 font-medium text-(--brand-navy)">
+                      <DoorOpen className="h-4 w-4 text-(--gold-icon)" />
+                      {event.entrySide}
+                    </span>
+                  ) : null}
+                  {transportItems.map((t) => (
+                    <span key={t} className="inline-flex items-center gap-2">
+                      <Bus className="h-4 w-4 text-(--gold-icon)" />
+                      {t}
+                    </span>
+                  ))}
+                  {event.transportToEvent ? (
+                    <span className="inline-flex items-start gap-2">
+                      <Bus className="mt-0.5 h-4 w-4 shrink-0 text-(--gold-icon)" />
+                      {event.transportToEvent}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </motion.section>
+
+          {/* Sponsors */}
+          {sponsorGroups.length > 0 ? (
+            <motion.section
+              variants={reduce ? undefined : rise}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-60px" }}
+            >
+              <SectionHead kicker="Sponsors" title="Made possible by" />
+              <div className="mt-6 space-y-4">
+                {sponsorGroups.map(([label, names]) => (
+                  <div key={label} className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+                    <span className="w-32 shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                      {label}
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {names.map((sponsor) =>
+                        sponsor.website ? (
+                          <a
+                            key={sponsor.name}
+                            href={sponsor.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-bricolage text-sm font-bold text-(--brand-navy) transition hover:border-(--gold)"
+                          >
+                            {sponsor.name}
+                          </a>
+                        ) : (
+                          <span
+                            key={sponsor.name}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-bricolage text-sm font-bold text-(--brand-navy)"
+                          >
+                            {sponsor.name}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.section>
+          ) : null}
+
+          {/* Host + request-a-date */}
+          <motion.section
+            variants={reduce ? undefined : rise}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-60px" }}
+            className="grid gap-4 sm:grid-cols-[1.4fr_1fr]"
+          >
+            {organizerName ? (
+              <div className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-[0_18px_50px_-25px_rgba(12,29,55,0.25)]">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-(--brand-navy) font-bricolage text-xl font-bold text-white">
+                  {organizerName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Hosted by</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 font-semibold text-(--brand-navy)">
+                    <span className="truncate">{organizerName}</span>
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-(--brand-blue)" />
+                  </p>
+                  <p className="text-xs text-slate-500">Verified organizer</p>
+                </div>
+              </div>
+            ) : (
+              <div />
+            )}
+
+            {isLoggedIn ? (
               <Dialog>
                 <DialogTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-2 font-semibold text-slate-600 transition hover:text-(--brand-navy)"
+                    className="group flex items-center justify-between gap-3 rounded-3xl border border-dashed border-(--gold-soft-border) bg-transparent p-5 text-left transition hover:border-(--gold) hover:bg-(--gold-soft-bg)/50"
                   >
-                    <Phone className="h-4 w-4 text-(--gold-icon)" /> Contact organizer
+                    <div>
+                      <p className="flex items-center gap-2 text-sm font-bold text-(--brand-navy)">
+                        <CalendarPlus className="h-4 w-4 text-(--gold-icon)" />
+                        Can&rsquo;t make it?
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">Request a different date</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-(--gold-icon) transition-transform group-hover:translate-x-1" />
                   </button>
                 </DialogTrigger>
-                <DialogContent className="w-[95vw] max-w-md rounded-3xl border border-(--gray-200) bg-(--white) p-6">
-                  <DialogTitle className="mb-3 text-lg font-bold text-(--brand-navy)">Contact Information</DialogTitle>
-                  <div className="space-y-2 text-sm text-(--gray-600)">
-                    {contact.mobile ? (
-                      <a href={`tel:${contact.mobile}`} className="flex items-center gap-2 hover:text-(--brand-blue)">
-                        <Phone className="h-4 w-4" /> {contact.mobile}
-                      </a>
-                    ) : null}
-                    {contact.email ? (
-                      <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:text-(--brand-blue)">
-                        <ScrollText className="h-4 w-4" /> {contact.email}
-                      </a>
-                    ) : null}
-                    {contact.website ? (
-                      <a
-                        href={contact.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 hover:text-(--brand-blue)"
-                      >
-                        <Navigation className="h-4 w-4" /> {contact.website}
-                      </a>
-                    ) : null}
-                    {!contact.mobile && !contact.email && !contact.website ? (
-                      <p>
-                        Reach us at{" "}
-                        <a href="mailto:contact-us@baatasari.com" className="font-semibold text-(--brand-blue)">
-                          contact-us@baatasari.com
-                        </a>
-                      </p>
-                    ) : null}
+                <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-5xl flex-col items-center justify-center overflow-hidden rounded-3xl border-0 bg-(--white) p-0">
+                  <VisuallyHidden>
+                    <DialogTitle>Select Date and View Reviews</DialogTitle>
+                  </VisuallyHidden>
+                  <div className="flex h-full w-full items-center justify-center overflow-y-auto p-6 md:p-8">
+                    <DateReviewsSection eventId={event.id} />
                   </div>
                 </DialogContent>
               </Dialog>
-            </motion.section>
-          </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openModal("register")}
+                className="group flex items-center justify-between gap-3 rounded-3xl border border-dashed border-(--gold-soft-border) bg-transparent p-5 text-left transition hover:border-(--gold) hover:bg-(--gold-soft-bg)/50"
+              >
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-bold text-(--brand-navy)">
+                    <CalendarPlus className="h-4 w-4 text-(--gold-icon)" />
+                    Can&rsquo;t make it?
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">Register to request a different date</p>
+                </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-(--gold-icon) transition-transform group-hover:translate-x-1" />
+              </button>
+            )}
+          </motion.section>
+
+          {/* Quick links — refund · guidelines · contact */}
+          <motion.section
+            variants={reduce ? undefined : rise}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-60px" }}
+            className="flex flex-wrap items-center gap-x-7 gap-y-3 border-t border-(--gold-bar-border) pt-6 text-sm"
+          >
+            <Link
+              href="/refund-policy"
+              className="inline-flex items-center gap-2 font-semibold text-slate-600 transition hover:text-(--brand-navy)"
+            >
+              <ShieldCheck className="h-4 w-4 text-(--gold-icon)" /> Refund policy
+            </Link>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 font-semibold text-slate-600 transition hover:text-(--brand-navy)"
+                >
+                  <ScrollText className="h-4 w-4 text-(--gold-icon)" /> Guidelines &amp; rules
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[80vh] w-[95vw] max-w-lg overflow-y-auto rounded-3xl border border-(--gray-200) bg-(--white) p-6">
+                <DialogTitle className="mb-3 text-lg font-bold text-(--brand-navy)">Guidelines &amp; Rules</DialogTitle>
+                <ul className="list-disc space-y-2 pl-5 text-sm text-(--gray-600)">
+                  {guidelineItems.length > 0 ? (
+                    guidelineItems.map((item) => <li key={item}>{item}</li>)
+                  ) : (
+                    <>
+                      <li>Tickets once booked cannot be exchanged or refunded.</li>
+                      <li>Please arrive at least 20 minutes before the event start time.</li>
+                      <li>Carry a valid ID; rights of admission reserved.</li>
+                    </>
+                  )}
+                </ul>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 font-semibold text-slate-600 transition hover:text-(--brand-navy)"
+                >
+                  <Phone className="h-4 w-4 text-(--gold-icon)" /> Contact organizer
+                </button>
+              </DialogTrigger>
+              <DialogContent className="w-[95vw] max-w-md rounded-3xl border border-(--gray-200) bg-(--white) p-6">
+                <DialogTitle className="mb-3 text-lg font-bold text-(--brand-navy)">Contact Information</DialogTitle>
+                <div className="space-y-2 text-sm text-(--gray-600)">
+                  {contact.mobile ? (
+                    <a href={`tel:${contact.mobile}`} className="flex items-center gap-2 hover:text-(--brand-blue)">
+                      <Phone className="h-4 w-4" /> {contact.mobile}
+                    </a>
+                  ) : null}
+                  {contact.email ? (
+                    <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:text-(--brand-blue)">
+                      <ScrollText className="h-4 w-4" /> {contact.email}
+                    </a>
+                  ) : null}
+                  {contact.website ? (
+                    <a
+                      href={contact.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 hover:text-(--brand-blue)"
+                    >
+                      <Navigation className="h-4 w-4" /> {contact.website}
+                    </a>
+                  ) : null}
+                  {!contact.mobile && !contact.email && !contact.website ? (
+                    <p>
+                      Reach us at{" "}
+                      <a href="mailto:contact-us@baatasari.com" className="font-semibold text-(--brand-blue)">
+                        contact-us@baatasari.com
+                      </a>
+                    </p>
+                  ) : null}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </motion.section>
         </div>
       </div>
 
       {/* ════ Mobile sticky booking bar ════ */}
       {canBook ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-(--gray-200) bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-(--gray-200) bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md lg:hidden">
           <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="font-bricolage text-base font-bold tabular-nums text-(--brand-navy)">{priceDisplay}</p>
-              <p className="text-xs font-semibold text-emerald-600">Available</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--gray-400)">
+                {isFreeEvent ? "Entry" : "From"}
+              </p>
+              <p className="font-bricolage text-lg font-bold tabular-nums text-(--brand-navy)">{priceDisplay}</p>
             </div>
             <button
               type="button"
               onClick={handleBookCta}
-              className="shrink-0 rounded-xl bg-(--brand-navy) px-7 py-3 font-poppins text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 active:scale-[0.98]"
+              className="shrink-0 rounded-2xl bg-(--brand-navy) px-8 py-3.5 font-poppins text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 active:scale-[0.98]"
             >
               {bookCtaLabel}
             </button>

@@ -220,7 +220,7 @@ export function EventsSearchHero() {
         {/* Search bar */}
         <div
           ref={searchRef}
-          className="mx-auto mt-40 w-full max-w-5xl opacity-0 sm:mt-46 md:mt-24"
+          className="mx-auto mt-48 w-full max-w-5xl opacity-0 sm:mt-54 md:mt-24"
         >
           <div className="flex flex-wrap items-stretch gap-2 rounded-3xl border border-(--gray-200) bg-white p-2 shadow-[0_20px_60px_-20px_rgba(12,29,55,0.18)] lg:flex-nowrap lg:gap-0 lg:rounded-full">
             {/* Search input — full width on mobile */}
