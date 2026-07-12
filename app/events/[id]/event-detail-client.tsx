@@ -363,7 +363,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               slug={event.slug}
               title={event.title}
               iconOnly
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white/85 backdrop-blur-md transition hover:bg-white/20 hover:text-white active:scale-95"
+              className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white/85 backdrop-blur-md transition hover:bg-white/20 hover:text-white active:scale-95 lg:flex"
             />
           </div>
 
@@ -403,15 +403,24 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             ))}
           </motion.div>
 
-          {/* Title */}
-          <motion.h1
-            variants={reduce ? undefined : rise}
-            initial="hidden"
-            animate="show"
-            className="mt-4 max-w-4xl font-bricolage text-[clamp(1.9rem,5vw,4rem)] font-bold leading-[1.04] tracking-tight text-white [text-wrap:balance]"
-          >
-            {event.title}
-          </motion.h1>
+          {/* Title — share sits beside it on mobile */}
+          <div className="mt-4 flex items-start justify-between gap-3">
+            <motion.h1
+              variants={reduce ? undefined : rise}
+              initial="hidden"
+              animate="show"
+              className="max-w-4xl font-bricolage text-[clamp(1.6rem,5vw,4rem)] font-bold leading-[1.08] tracking-tight text-white [text-wrap:balance]"
+            >
+              {event.title}
+            </motion.h1>
+            <ShareEventButton
+              eventId={event.id}
+              slug={event.slug}
+              title={event.title}
+              iconOnly
+              className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white/85 backdrop-blur-md transition hover:bg-white/20 hover:text-white active:scale-95 lg:hidden"
+            />
+          </div>
           {event.tagline ? (
             <motion.p
               variants={reduce ? undefined : rise}
@@ -423,12 +432,12 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             </motion.p>
           ) : null}
 
-          {/* Meta row */}
+          {/* Meta row — desktop only; on mobile these details live in the ticket card */}
           <motion.div
             variants={reduce ? undefined : rise}
             initial="hidden"
             animate="show"
-            className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm text-white/80"
+            className="mt-7 hidden flex-wrap items-center gap-x-7 gap-y-3 text-sm text-white/80 lg:flex"
           >
             <span className="inline-flex items-center gap-2 font-semibold text-white">
               <CalendarDays className="h-4 w-4 text-(--gold)" />
@@ -483,14 +492,14 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
           animate="show"
           className="min-w-0 lg:hidden"
         >
-          <div className="relative mx-auto aspect-[2/3] w-60 overflow-hidden rounded-[1.25rem] bg-(--brand-navy) shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)] sm:w-72">
+          <div className="relative h-44 w-full overflow-hidden rounded-2xl bg-(--brand-navy) shadow-[0_35px_70px_-30px_rgba(4,12,28,0.6)] sm:h-60">
             <Image
               src={coverImageSrc}
               alt={`${event.title} poster`}
               fill
               priority
-              sizes="288px"
-              className={`object-cover ${unavailable ? "grayscale-[0.4]" : ""}`}
+              sizes="100vw"
+              className={`object-cover object-[center_30%] ${unavailable ? "grayscale-[0.4]" : ""}`}
               onError={() => setCoverImageSrc("/an2.png")}
             />
           </div>
