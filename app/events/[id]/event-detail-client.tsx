@@ -458,18 +458,16 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               animate="show"
               className="hidden lg:block"
             >
-              <div className="ml-auto w-full max-w-[300px] rotate-[1.5deg] rounded-[1.5rem] bg-white p-2 shadow-[0_45px_90px_-35px_rgba(4,12,28,0.8)] transition-transform duration-500 hover:rotate-0">
-                <div className="relative aspect-[2/3] overflow-hidden rounded-[1rem] bg-(--brand-navy)">
-                  <Image
-                    src={coverImageSrc}
-                    alt={`${event.title} poster`}
-                    fill
-                    priority
-                    sizes="300px"
-                    className={`object-cover ${unavailable ? "grayscale-[0.4]" : ""}`}
-                    onError={() => setCoverImageSrc("/an2.png")}
-                  />
-                </div>
+              <div className="relative ml-auto aspect-[2/3] w-full max-w-[300px] rotate-[1.5deg] overflow-hidden rounded-[1.25rem] bg-(--brand-navy) shadow-[0_45px_90px_-35px_rgba(4,12,28,0.8)] transition-transform duration-500 hover:rotate-0">
+                <Image
+                  src={coverImageSrc}
+                  alt={`${event.title} poster`}
+                  fill
+                  priority
+                  sizes="300px"
+                  className={`object-cover ${unavailable ? "grayscale-[0.4]" : ""}`}
+                  onError={() => setCoverImageSrc("/an2.png")}
+                />
               </div>
             </motion.div>
           </div>
@@ -485,18 +483,16 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
           animate="show"
           className="min-w-0 lg:hidden"
         >
-          <div className="mx-auto w-60 rounded-[1.5rem] bg-white p-2 shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)] sm:w-72">
-            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[1rem] bg-(--brand-navy)">
-              <Image
-                src={coverImageSrc}
-                alt={`${event.title} poster`}
-                fill
-                priority
-                sizes="(min-width: 1024px) 320px, 288px"
-                className={`object-cover ${unavailable ? "grayscale-[0.4]" : ""}`}
-                onError={() => setCoverImageSrc("/an2.png")}
-              />
-            </div>
+          <div className="relative mx-auto aspect-[2/3] w-60 overflow-hidden rounded-[1.25rem] bg-(--brand-navy) shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)] sm:w-72">
+            <Image
+              src={coverImageSrc}
+              alt={`${event.title} poster`}
+              fill
+              priority
+              sizes="288px"
+              className={`object-cover ${unavailable ? "grayscale-[0.4]" : ""}`}
+              onError={() => setCoverImageSrc("/an2.png")}
+            />
           </div>
         </motion.div>
 
@@ -1090,23 +1086,45 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
         </div>
       </div>
 
-      {/* ════ Mobile sticky booking bar ════ */}
+      {/* ════ Mobile sticky booking bar — mirrors the tier selection once tickets are picked ════ */}
       {canBook ? (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-(--gray-200) bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md lg:hidden">
           <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--gray-400)">
-                {isFreeEvent ? "Entry" : "From"}
-              </p>
-              <p className="font-bricolage text-lg font-bold tabular-nums text-(--brand-navy)">{priceDisplay}</p>
-            </div>
-            <button
-              type="button"
-              onClick={handleBookCta}
-              className="shrink-0 rounded-2xl bg-(--brand-navy) px-8 py-3.5 font-poppins text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 active:scale-[0.98]"
-            >
-              {bookCtaLabel}
-            </button>
+            {isLoggedIn && showTiers && totalQty > 0 ? (
+              <>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--gray-400)">
+                    Total · {totalQty} ticket{totalQty > 1 ? "s" : ""}
+                  </p>
+                  <p className="font-bricolage text-lg font-bold tabular-nums text-(--brand-navy)">
+                    {totalPrice === 0 ? "Free" : formatCurrency(totalPrice)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={goToCheckout}
+                  className="shrink-0 rounded-2xl bg-(--brand-navy) px-8 py-3.5 font-poppins text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 active:scale-[0.98]"
+                >
+                  Book {totalQty} ticket{totalQty > 1 ? "s" : ""}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--gray-400)">
+                    {isFreeEvent ? "Entry" : "From"}
+                  </p>
+                  <p className="font-bricolage text-lg font-bold tabular-nums text-(--brand-navy)">{priceDisplay}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleBookCta}
+                  className="shrink-0 rounded-2xl bg-(--brand-navy) px-8 py-3.5 font-poppins text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 active:scale-[0.98]"
+                >
+                  {bookCtaLabel}
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : null}
