@@ -285,7 +285,31 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     return `${rounded % 1 === 0 ? rounded : rounded.toFixed(1)} hour${rounded !== 1 ? "s" : ""}`
   }, [event.startTime, event.endTime, isMultiDay])
 
-  const contact = (event.contactInfo ?? {}) as { mobile?: string; email?: string; website?: string }
+  // Age group from the organizer's audienceRange ("Age Limit" row).
+  const ageLabel = useMemo(() => {
+    const min = event.audienceRange?.min
+    const max = event.audienceRange?.max
+    if (typeof min !== "number" || typeof max !== "number") return null
+    if (min <= 0 && max >= 100) return "All ages"
+    if (max >= 100) return `${min}+ yrs`
+    return `${min}–${max} yrs`
+  }, [event.audienceRange])
+
+  // Target-audience checkboxes from create-event → "Who it's for" pills.
+  const audienceTags = useMemo(
+    () =>
+      Object.entries(asRecord(event.targetAudience))
+        .filter(([, v]) => v === true)
+        .map(([k]) => k),
+    [event.targetAudience],
+  )
+
+  const contact = (event.contactInfo ?? {}) as {
+    mobile?: string
+    email?: string
+    website?: string
+    additionalLinks?: string
+  }
   const organizerName = event.organizerDisplayName ?? null
   const mapsUrl = event.googleMapsUrl
   const goingCount = typeof event.bookedCount === "number" ? event.bookedCount : 0
@@ -472,24 +496,15 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
           animate="show"
           className="min-w-0"
         >
-          <div className="rounded-[1.75rem] bg-white p-2 shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)]">
-            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[1.25rem] bg-(--brand-navy) sm:aspect-[2/1]">
-              <Image
-                src={coverImageSrc}
-                alt=""
-                aria-hidden
-                fill
-                sizes="1px"
-                className={`scale-110 object-cover opacity-70 blur-2xl ${unavailable ? "grayscale-[0.4]" : ""}`}
-                onError={() => setCoverImageSrc("/an2.png")}
-              />
+          <div className="mx-auto w-60 rounded-[1.5rem] bg-white p-2 shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)] sm:w-72 lg:mx-0 lg:w-80">
+            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[1rem] bg-(--brand-navy)">
               <Image
                 src={coverImageSrc}
                 alt={`${event.title} poster`}
                 fill
                 priority
-                sizes="(min-width: 1024px) 880px, 100vw"
-                className={`object-contain drop-shadow-[0_16px_40px_rgba(4,12,28,0.5)] ${unavailable ? "grayscale-[0.4]" : ""}`}
+                sizes="(min-width: 1024px) 320px, 288px"
+                className={`object-cover ${unavailable ? "grayscale-[0.4]" : ""}`}
                 onError={() => setCoverImageSrc("/an2.png")}
               />
             </div>
@@ -505,29 +520,27 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               animate="show"
               className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)]"
             >
-              {/* Stub header: price */}
-              <div className="relative overflow-hidden bg-(--brand-navy) px-6 py-5">
-                <div
-                  aria-hidden
-                  className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
-                  style={{ backgroundImage: NOISE_TEXTURE }}
-                />
-                <div className="relative flex items-end justify-between gap-4">
+              {/* Stub header: price — warm cream so the card separates from the navy hero */}
+              <div className="border-b border-(--gold-bar-border) bg-(--gold-bar-bg) px-6 py-5">
+                <div className="flex items-end justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/65">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-(--gold-text)">
                       {isFreeEvent ? "Entry" : "Tickets from"}
                     </p>
-                    <p className="font-bricolage text-3xl font-bold tabular-nums text-white">
+                    <p className="font-bricolage text-3xl font-bold tabular-nums text-(--brand-navy)">
                       {priceDisplay}
                     </p>
                   </div>
                   {unavailable ? null : allSoldOut ? (
-                    <span className="rounded-full bg-rose-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-rose-200">
+                    <span className="rounded-full bg-rose-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-rose-600">
                       Sold out
                     </span>
                   ) : tiers.length > 0 ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-300">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                      </span>
                       Available
                     </span>
                   ) : null}
@@ -546,6 +559,11 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                 {genres.length > 0 ? (
                   <TicketRow icon={<Music className="h-4.5 w-4.5" />} label="Genre">
                     {genres.join(", ")}
+                  </TicketRow>
+                ) : null}
+                {ageLabel ? (
+                  <TicketRow icon={<Users className="h-4.5 w-4.5" />} label="Age group">
+                    {ageLabel}
                   </TicketRow>
                 ) : null}
                 <TicketRow icon={<MapPin className="h-4.5 w-4.5" />} label="Venue">
@@ -733,7 +751,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
         </div>
 
         {/* ════ STORY — content flows under the artwork ════ */}
-        <div className="min-w-0 space-y-14 pt-4 lg:col-start-1 lg:row-start-2 lg:pt-8">
+        <div className="min-w-0 space-y-6 pt-2 lg:col-start-1 lg:row-start-2 lg:pt-8">
           {/* About */}
           {descriptionParas.length > 0 ? (
             <motion.section
@@ -741,6 +759,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, margin: "-60px" }}
+              className="rounded-3xl bg-white p-6 shadow-[0_24px_60px_-32px_rgba(12,29,55,0.4)] sm:p-8"
             >
               <SectionHead kicker="About" title="What's happening" />
               {(aboutExpanded ? descriptionParas : descriptionParas.slice(0, 1)).map((para, i) => (
@@ -752,9 +771,12 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                 <button
                   type="button"
                   onClick={() => setAboutExpanded((v) => !v)}
-                  className="mt-2 text-sm font-semibold text-(--brand-blue) underline-offset-4 transition hover:underline"
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-(--gray-200) bg-white px-4 py-2 text-sm font-semibold text-(--brand-navy) transition hover:border-(--brand-navy) hover:bg-(--gray-50) active:scale-[0.98]"
                 >
                   {aboutExpanded ? "Read less" : "Read more"}
+                  <ArrowRight
+                    className={`h-3.5 w-3.5 transition-transform ${aboutExpanded ? "-rotate-90" : "rotate-90"}`}
+                  />
                 </button>
               ) : null}
             </motion.section>
@@ -767,15 +789,16 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, margin: "-60px" }}
+              className="rounded-3xl bg-white p-6 shadow-[0_24px_60px_-32px_rgba(12,29,55,0.4)] sm:p-8"
             >
               <SectionHead kicker="Lineup" title="On stage" />
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {artists.map((artist) => (
                   <div
                     key={artist.name}
-                    className="rounded-2xl bg-white p-4 shadow-[0_18px_45px_-28px_rgba(12,29,55,0.45)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_55px_-28px_rgba(12,29,55,0.55)]"
+                    className="rounded-2xl border border-(--gray-100) bg-(--gray-50) p-4 transition duration-300 hover:-translate-y-1 hover:border-(--gold-soft-border) hover:bg-(--gold-soft-bg)/40 hover:shadow-[0_20px_45px_-24px_rgba(12,29,55,0.4)]"
                   >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-(--gold-soft-bg) font-bricolage text-lg font-bold text-(--gold-text)">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-(--brand-navy) font-bricolage text-lg font-bold text-(--gold)">
                       {artist.name.charAt(0).toUpperCase()}
                     </div>
                     <p className="mt-3 text-sm font-bold leading-snug text-(--brand-navy)">{artist.name}</p>
@@ -786,7 +809,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                 ))}
               </div>
               {chiefGuest ? (
-                <p className="mt-6 flex items-center gap-2 text-sm text-slate-500 sm:mt-8">
+                <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-(--gold-soft-border) bg-(--gold-soft-bg) px-4 py-2 text-sm font-semibold text-(--gold-text)">
                   <Sparkles className="h-4 w-4 text-(--gold-icon)" />
                   {chiefGuest}
                 </p>
@@ -795,12 +818,13 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
           ) : null}
 
           {/* Highlights + perks */}
-          {eventHighlights.length > 0 || perks.length > 0 ? (
+          {eventHighlights.length > 0 || perks.length > 0 || audienceTags.length > 0 ? (
             <motion.section
               variants={reduce ? undefined : rise}
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, margin: "-60px" }}
+              className="rounded-3xl border border-(--gold-bar-border) bg-(--gold-bar-bg) p-6 sm:p-8"
             >
               <SectionHead kicker="Highlights" title="Worth staying for" />
               {eventHighlights.length > 0 ? (
@@ -808,7 +832,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   {eventHighlights.map((h) => (
                     <span
                       key={h}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-(--gold-soft-border) bg-(--gold-soft-bg) px-4 py-2 text-sm font-semibold text-(--gold-text) transition hover:border-(--gold)"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-(--gold-soft-border) bg-white px-4 py-2 text-sm font-semibold text-(--gold-text) shadow-sm transition hover:-translate-y-0.5 hover:border-(--gold)"
                     >
                       <Sparkles className="h-3.5 w-3.5 text-(--gold-icon)" />
                       {h}
@@ -816,8 +840,26 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   ))}
                 </div>
               ) : null}
+              {audienceTags.length > 0 ? (
+                <div className="mt-6">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--gold-text)">
+                    Who it&rsquo;s for
+                  </p>
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    {audienceTags.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-(--gold-soft-border) bg-white px-3.5 py-1.5 text-xs font-semibold text-(--gray-700)"
+                      >
+                        <Users className="h-3.5 w-3.5 text-(--gold-icon)" />
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {perks.length > 0 ? (
-                <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
+                <div className="mt-6 rounded-2xl border border-emerald-200 bg-white p-5">
                   <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
                     <Gift className="h-4 w-4" /> Included with your ticket
                   </p>
@@ -840,42 +882,59 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-60px" }}
+            className="relative overflow-hidden rounded-3xl bg-(--brand-navy) p-6 sm:p-8"
           >
-            <SectionHead kicker="Getting there" title="Venue & transport" />
-            <div className="mt-6 overflow-hidden rounded-3xl border border-(--gold-bar-border) bg-(--gold-bar-bg)">
-              <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-(--gold-icon)" />
-                  <p className="font-semibold text-(--brand-navy)">{event.venue ?? "TBA"}</p>
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-[0.05] mix-blend-overlay"
+              style={{ backgroundImage: NOISE_TEXTURE }}
+            />
+            <div className="relative">
+              <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--gold)">Getting there</p>
+              <h2 className="mt-1.5 font-bricolage text-2xl font-bold tracking-tight text-white">Venue &amp; transport</h2>
+
+              <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3.5">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-(--gold)">
+                    <MapPin className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Venue</p>
+                    <p className="font-semibold text-white">{event.venue ?? "TBA"}</p>
+                  </div>
                 </div>
                 {mapsUrl ? (
                   <a
                     href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-(--brand-navy) px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_-12px_rgba(12,29,55,0.5)] transition hover:bg-(--brand-navy)/90 active:scale-[0.98]"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-(--brand-navy) shadow-[0_14px_30px_-14px_rgba(0,0,0,0.6)] transition hover:-translate-y-0.5 hover:bg-(--gold-soft-bg) active:scale-[0.98]"
                   >
                     <Navigation className="h-4 w-4" /> Get directions
                   </a>
                 ) : null}
               </div>
+
               {event.entrySide || transportItems.length > 0 || event.transportToEvent ? (
-                <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-(--gold-bar-border) px-5 py-4 text-sm text-slate-600 sm:px-6">
+                <div className="mt-6 flex flex-wrap gap-2 border-t border-white/10 pt-5">
                   {event.entrySide ? (
-                    <span className="inline-flex items-center gap-2 font-medium text-(--brand-navy)">
-                      <DoorOpen className="h-4 w-4 text-(--gold-icon)" />
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/90">
+                      <DoorOpen className="h-3.5 w-3.5 text-(--gold)" />
                       {event.entrySide}
                     </span>
                   ) : null}
                   {transportItems.map((t) => (
-                    <span key={t} className="inline-flex items-center gap-2">
-                      <Bus className="h-4 w-4 text-(--gold-icon)" />
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/90"
+                    >
+                      <Bus className="h-3.5 w-3.5 text-(--gold)" />
                       {t}
                     </span>
                   ))}
                   {event.transportToEvent ? (
-                    <span className="inline-flex items-start gap-2">
-                      <Bus className="mt-0.5 h-4 w-4 shrink-0 text-(--gold-icon)" />
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/90">
+                      <Bus className="h-3.5 w-3.5 shrink-0 text-(--gold)" />
                       {event.transportToEvent}
                     </span>
                   ) : null}
@@ -891,6 +950,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, margin: "-60px" }}
+              className="rounded-3xl bg-white p-6 shadow-[0_24px_60px_-32px_rgba(12,29,55,0.4)] sm:p-8"
             >
               <SectionHead kicker="Sponsors" title="Made possible by" />
               <div className="mt-6 space-y-4">
@@ -907,14 +967,14 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                             href={sponsor.website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-bricolage text-sm font-bold text-(--brand-navy) transition hover:border-(--gold)"
+                            className="rounded-full border border-(--gray-200) bg-(--gray-50) px-4 py-2 font-bricolage text-sm font-bold text-(--brand-navy) transition hover:-translate-y-0.5 hover:border-(--gold) hover:bg-white"
                           >
                             {sponsor.name}
                           </a>
                         ) : (
                           <span
                             key={sponsor.name}
-                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-bricolage text-sm font-bold text-(--brand-navy)"
+                            className="rounded-full border border-(--gray-200) bg-(--gray-50) px-4 py-2 font-bricolage text-sm font-bold text-(--brand-navy)"
                           >
                             {sponsor.name}
                           </span>
@@ -936,8 +996,8 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             className="grid gap-4 sm:grid-cols-[1.4fr_1fr]"
           >
             {organizerName ? (
-              <div className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-[0_18px_50px_-25px_rgba(12,29,55,0.25)]">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-(--brand-navy) font-bricolage text-xl font-bold text-white">
+              <div className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-[0_24px_60px_-32px_rgba(12,29,55,0.4)]">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-(--brand-navy) font-bricolage text-xl font-bold text-(--gold)">
                   {organizerName.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
@@ -958,7 +1018,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                 <DialogTrigger asChild>
                   <button
                     type="button"
-                    className="group flex items-center justify-between gap-3 rounded-3xl border border-dashed border-(--gold-soft-border) bg-transparent p-5 text-left transition hover:border-(--gold) hover:bg-(--gold-soft-bg)/50"
+                    className="group flex items-center justify-between gap-3 rounded-3xl border border-(--gold-soft-border) bg-(--gold-soft-bg) p-5 text-left shadow-[0_18px_45px_-28px_rgba(12,29,55,0.3)] transition hover:-translate-y-0.5 hover:border-(--gold)"
                   >
                     <div>
                       <p className="flex items-center gap-2 text-sm font-bold text-(--brand-navy)">
@@ -983,7 +1043,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               <button
                 type="button"
                 onClick={() => openModal("register")}
-                className="group flex items-center justify-between gap-3 rounded-3xl border border-dashed border-(--gold-soft-border) bg-transparent p-5 text-left transition hover:border-(--gold) hover:bg-(--gold-soft-bg)/50"
+                className="group flex items-center justify-between gap-3 rounded-3xl border border-(--gold-soft-border) bg-(--gold-soft-bg) p-5 text-left shadow-[0_18px_45px_-28px_rgba(12,29,55,0.3)] transition hover:-translate-y-0.5 hover:border-(--gold)"
               >
                 <div>
                   <p className="flex items-center gap-2 text-sm font-bold text-(--brand-navy)">
@@ -1003,11 +1063,11 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-60px" }}
-            className="flex flex-wrap items-center gap-x-7 gap-y-3 border-t border-(--gold-bar-border) pt-6 text-sm"
+            className="flex flex-wrap items-center gap-3 pt-2 text-sm"
           >
             <Link
               href="/refund-policy"
-              className="inline-flex items-center gap-2 font-semibold text-slate-600 transition hover:text-(--brand-navy)"
+              className="inline-flex items-center gap-2 rounded-full border border-(--gray-200) bg-white px-5 py-2.5 font-semibold text-(--brand-navy) shadow-sm transition hover:-translate-y-0.5 hover:border-(--gold) hover:shadow-md active:scale-[0.98]"
             >
               <ShieldCheck className="h-4 w-4 text-(--gold-icon)" /> Refund policy
             </Link>
@@ -1016,7 +1076,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               <DialogTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 font-semibold text-slate-600 transition hover:text-(--brand-navy)"
+                  className="inline-flex items-center gap-2 rounded-full border border-(--gray-200) bg-white px-5 py-2.5 font-semibold text-(--brand-navy) shadow-sm transition hover:-translate-y-0.5 hover:border-(--gold) hover:shadow-md active:scale-[0.98]"
                 >
                   <ScrollText className="h-4 w-4 text-(--gold-icon)" /> Guidelines &amp; rules
                 </button>
@@ -1041,7 +1101,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               <DialogTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 font-semibold text-slate-600 transition hover:text-(--brand-navy)"
+                  className="inline-flex items-center gap-2 rounded-full border border-(--gray-200) bg-white px-5 py-2.5 font-semibold text-(--brand-navy) shadow-sm transition hover:-translate-y-0.5 hover:border-(--gold) hover:shadow-md active:scale-[0.98]"
                 >
                   <Phone className="h-4 w-4 text-(--gold-icon)" /> Contact organizer
                 </button>
@@ -1068,6 +1128,11 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                     >
                       <Navigation className="h-4 w-4" /> {contact.website}
                     </a>
+                  ) : null}
+                  {contact.additionalLinks ? (
+                    <p className="flex items-start gap-2">
+                      <ScrollText className="mt-0.5 h-4 w-4 shrink-0" /> {contact.additionalLinks}
+                    </p>
                   ) : null}
                   {!contact.mobile && !contact.email && !contact.website ? (
                     <p>
