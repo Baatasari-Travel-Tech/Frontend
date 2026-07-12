@@ -15,7 +15,6 @@ import {
   CalendarX2,
   Clock,
   DoorOpen,
-  Gift,
   MapPin,
   Music,
   Navigation,
@@ -215,23 +214,6 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     return typeof personnel === "string" && personnel.trim() ? personnel.trim() : null
   })()
 
-  // Add-ons → "included with your ticket" perks.
-  const perks = useMemo(() => {
-    const addOns = asRecord(event.addOns)
-    const list: string[] = []
-    if (addOns.freebies) list.push("Freebies at entry")
-    if (addOns.giftHampers) {
-      const desc = typeof addOns.giftHampersDescription === "string" ? addOns.giftHampersDescription.trim() : ""
-      list.push(desc || "Gift hampers")
-    }
-    if (addOns.merchandise) list.push("Event merchandise")
-    if (addOns.addOther) {
-      const desc = typeof addOns.addOtherDescription === "string" ? addOns.addOtherDescription.trim() : ""
-      if (desc) list.push(desc)
-    }
-    return list
-  }, [event.addOns])
-
   const sponsorGroups = useMemo(() => {
     const s = event.sponsors ?? {}
     const groups: [string, { name: string; website?: string | null }[]][] = [
@@ -284,15 +266,6 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
     if (max >= 100) return `${min}+ yrs`
     return `${min}–${max} yrs`
   }, [event.audienceRange])
-
-  // Target-audience checkboxes from create-event → "Who it's for" pills.
-  const audienceTags = useMemo(
-    () =>
-      Object.entries(asRecord(event.targetAudience))
-        .filter(([, v]) => v === true)
-        .map(([k]) => k),
-    [event.targetAudience],
-  )
 
   const contact = (event.contactInfo ?? {}) as {
     mobile?: string
@@ -375,7 +348,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
           />
         </div>
 
-        <div className="mx-auto w-full max-w-[1400px] px-4 pb-36 pt-6 sm:px-6 md:pb-44 lg:px-10 lg:pt-8">
+        <div className="mx-auto w-full max-w-[1400px] px-4 pb-36 pt-6 sm:px-6 md:pb-44 lg:px-10 lg:pb-16 lg:pt-8">
           {/* Top row: back link + share */}
           <div className="flex items-center justify-between gap-4">
             <Link
@@ -394,12 +367,14 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             />
           </div>
 
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-center lg:gap-16">
+            <div>
           {/* Kicker chips + status */}
           <motion.div
             variants={reduce ? undefined : rise}
             initial="hidden"
             animate="show"
-            className="mt-10 flex flex-wrap items-center gap-2 md:mt-14"
+            className="mt-10 flex flex-wrap items-center gap-2 md:mt-14 lg:mt-10"
           >
             {isCancelled ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
@@ -474,19 +449,43 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               </span>
             ) : null}
           </motion.div>
+            </div>
+
+            {/* Poster — desktop: framed object beside the title */}
+            <motion.div
+              variants={reduce ? undefined : rise}
+              initial="hidden"
+              animate="show"
+              className="hidden lg:block"
+            >
+              <div className="ml-auto w-full max-w-[300px] rotate-[1.5deg] rounded-[1.5rem] bg-white p-2 shadow-[0_45px_90px_-35px_rgba(4,12,28,0.8)] transition-transform duration-500 hover:rotate-0">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-[1rem] bg-(--brand-navy)">
+                  <Image
+                    src={coverImageSrc}
+                    alt={`${event.title} poster`}
+                    fill
+                    priority
+                    sizes="300px"
+                    className={`object-cover ${unavailable ? "grayscale-[0.4]" : ""}`}
+                    onError={() => setCoverImageSrc("/an2.png")}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </header>
 
       {/* ════ OVERLAP ZONE — artwork + ticket rise out of the header ════ */}
-      <div className="relative z-10 mx-auto -mt-28 grid w-full max-w-[1400px] grid-cols-1 gap-8 px-4 sm:px-6 md:-mt-32 lg:grid-cols-[minmax(0,1fr)_408px] lg:grid-rows-[auto_1fr] lg:gap-12 lg:px-10">
-        {/* Artwork — framed object, portrait art never cropped */}
+      <div className="relative z-10 mx-auto -mt-28 grid w-full max-w-[1400px] grid-cols-1 gap-8 px-4 sm:px-6 md:-mt-32 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_408px] lg:gap-12 lg:px-10">
+        {/* Artwork — mobile/tablet only; on desktop the poster lives in the header */}
         <motion.div
           variants={reduce ? undefined : rise}
           initial="hidden"
           animate="show"
-          className="min-w-0"
+          className="min-w-0 lg:hidden"
         >
-          <div className="mx-auto w-60 rounded-[1.5rem] bg-white p-2 shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)] sm:w-72 lg:mx-0 lg:w-80">
+          <div className="mx-auto w-60 rounded-[1.5rem] bg-white p-2 shadow-[0_45px_90px_-35px_rgba(4,12,28,0.65)] sm:w-72">
             <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[1rem] bg-(--brand-navy)">
               <Image
                 src={coverImageSrc}
@@ -502,7 +501,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
         </motion.div>
 
         {/* ── The ticket ── */}
-        <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        <div className="min-w-0 lg:col-start-2 lg:row-start-1">
           <div className="lg:sticky lg:top-24">
             <motion.div
               variants={reduce ? undefined : rise}
@@ -741,7 +740,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
         </div>
 
         {/* ════ STORY — content flows under the artwork ════ */}
-        <div className="min-w-0 space-y-6 pt-2 lg:col-start-1 lg:row-start-2 lg:pt-8">
+        <div className="min-w-0 space-y-6 pt-2 lg:col-start-1 lg:row-start-1 lg:pt-0">
           {/* About */}
           {descriptionParas.length > 0 ? (
             <motion.section
@@ -803,52 +802,6 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   <Sparkles className="h-4 w-4 text-(--gold-icon)" />
                   {chiefGuest}
                 </p>
-              ) : null}
-            </motion.section>
-          ) : null}
-
-          {/* Highlights + perks */}
-          {perks.length > 0 || audienceTags.length > 0 ? (
-            <motion.section
-              variants={reduce ? undefined : rise}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-60px" }}
-              className="rounded-3xl border border-(--gold-bar-border) bg-(--gold-bar-bg) p-6 sm:p-8"
-            >
-              <SectionHead kicker="Good to know" title="Who it's for & what's included" />
-              {audienceTags.length > 0 ? (
-                <div className="mt-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-(--gold-text)">
-                    Who it&rsquo;s for
-                  </p>
-                  <div className="mt-2.5 flex flex-wrap gap-2">
-                    {audienceTags.map((t) => (
-                      <span
-                        key={t}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-(--gold-soft-border) bg-white px-3.5 py-1.5 text-xs font-semibold text-(--gray-700)"
-                      >
-                        <Users className="h-3.5 w-3.5 text-(--gold-icon)" />
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {perks.length > 0 ? (
-                <div className="mt-6 rounded-2xl border border-emerald-200 bg-white p-5">
-                  <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
-                    <Gift className="h-4 w-4" /> Included with your ticket
-                  </p>
-                  <ul className="mt-2.5 space-y-1.5 text-sm text-slate-600">
-                    {perks.map((p) => (
-                      <li key={p} className="flex items-start gap-2">
-                        <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-500" />
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
               ) : null}
             </motion.section>
           ) : null}
