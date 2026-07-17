@@ -217,10 +217,17 @@ function Chapter({
 /* ------------------------------------------------------------ preview card */
 
 /** The public organizer card as attendees see it, bound to live form values. */
-function PublicPreview({ logoUrl, onLogoPick }: { logoUrl: string | null; onLogoPick: (file: File | null) => void }) {
+function PublicPreview({
+  displayName,
+  logoUrl,
+  onLogoPick,
+}: {
+  displayName: string
+  logoUrl: string | null
+  onLogoPick: (file: File | null) => void
+}) {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const { control } = useFormContext<Values>()
-  const orgName = useWatch({ control, name: "orgName" })
   const description = useWatch({ control, name: "description" })
   const city = useWatch({ control, name: "city" })
   const state = useWatch({ control, name: "state" })
@@ -264,9 +271,7 @@ function PublicPreview({ logoUrl, onLogoPick }: { logoUrl: string | null; onLogo
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <h3 className="truncate font-bricolage text-sm font-bold text-slate-900">
-              {orgName || "Your organization"}
-            </h3>
+            <h3 className="truncate font-bricolage text-sm font-bold text-slate-900">{displayName}</h3>
             <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-sky-500" />
           </div>
           {place ? (
@@ -562,6 +567,13 @@ export default function OrganizerProfilePage() {
 
   const displayLogo = logoPreview ?? organizerProfile?.logoUrl ?? null
 
+  // Individuals have no organization, so they are shown by their own name. An
+  // ORGANIZATION still falls back to the person's name while orgName is empty,
+  // so the heading is never the placeholder once we know who they are.
+  const isIndividual = (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+  const displayName =
+    (isIndividual ? values.fullName : values.orgName || values.fullName) || profile?.full_name || "Your profile"
+
   return (
     <ProtectedRoute requireOrganizer allowPendingOrganizer>
       <FormProvider {...form}>
@@ -584,14 +596,14 @@ export default function OrganizerProfilePage() {
               </Link>
               <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">Organizer profile</p>
               <h1 className="mt-4 max-w-[16ch] font-bricolage text-4xl font-bold leading-[1.05] tracking-tight text-slate-900 md:text-[3.25rem]">
-                {values.orgName || "Your organization"}
+                {displayName}
               </h1>
             </motion.header>
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-16">
               {/* RAIL */}
               <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-                <PublicPreview logoUrl={displayLogo} onLogoPick={pickLogo} />
+                <PublicPreview displayName={displayName} logoUrl={displayLogo} onLogoPick={pickLogo} />
 
                 <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_45px_-25px_rgba(12,29,55,0.2)]">
                   <div className="flex items-baseline justify-between">

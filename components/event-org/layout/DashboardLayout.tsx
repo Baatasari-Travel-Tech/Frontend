@@ -30,8 +30,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   const shellBg = whiteShell ? "bg-white" : bareShell ? "bg-background" : "bg-slate-50";
 
+  // `overflow-x: hidden` makes this element a scroll container, which breaks
+  // `position: sticky` for any descendant (the sticky element has nothing to
+  // scroll against, so it parks at the top). `overflow-x: clip` contains
+  // horizontal overflow the same way WITHOUT creating a scroll container, so the
+  // profile page's sticky rail keeps working. Scoped to that route to leave the
+  // other organizer pages on their existing behaviour.
+  const overflowX = bareShell ? "overflow-x-clip" : "overflow-x-hidden";
+
   return (
-    <div className={`min-h-screen flex flex-col overflow-x-hidden ${shellBg}`}>
+    <div className={`min-h-screen flex flex-col ${overflowX} ${shellBg}`}>
       <div className="flex flex-1 relative">
         {!hideSidebar ? (
           <Sidebar
