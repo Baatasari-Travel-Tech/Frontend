@@ -351,7 +351,7 @@ export default function OrganizerProfilePage() {
             </label>
           </SectionCard>
 
-          <SectionCard title="Organization details">
+          <SectionCard id="organization-details" title="Organization details">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
                 Organization name *
@@ -433,7 +433,7 @@ export default function OrganizerProfilePage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Bank and compliance details">
+          <SectionCard id="bank-details" title="Bank and compliance details">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm font-semibold text-slate-700">
                 PAN number *

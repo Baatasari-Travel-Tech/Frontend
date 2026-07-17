@@ -45,14 +45,26 @@ export function SectionCard({
   description,
   children,
   className,
+  id,
 }: {
   title?: string
   description?: string
   children: ReactNode
   className?: string
+  // Anchor target, so a link can deep-link straight to this section
+  // (e.g. /organizer/profile#bank-details from a "fix your bank details" email).
+  // scroll-mt keeps the heading clear of the sticky header when jumped to.
+  id?: string
 }) {
   return (
-    <section className={cn("rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-5 sm:p-6", className)}>
+    <section
+      id={id}
+      className={cn(
+        "rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-5 sm:p-6",
+        id ? "scroll-mt-24" : undefined,
+        className,
+      )}
+    >
       {title ? <h2 className="text-lg font-semibold text-slate-950">{title}</h2> : null}
       {description ? <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p> : null}
       <div className={cn(title || description ? "mt-5" : undefined)}>{children}</div>
