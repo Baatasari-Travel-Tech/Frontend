@@ -140,12 +140,9 @@ const quietInput =
   "w-full border-b border-slate-900/15 bg-transparent px-0 py-1.5 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-500 hover:border-slate-900/30 focus:border-brand-900"
 
 /**
- * Steps drive the rail, the scroll-spy targets, the completion meter and the
- * jump-to-first-error on a failed save.
- *
- * `fields`   = everything living on that step. Used to locate which step an
- *              error belongs to.
- * `required` = the subset that gates payouts, which is why Social has none.
+ * Steps drive the rail, the scroll-spy targets and the jump-to-first-error on a
+ * failed save. `fields` is everything living on that step, used to locate which
+ * step an error belongs to.
  */
 const CHAPTERS = [
   {
@@ -154,7 +151,6 @@ const CHAPTERS = [
     short: "Personal",
     standfirst: "Who we contact about this account. Never shown to attendees.",
     fields: ["fullName", "personalPhone", "dob", "location", "gender", "profession"],
-    required: ["fullName", "personalPhone", "dob", "location", "gender", "profession"],
   },
   {
     id: "organization",
@@ -162,7 +158,6 @@ const CHAPTERS = [
     short: "Organization",
     standfirst: "How your brand reads on event pages and in confirmation emails.",
     fields: ["orgName", "description", "contactEmail", "contactPhone", "primaryContactName", "secondaryContactPhone"],
-    required: ["orgName", "description", "contactEmail", "contactPhone"],
   },
   {
     id: "address",
@@ -170,7 +165,6 @@ const CHAPTERS = [
     short: "Address",
     standfirst: "Your registered address, used on invoices and tax filings.",
     fields: ["address", "city", "state", "pincode"],
-    required: ["address", "city", "state", "pincode"],
   },
   {
     id: "links",
@@ -178,7 +172,6 @@ const CHAPTERS = [
     short: "Social",
     standfirst: "Optional. Attendees check these before they buy.",
     fields: ["websiteUrl", "instagramUrl", "linkedinUrl"],
-    required: [],
   },
   {
     id: "bank",
@@ -188,7 +181,6 @@ const CHAPTERS = [
     short: "Compliance",
     standfirst: "Encrypted at rest. Changing these pauses payouts for 24 hours while we re-verify.",
     fields: ["panNumber", "gstNumber", "bankAccountName", "bankAccountNumber", "bankIfsc"],
-    required: ["panNumber", "bankAccountName", "bankAccountNumber", "bankIfsc"],
   },
 ] as const satisfies ReadonlyArray<{
   id: string
@@ -196,31 +188,7 @@ const CHAPTERS = [
   short: string
   standfirst: string
   fields: ReadonlyArray<keyof Values>
-  required: ReadonlyArray<keyof Values>
 }>
-
-/** Required of organizations only. An individual is not held to these. */
-const ORGANIZATION_ONLY_REQUIRED = new Set<keyof Values>([
-  "orgName",
-  "description",
-  "contactEmail",
-  "contactPhone",
-  "address",
-  "city",
-  "state",
-  "pincode",
-])
-
-/** Fields that must be filled before payouts unlock. Drives the meter. */
-const requiredFieldsFor = (isIndividual: boolean) =>
-  CHAPTERS.flatMap((chapter) => chapter.required).filter(
-    (field) => !(isIndividual && ORGANIZATION_ONLY_REQUIRED.has(field)),
-  )
-
-function completionOf(values: Partial<Values>, required: ReadonlyArray<keyof Values>) {
-  const filled = required.filter((key) => (values[key] ?? "").toString().trim().length > 0)
-  return { filled: filled.length, total: required.length, percent: (filled.length / required.length) * 100 }
-}
 
 /* ---------------------------------------------------------------- primitives */
 
@@ -461,7 +429,6 @@ export default function OrganizerProfilePage() {
   // resolver on each validation, so swapping it is safe.
   const isIndividual = (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
   const resolver = useMemo(() => zodResolver(makeSchema(isIndividual)), [isIndividual])
-  const requiredFields = useMemo(() => requiredFieldsFor(isIndividual), [isIndividual])
 
   const form = useForm<Values>({
     resolver,
@@ -471,7 +438,6 @@ export default function OrganizerProfilePage() {
   const { register, setValue, control } = form
 
   const values = useWatch({ control }) as Partial<Values>
-  const completion = useMemo(() => completionOf(values, requiredFields), [values, requiredFields])
   const description = values.description ?? ""
 
   // Picking a logo does not touch form state, so fold it into the dirty check or
@@ -852,32 +818,9 @@ export default function OrganizerProfilePage() {
               <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
                 <PublicPreview displayName={displayName} logoUrl={displayLogo} onLogoPick={pickLogo} />
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_45px_-25px_rgba(12,29,55,0.2)]">
-                  <div className="flex items-baseline justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Completion</p>
-                    <p className="font-mono text-[11px] tabular-nums text-slate-400">
-                      {completion.filled}/{completion.total}
-                    </p>
-                  </div>
-                  <div className="mt-2.5 h-px w-full bg-slate-900/15">
-                    <motion.div
-                      initial={reduce ? false : { scaleX: 0 }}
-                      animate={{ scaleX: completion.percent / 100 }}
-                      transition={{ duration: 0.9, ease: EASE }}
-                      style={{ transformOrigin: "left" }}
-                      className="h-px bg-brand-900"
-                    />
-                  </div>
-                  <p className="mt-2 text-[11px] text-slate-400">
-                    {completion.filled === completion.total
-                      ? "Payout ready."
-                      : `${completion.total - completion.filled} required ${
-                          completion.total - completion.filled === 1 ? "field" : "fields"
-                        } left.`}
-                  </p>
-
-                  {/* Steps, desktop. Vertical, with a navy rule marking position. */}
-                  <nav className="mt-5 hidden border-t border-slate-100 pt-4 lg:block">
+                {/* Steps, desktop. Vertical, with a navy rule marking position. */}
+                <div className="hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_45px_-25px_rgba(12,29,55,0.2)] lg:block">
+                  <nav>
                     {CHAPTERS.map((chapter) => {
                       const active = activeId === chapter.id
                       return (

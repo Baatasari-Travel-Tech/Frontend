@@ -262,13 +262,33 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     // onboarding status from the auth payload even if profile APIs lag.
     setProfile(normalizeLegacyProfile(currentUser, null))
 
+    // /user/preferences and /talent/profile sit behind requireUserAccess, which
+    // rejects an ORGANIZER unless their active role is USER. Calling them while
+    // acting as an organizer is a guaranteed 403 on every login: harmless
+    // (allSettled swallows it) but it fills the console with red herrings.
+    // switchRole() loads them when the organizer moves to USER mode.
+    const canUseUserRoutes = nextActiveRole === "USER"
+    if (!canUseUserRoutes) {
+      setPreferences(null)
+      setTalentProfile(null)
+    }
+
     await Promise.allSettled([
       loadProfile(currentUser),
       loadOrganizerProfile(currentUser),
-      loadPreferences(currentUser),
-      loadTalentProfile(currentUser),
+      ...(canUseUserRoutes ? [loadPreferences(currentUser), loadTalentProfile(currentUser)] : []),
     ])
-  }, [loadOrganizerProfile, loadPreferences, loadProfile, loadTalentProfile, setActiveRole, setProfile, setUser])
+  }, [
+    loadOrganizerProfile,
+    loadPreferences,
+    loadProfile,
+    loadTalentProfile,
+    setActiveRole,
+    setPreferences,
+    setProfile,
+    setTalentProfile,
+    setUser,
+  ])
 
   const bootstrap = useCallback(async () => {
     setBootstrapping(true)
@@ -385,6 +405,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
 
     setActiveRole("USER")
+    // User routes are reachable now. An organizer's bootstrap skips these (they
+    // would 403 while acting as an organizer), so this is where they get loaded.
+    // Set first: the store is synchronous, so these requests carry the USER role.
+    await Promise.allSettled([loadPreferences(), loadTalentProfile()])
   }
 
   const updateProfile = async (payload: Record<string, unknown>) => {
