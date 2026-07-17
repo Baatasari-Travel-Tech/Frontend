@@ -20,6 +20,17 @@ const EASE = [0.22, 1, 0.36, 1] as const
 // these bounds, so the constraint holds whether the user picks or pastes.
 const DOB_BOUNDS = getDobDateBounds(new Date(), ORGANIZER_MIN_AGE)
 
+/**
+ * Links are https-only. The inputs render the scheme as a fixed prefix and store
+ * it in the value, so this should never fail from the UI; it is here to reject
+ * an http:// value arriving from an older saved profile or a pasted string.
+ */
+const httpsUrl = z
+  .string()
+  .url("Enter a valid link")
+  .startsWith("https://", "Only https links are accepted")
+  .or(z.literal(""))
+
 const schema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
   personalPhone: z.string().regex(/^\d{10}$/, "Enter a valid 10 digit phone number"),
@@ -40,9 +51,9 @@ const schema = z.object({
   city: z.string().min(2, "Enter your city"),
   state: z.string().min(2, "Enter your state"),
   pincode: z.string().min(4, "Enter your pincode"),
-  websiteUrl: z.string().url("Enter a valid URL").or(z.literal("")),
-  instagramUrl: z.string().url("Enter a valid URL").or(z.literal("")),
-  linkedinUrl: z.string().url("Enter a valid URL").or(z.literal("")),
+  websiteUrl: httpsUrl,
+  instagramUrl: httpsUrl,
+  linkedinUrl: httpsUrl,
   panNumber: z.string().min(5, "Enter the PAN number"),
   gstNumber: z.string().optional(),
   bankAccountName: z.string().min(2, "Enter the account holder name"),
@@ -51,6 +62,8 @@ const schema = z.object({
 })
 
 type Values = z.infer<typeof schema>
+
+type LinkField = "websiteUrl" | "instagramUrl" | "linkedinUrl"
 
 const EMPTY_VALUES: Values = {
   fullName: "",
@@ -185,6 +198,36 @@ function Field({
   )
 }
 
+/**
+ * Link field with a fixed `https://` prefix, mirroring the `+91` phone field.
+ * The form value is the full URL; the input only ever shows and edits the part
+ * after the scheme, so the scheme cannot be deleted or typed as http.
+ * Pasting a full URL still works: any scheme in the pasted text is stripped.
+ */
+function HttpsField({ name, label, placeholder }: { name: LinkField; label: string; placeholder: string }) {
+  const { control, setValue } = useFormContext<Values>()
+  const value = useWatch({ control, name }) ?? ""
+  return (
+    <Field label={label} name={name}>
+      <div className="flex items-baseline border-b border-slate-900/15 transition focus-within:border-brand-900 hover:border-slate-900/30">
+        <span className="shrink-0 text-[15px] text-slate-400">https://</span>
+        <input
+          className="w-full bg-transparent py-1.5 text-[15px] text-slate-900 outline-none placeholder:text-slate-500"
+          placeholder={placeholder}
+          inputMode="url"
+          autoCapitalize="none"
+          spellCheck={false}
+          value={value.replace(/^https?:\/\//, "")}
+          onChange={(event) => {
+            const rest = event.target.value.replace(/^https?:\/\//, "").trimStart()
+            setValue(name, rest ? `https://${rest}` : "", { shouldValidate: true, shouldDirty: true })
+          }}
+        />
+      </div>
+    </Field>
+  )
+}
+
 function Chapter({
   chapter,
   className,
@@ -237,63 +280,65 @@ function PublicPreview({
   const place = [city, state].filter(Boolean).join(", ")
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_45px_-25px_rgba(12,29,55,0.2)]">
-      <p className="mb-3.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Attendees see</p>
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_45px_-25px_rgba(12,29,55,0.2)]">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Attendees see</p>
 
-      <div className="flex items-start gap-3">
-        <button
-          type="button"
-          onClick={() => logoInputRef.current?.click()}
-          aria-label="Change organization logo"
-          className="group relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition hover:border-brand-900"
-        >
-          {logoUrl ? (
-            <img src={logoUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="flex h-full w-full items-center justify-center text-slate-300">
-              <Building2 className="h-4 w-4" />
-            </span>
-          )}
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-900/70 opacity-0 transition group-hover:opacity-100">
-            <Camera className="h-3.5 w-3.5 text-white" />
+      {/* Logo above the name rather than beside it: in a 18rem rail, a side-by-side
+          layout leaves the name about 9rem and forces it to truncate. Stacked, the
+          name gets the full width and can run to two lines at display size. */}
+      <button
+        type="button"
+        onClick={() => logoInputRef.current?.click()}
+        aria-label="Change organization logo"
+        className="group relative mt-4 h-16 w-16 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 transition hover:border-brand-900"
+      >
+        {logoUrl ? (
+          <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-slate-300">
+            <Building2 className="h-6 w-6" />
           </span>
-        </button>
-        <input
-          ref={logoInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(event) => {
-            onLogoPick(event.target.files?.[0] ?? null)
-            event.target.value = ""
-          }}
-        />
+        )}
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-900/70 opacity-0 transition group-hover:opacity-100">
+          <Camera className="h-4 w-4 text-white" />
+        </span>
+      </button>
+      <input
+        ref={logoInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          onLogoPick(event.target.files?.[0] ?? null)
+          event.target.value = ""
+        }}
+      />
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h3 className="truncate font-bricolage text-sm font-bold text-slate-900">{displayName}</h3>
-            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-sky-500" />
-          </div>
-          {place ? (
-            <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400">
-              <MapPin className="h-3 w-3" />
-              {place}
-            </p>
-          ) : (
-            <p className="mt-0.5 text-[11px] italic text-slate-300">Add a city</p>
-          )}
-        </div>
+      <div className="mt-3.5 flex items-start gap-1.5">
+        <h3 className="line-clamp-2 font-bricolage text-xl font-bold leading-tight tracking-tight text-slate-900">
+          {displayName}
+        </h3>
+        <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-sky-500" />
       </div>
 
-      {description ? (
-        <p className="mt-3 line-clamp-3 text-xs leading-5 text-slate-500">{description}</p>
+      {place ? (
+        <p className="mt-1.5 flex items-center gap-1 text-xs text-slate-400">
+          <MapPin className="h-3 w-3 shrink-0" />
+          {place}
+        </p>
       ) : (
-        <p className="mt-3 text-xs italic leading-5 text-slate-300">
+        <p className="mt-1.5 text-xs italic text-slate-300">Add a city</p>
+      )}
+
+      {description ? (
+        <p className="mt-3 line-clamp-4 text-[13px] leading-6 text-slate-500">{description}</p>
+      ) : (
+        <p className="mt-3 text-[13px] italic leading-6 text-slate-300">
           Your description appears here. Attendees read this before they buy.
         </p>
       )}
 
-      <div className="mt-3.5 flex items-center gap-1.5">
+      <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-4">
         {[
           { url: websiteUrl, icon: Globe, label: "Website" },
           { url: instagramUrl, icon: Instagram, label: "Instagram" },
@@ -302,11 +347,12 @@ function PublicPreview({
           <span
             key={link.label}
             aria-label={link.label}
-            className={`flex h-6 w-6 items-center justify-center rounded-md border transition ${
-              link.url ? "border-slate-200 text-slate-500" : "border-dashed border-slate-200 text-slate-200"
+            title={link.label}
+            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition ${
+              link.url ? "border-slate-200 text-slate-600" : "border-dashed border-slate-200 text-slate-200"
             }`}
           >
-            <link.icon className="h-3 w-3" />
+            <link.icon className="h-3.5 w-3.5" />
           </span>
         ))}
       </div>
@@ -600,7 +646,7 @@ export default function OrganizerProfilePage() {
               </h1>
             </motion.header>
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-16">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-14">
               {/* RAIL */}
               <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
                 <PublicPreview displayName={displayName} logoUrl={displayLogo} onLogoPick={pickLogo} />
@@ -829,15 +875,9 @@ export default function OrganizerProfilePage() {
                   </Chapter>
 
                   <Chapter chapter={CHAPTERS[3]} className={stepClass(CHAPTERS[3].id)}>
-                    <Field label="Website" name="websiteUrl">
-                      <input className={quietInput} placeholder="https://" {...register("websiteUrl")} />
-                    </Field>
-                    <Field label="Instagram" name="instagramUrl">
-                      <input className={quietInput} placeholder="https://" {...register("instagramUrl")} />
-                    </Field>
-                    <Field label="LinkedIn" name="linkedinUrl">
-                      <input className={quietInput} placeholder="https://" {...register("linkedinUrl")} />
-                    </Field>
+                    <HttpsField name="websiteUrl" label="Website" placeholder="yourdomain.com" />
+                    <HttpsField name="instagramUrl" label="Instagram" placeholder="instagram.com/yourhandle" />
+                    <HttpsField name="linkedinUrl" label="LinkedIn" placeholder="linkedin.com/company/you" />
                   </Chapter>
 
                   <Chapter chapter={CHAPTERS[4]} className={stepClass(CHAPTERS[4].id)}>
