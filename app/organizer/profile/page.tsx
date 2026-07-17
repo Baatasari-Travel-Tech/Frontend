@@ -7,7 +7,18 @@ import { motion, useReducedMotion } from "framer-motion"
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { ArrowLeft, ArrowRight, Building2, Camera, Globe, Instagram, Linkedin, MapPin, ShieldCheck } from "lucide-react"
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Camera,
+  Globe,
+  Instagram,
+  Linkedin,
+  MapPin,
+  RotateCcw,
+  ShieldCheck,
+} from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { LocationAutocomplete } from "@/components/common/location-autocomplete"
 import { useAuth } from "@/app/providers"
@@ -428,10 +439,12 @@ export default function OrganizerProfilePage() {
   const [avatarUploading, setAvatarUploading] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const avatarUrlRef = useRef<string | null>(null)
+  const orgLogoInputRef = useRef<HTMLInputElement>(null)
 
   // Set when a link was clicked while dirty: holds where the user was trying to
   // go until they choose save / leave / stay.
   const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const [confirmReonboard, setConfirmReonboard] = useState(false)
   const router = useRouter()
 
   const formRef = useRef<HTMLFormElement>(null)
@@ -950,6 +963,48 @@ export default function OrganizerProfilePage() {
 
                 <form ref={formRef} onSubmit={onSubmit} className="space-y-5">
                   <Chapter chapter={CHAPTERS[0]} className={stepClass(CHAPTERS[0].id)}>
+                    <Field label="Profile photo" hint="PNG, JPG or WEBP, up to 5MB. Saves as soon as you crop." className="sm:col-span-2">
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => avatarInputRef.current?.click()}
+                          disabled={avatarUploading}
+                          aria-label="Change profile photo"
+                          className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 transition hover:border-brand-900 disabled:cursor-wait"
+                        >
+                          <img
+                            src={avatarPreview || DEFAULT_AVATAR_IMAGE}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null
+                              event.currentTarget.src = DEFAULT_AVATAR_IMAGE
+                            }}
+                          />
+                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-900/70 opacity-0 transition group-hover:opacity-100">
+                            <Camera className="h-4 w-4 text-white" />
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => avatarInputRef.current?.click()}
+                          disabled={avatarUploading}
+                          className="rounded-full border border-slate-900/15 bg-white px-4 py-2 text-[13px] font-semibold text-slate-600 transition hover:border-brand-900 hover:text-brand-900 disabled:opacity-60"
+                        >
+                          {avatarUploading ? "Uploading..." : "Change photo"}
+                        </button>
+                        <input
+                          ref={avatarInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={(event) => {
+                            crop.handleAvatarChange(event.target.files?.[0] ?? null)
+                            event.target.value = ""
+                          }}
+                        />
+                      </div>
+                    </Field>
                     <Field label="Full name" name="fullName" required>
                       <input className={quietInput} {...register("fullName")} />
                     </Field>
@@ -999,48 +1054,6 @@ export default function OrganizerProfilePage() {
                     <Field label="Profession" name="profession" required>
                       <input className={quietInput} {...register("profession")} />
                     </Field>
-                    <Field label="Profile photo" hint="PNG, JPG or WEBP, up to 5MB. Saves as soon as you crop." className="sm:col-span-2">
-                      <div className="flex items-center gap-4">
-                        <button
-                          type="button"
-                          onClick={() => avatarInputRef.current?.click()}
-                          disabled={avatarUploading}
-                          aria-label="Change profile photo"
-                          className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 transition hover:border-brand-900 disabled:cursor-wait"
-                        >
-                          <img
-                            src={avatarPreview || DEFAULT_AVATAR_IMAGE}
-                            alt=""
-                            className="h-full w-full object-cover"
-                            onError={(event) => {
-                              event.currentTarget.onerror = null
-                              event.currentTarget.src = DEFAULT_AVATAR_IMAGE
-                            }}
-                          />
-                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-900/70 opacity-0 transition group-hover:opacity-100">
-                            <Camera className="h-4 w-4 text-white" />
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => avatarInputRef.current?.click()}
-                          disabled={avatarUploading}
-                          className="rounded-full border border-slate-900/15 bg-white px-4 py-2 text-[13px] font-semibold text-slate-600 transition hover:border-brand-900 hover:text-brand-900 disabled:opacity-60"
-                        >
-                          {avatarUploading ? "Uploading..." : "Change photo"}
-                        </button>
-                        <input
-                          ref={avatarInputRef}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          className="hidden"
-                          onChange={(event) => {
-                            crop.handleAvatarChange(event.target.files?.[0] ?? null)
-                            event.target.value = ""
-                          }}
-                        />
-                      </div>
-                    </Field>
                   </Chapter>
 
                   <Chapter
@@ -1053,6 +1066,50 @@ export default function OrganizerProfilePage() {
                         : undefined
                     }
                   >
+                    <Field
+                      label={isIndividual ? "Your photo on events" : "Organization logo"}
+                      hint="Square works best. Uploads when you save."
+                      className="sm:col-span-2"
+                    >
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => orgLogoInputRef.current?.click()}
+                          aria-label="Change organization logo"
+                          className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 transition hover:border-brand-900"
+                        >
+                          {displayLogo ? (
+                            <img src={displayLogo} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-slate-300">
+                              <Building2 className="h-6 w-6" />
+                            </span>
+                          )}
+                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-900/70 opacity-0 transition group-hover:opacity-100">
+                            <Camera className="h-4 w-4 text-white" />
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => orgLogoInputRef.current?.click()}
+                          className="rounded-full border border-slate-900/15 bg-white px-4 py-2 text-[13px] font-semibold text-slate-600 transition hover:border-brand-900 hover:text-brand-900"
+                        >
+                          {logoFile ? "Change again" : displayLogo ? "Change logo" : "Add logo"}
+                        </button>
+                        {logoFile ? <span className="truncate text-xs text-slate-400">{logoFile.name}</span> : null}
+                        <input
+                          ref={orgLogoInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            pickLogo(event.target.files?.[0] ?? null)
+                            event.target.value = ""
+                          }}
+                        />
+                      </div>
+                    </Field>
+
                     {/* An individual has no organization name; they are shown by
                         their own name, so the field would be meaningless. */}
                     {!isIndividual ? (
@@ -1100,38 +1157,50 @@ export default function OrganizerProfilePage() {
 
                   <Chapter chapter={CHAPTERS[2]} className={stepClass(CHAPTERS[2].id)}>
                     <Field
-                      label="Find your area"
-                      hint="Enter a pincode or area name, then pick yours. City, state and pincode fill in for you."
+                      label="Find your address"
+                      hint="Enter your pincode and pick your area. If the list is long, type your area name after the pincode. Everything below fills in from your selection."
                       className="sm:col-span-2"
                     >
                       <LocationAutocomplete
-                        placeholder="Pincode or area"
+                        value={
+                          [values.address, values.city, values.state].filter(Boolean).join(", ") +
+                          (values.pincode ? ` - ${values.pincode}` : "")
+                        }
+                        placeholder="Enter pincode"
                         onSelect={(loc) => {
-                          const fill = (field: "city" | "state" | "pincode", value: string | null) => {
-                            if (value) setValue(field, value, { shouldValidate: true, shouldDirty: true })
-                          }
+                          // The fields below are read-only, so the selection is the
+                          // single source of truth: every one is overwritten,
+                          // including blanks, so a new pick cannot leave a stale
+                          // city or state behind from the previous one.
+                          const fill = (field: "address" | "city" | "state" | "pincode", value: string | null) =>
+                            setValue(field, value ?? "", { shouldValidate: true, shouldDirty: true })
+                          fill("address", loc.area)
                           fill("city", loc.city)
                           fill("state", loc.state)
                           fill("pincode", loc.pincode)
-                          // Seed the street line with the area only while it is
-                          // empty: never overwrite an address already typed.
-                          if (loc.area && !form.getValues("address")?.trim()) {
-                            setValue("address", loc.area, { shouldValidate: true, shouldDirty: true })
-                          }
                         }}
                       />
                     </Field>
-                    <Field label="Street" name="address" required={!isIndividual} className="sm:col-span-2">
-                      <input className={quietInput} {...register("address")} />
+                    {/* Filled from the lookup only, never typed. readOnly (not
+                        disabled) so the values still submit, and it stops the
+                        browser's saved-address autofill from covering the
+                        lookup's own dropdown. */}
+                    <Field label="Area" name="address" required={!isIndividual} className="sm:col-span-2">
+                      <input className={`${quietInput} cursor-default`} readOnly tabIndex={-1} {...register("address")} />
                     </Field>
                     <Field label="City" name="city" required={!isIndividual}>
-                      <input className={quietInput} {...register("city")} />
+                      <input className={`${quietInput} cursor-default`} readOnly tabIndex={-1} {...register("city")} />
                     </Field>
                     <Field label="State" name="state" required={!isIndividual}>
-                      <input className={quietInput} {...register("state")} />
+                      <input className={`${quietInput} cursor-default`} readOnly tabIndex={-1} {...register("state")} />
                     </Field>
                     <Field label="Pincode" name="pincode" required={!isIndividual}>
-                      <input className={`${quietInput} font-mono`} inputMode="numeric" {...register("pincode")} />
+                      <input
+                        className={`${quietInput} cursor-default font-mono`}
+                        readOnly
+                        tabIndex={-1}
+                        {...register("pincode")}
+                      />
                     </Field>
                   </Chapter>
 
@@ -1162,6 +1231,28 @@ export default function OrganizerProfilePage() {
                       <input className={`${quietInput} font-mono uppercase`} {...register("bankIfsc")} />
                     </Field>
                   </Chapter>
+
+                  {/* Danger zone. Rides with the last step on mobile; sits at the
+                      bottom of the stack on desktop. */}
+                  <div
+                    className={`rounded-3xl border border-rose-200 bg-rose-50/60 p-5 sm:p-7 md:p-8 ${stepClass(
+                      CHAPTERS[4].id,
+                    )}`}
+                  >
+                    <h2 className="font-bricolage text-lg font-bold tracking-tight text-rose-700">Restart onboarding</h2>
+                    <p className="mt-1.5 max-w-[54ch] text-sm leading-6 text-rose-600/90">
+                      Takes you back through organizer onboarding from the beginning. Your saved profile stays exactly as
+                      it is unless you complete onboarding again.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmReonboard(true)}
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-white px-4 py-2 text-[13px] font-semibold text-rose-700 transition hover:bg-rose-50 active:translate-y-px"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Restart onboarding
+                    </button>
+                  </div>
 
                   {error ? (
                     <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -1256,6 +1347,57 @@ export default function OrganizerProfilePage() {
           ) : null}
 
           <AvatarCropDialog crop={crop} />
+
+          {/* Restart onboarding needs an explicit confirm: it is a one-way trip
+              out of a page that may hold unsaved edits. */}
+          {confirmReonboard ? (
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 backdrop-blur-sm sm:items-center"
+              onClick={() => setConfirmReonboard(false)}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="reonboard-title"
+            >
+              <motion.div
+                initial={reduce ? false : { opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.25, ease: EASE }}
+                onClick={(event) => event.stopPropagation()}
+                className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_30px_70px_-20px_rgba(12,29,55,0.45)]"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                  <RotateCcw className="h-5 w-5" />
+                </span>
+                <h2 id="reonboard-title" className="mt-4 font-bricolage text-xl font-bold tracking-tight text-slate-900">
+                  Restart onboarding?
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  You will go through organizer onboarding from the beginning.
+                  {isDirty ? " Unsaved changes on this page will be lost." : " Your saved profile is not changed."}
+                </p>
+                <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfirmReonboard(false)
+                      discard()
+                      router.push("/organizer/onboarding")
+                    }}
+                    className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 active:translate-y-px sm:flex-1"
+                  >
+                    Yes, restart
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmReonboard(false)}
+                    className="rounded-full border border-slate-900/15 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 sm:flex-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          ) : null}
 
           {/* Raised when a link is clicked with unsaved changes. */}
           {pendingHref ? (

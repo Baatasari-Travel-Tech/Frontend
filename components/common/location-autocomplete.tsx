@@ -99,8 +99,15 @@ export function LocationAutocomplete({
     <div
       ref={menuRef}
       style={{ position: "fixed", top: coords.top, left: coords.left, width: coords.width }}
-      className="z-[100] max-h-72 overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+      className="z-[100] max-h-80 overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
     >
+      {/* A busy pincode returns a lot of areas (791122 has 153). Say how many, and
+          point at the way out: type the area name after the code to filter. */}
+      {!loading && results.length > 12 ? (
+        <p className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50/95 px-3 py-2 text-[11px] font-medium text-slate-500 backdrop-blur">
+          {results.length} areas. Type your area name after the pincode to narrow.
+        </p>
+      ) : null}
       {loading ? (
         <p className="px-3 py-2 text-xs text-slate-400">Searching…</p>
       ) : results.length === 0 ? (
