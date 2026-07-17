@@ -2,15 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion, useReducedMotion } from "framer-motion"
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft, ArrowRight, Building2, Camera, Globe, Instagram, Linkedin, MapPin, ShieldCheck } from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { LocationAutocomplete } from "@/components/common/location-autocomplete"
 import { useAuth } from "@/app/providers"
+import { AvatarCropDialog, useAvatarCrop } from "@/app/profile/_components/avatar-crop-dialog"
 import { apiRequest } from "@/lib/api/client"
 import { uploadFile, uploadOrganizerAvatarImage } from "@/lib/api/uploads"
+import { DEFAULT_AVATAR_IMAGE, getAvatarImageUrl } from "@/lib/avatar"
 import { getDobDateBounds, isDobWithinBounds, ORGANIZER_MIN_AGE } from "@/lib/profile-validation"
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -31,37 +35,57 @@ const httpsUrl = z
   .startsWith("https://", "Only https links are accepted")
   .or(z.literal(""))
 
-const schema = z.object({
-  fullName: z.string().min(2, "Enter your full name"),
-  personalPhone: z.string().regex(/^\d{10}$/, "Enter a valid 10 digit phone number"),
-  dob: z
-    .string()
-    .min(1, "Select your date of birth")
-    .refine((value) => isDobWithinBounds(value, DOB_BOUNDS), `You must be at least ${ORGANIZER_MIN_AGE} years old`),
-  location: z.string().min(2, "Enter your location"),
-  gender: z.string().min(1, "Select your gender"),
-  profession: z.string().min(2, "Enter your profession"),
-  orgName: z.string().min(2, "Enter your organization name"),
-  description: z.string().min(20, "Add a stronger organization description"),
-  contactEmail: z.string().email("Enter a valid contact email"),
-  contactPhone: z.string().min(6, "Enter a valid contact number"),
-  primaryContactName: z.string().optional(),
-  secondaryContactPhone: z.string().optional(),
-  address: z.string().min(4, "Enter your address"),
-  city: z.string().min(2, "Enter your city"),
-  state: z.string().min(2, "Enter your state"),
-  pincode: z.string().min(4, "Enter your pincode"),
-  websiteUrl: httpsUrl,
-  instagramUrl: httpsUrl,
-  linkedinUrl: httpsUrl,
-  panNumber: z.string().min(5, "Enter the PAN number"),
-  gstNumber: z.string().optional(),
-  bankAccountName: z.string().min(2, "Enter the account holder name"),
-  bankAccountNumber: z.string().min(6, "Enter a valid account number"),
-  bankIfsc: z.string().min(4, "Enter a valid IFSC code"),
-})
+/**
+ * The backend only *requires* orgName/description/contact/address for
+ * ORGANIZATION (see organizer.schemas.ts superRefine); for INDIVIDUAL every one
+ * of them is optional-and-nullable. So an individual is free to fill in a
+ * description, city and links, and should: they are what fill the public card.
+ * Only orgName is genuinely organization-only, since an individual is shown by
+ * their own name.
+ *
+ * Hence one schema shape, two strictnesses. Fields an individual may leave blank
+ * still validate once they type something, so a half-filled description or a
+ * malformed email cannot be saved either way.
+ */
+const makeSchema = (isIndividual: boolean) => {
+  /** Required for an organization; optional for an individual, but valid if given. */
+  const softForIndividual = <T extends z.ZodString>(field: T) =>
+    isIndividual ? (field.or(z.literal("")) as unknown as T) : field
 
-type Values = z.infer<typeof schema>
+  return z.object({
+    fullName: z.string().min(2, "Enter your full name"),
+    personalPhone: z.string().regex(/^\d{10}$/, "Enter a valid 10 digit phone number"),
+    dob: z
+      .string()
+      .min(1, "Select your date of birth")
+      .refine((value) => isDobWithinBounds(value, DOB_BOUNDS), `You must be at least ${ORGANIZER_MIN_AGE} years old`),
+    location: z.string().min(2, "Enter your location"),
+    gender: z.string().min(1, "Select your gender"),
+    profession: z.string().min(2, "Enter your profession"),
+    // Individuals have no organization name; the field is not rendered for them.
+    orgName: isIndividual ? z.string() : z.string().min(2, "Enter your organization name"),
+    description: softForIndividual(z.string().min(20, "Add at least 20 characters")),
+    contactEmail: softForIndividual(z.string().email("Enter a valid contact email")),
+    contactPhone: softForIndividual(z.string().min(6, "Enter a valid contact number")),
+    primaryContactName: z.string().optional(),
+    secondaryContactPhone: z.string().optional(),
+    address: softForIndividual(z.string().min(4, "Enter your address")),
+    city: softForIndividual(z.string().min(2, "Enter your city")),
+    state: softForIndividual(z.string().min(2, "Enter your state")),
+    pincode: softForIndividual(z.string().min(4, "Enter your pincode")),
+    websiteUrl: httpsUrl,
+    instagramUrl: httpsUrl,
+    linkedinUrl: httpsUrl,
+    // Payout identity is required of everyone.
+    panNumber: z.string().min(5, "Enter the PAN number"),
+    gstNumber: z.string().optional(),
+    bankAccountName: z.string().min(2, "Enter the account holder name"),
+    bankAccountNumber: z.string().min(6, "Enter a valid account number"),
+    bankIfsc: z.string().min(4, "Enter a valid IFSC code"),
+  })
+}
+
+type Values = z.infer<ReturnType<typeof makeSchema>>
 
 type LinkField = "websiteUrl" | "instagramUrl" | "linkedinUrl"
 
@@ -105,9 +129,12 @@ const quietInput =
   "w-full border-b border-slate-900/15 bg-transparent px-0 py-1.5 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-500 hover:border-slate-900/30 focus:border-brand-900"
 
 /**
- * Steps drive the rail, the scroll-spy targets and the completion meter.
- * `required` lists only the fields that gate payouts, which is why Social has
- * none.
+ * Steps drive the rail, the scroll-spy targets, the completion meter and the
+ * jump-to-first-error on a failed save.
+ *
+ * `fields`   = everything living on that step. Used to locate which step an
+ *              error belongs to.
+ * `required` = the subset that gates payouts, which is why Social has none.
  */
 const CHAPTERS = [
   {
@@ -115,6 +142,7 @@ const CHAPTERS = [
     title: "Personal",
     short: "Personal",
     standfirst: "Who we contact about this account. Never shown to attendees.",
+    fields: ["fullName", "personalPhone", "dob", "location", "gender", "profession"],
     required: ["fullName", "personalPhone", "dob", "location", "gender", "profession"],
   },
   {
@@ -122,6 +150,7 @@ const CHAPTERS = [
     title: "Organization",
     short: "Organization",
     standfirst: "How your brand reads on event pages and in confirmation emails.",
+    fields: ["orgName", "description", "contactEmail", "contactPhone", "primaryContactName", "secondaryContactPhone"],
     required: ["orgName", "description", "contactEmail", "contactPhone"],
   },
   {
@@ -129,6 +158,7 @@ const CHAPTERS = [
     title: "Address",
     short: "Address",
     standfirst: "Your registered address, used on invoices and tax filings.",
+    fields: ["address", "city", "state", "pincode"],
     required: ["address", "city", "state", "pincode"],
   },
   {
@@ -136,6 +166,7 @@ const CHAPTERS = [
     title: "Social",
     short: "Social",
     standfirst: "Optional. Attendees check these before they buy.",
+    fields: ["websiteUrl", "instagramUrl", "linkedinUrl"],
     required: [],
   },
   {
@@ -145,6 +176,7 @@ const CHAPTERS = [
     // full name, so the label can be short enough to sit under a 28px circle.
     short: "Compliance",
     standfirst: "Encrypted at rest. Changing these pauses payouts for 24 hours while we re-verify.",
+    fields: ["panNumber", "gstNumber", "bankAccountName", "bankAccountNumber", "bankIfsc"],
     required: ["panNumber", "bankAccountName", "bankAccountNumber", "bankIfsc"],
   },
 ] as const satisfies ReadonlyArray<{
@@ -152,15 +184,31 @@ const CHAPTERS = [
   title: string
   short: string
   standfirst: string
+  fields: ReadonlyArray<keyof Values>
   required: ReadonlyArray<keyof Values>
 }>
 
-/** Fields that must be filled before payouts unlock. Drives the meter. */
-const REQUIRED_FIELDS = CHAPTERS.flatMap((chapter) => chapter.required) as (keyof Values)[]
+/** Required of organizations only. An individual is not held to these. */
+const ORGANIZATION_ONLY_REQUIRED = new Set<keyof Values>([
+  "orgName",
+  "description",
+  "contactEmail",
+  "contactPhone",
+  "address",
+  "city",
+  "state",
+  "pincode",
+])
 
-function completionOf(values: Partial<Values>) {
-  const filled = REQUIRED_FIELDS.filter((key) => (values[key] ?? "").toString().trim().length > 0)
-  return { filled: filled.length, total: REQUIRED_FIELDS.length, percent: (filled.length / REQUIRED_FIELDS.length) * 100 }
+/** Fields that must be filled before payouts unlock. Drives the meter. */
+const requiredFieldsFor = (isIndividual: boolean) =>
+  CHAPTERS.flatMap((chapter) => chapter.required).filter(
+    (field) => !(isIndividual && ORGANIZATION_ONLY_REQUIRED.has(field)),
+  )
+
+function completionOf(values: Partial<Values>, required: ReadonlyArray<keyof Values>) {
+  const filled = required.filter((key) => (values[key] ?? "").toString().trim().length > 0)
+  return { filled: filled.length, total: required.length, percent: (filled.length / required.length) * 100 }
 }
 
 /* ---------------------------------------------------------------- primitives */
@@ -230,10 +278,15 @@ function HttpsField({ name, label, placeholder }: { name: LinkField; label: stri
 
 function Chapter({
   chapter,
+  title,
+  standfirst,
   className,
   children,
 }: {
   chapter: (typeof CHAPTERS)[number]
+  /** Overrides for wording that differs for an individual. */
+  title?: string
+  standfirst?: string
   /** Mobile wizard hides every step but the active one; desktop shows them all. */
   className?: string
   children: React.ReactNode
@@ -249,8 +302,8 @@ function Chapter({
       className={`scroll-mt-32 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_45px_-25px_rgba(12,29,55,0.2)] sm:p-7 md:p-8 ${className ?? ""}`}
     >
       <div className="max-w-[54ch]">
-        <h2 className="font-bricolage text-2xl font-bold tracking-tight text-slate-900">{chapter.title}</h2>
-        <p className="mt-1.5 text-sm leading-6 text-slate-500">{chapter.standfirst}</p>
+        <h2 className="font-bricolage text-2xl font-bold tracking-tight text-slate-900">{title ?? chapter.title}</h2>
+        <p className="mt-1.5 text-sm leading-6 text-slate-500">{standfirst ?? chapter.standfirst}</p>
       </div>
       <div className="mt-7 grid gap-x-10 gap-y-6 sm:grid-cols-2">{children}</div>
     </motion.section>
@@ -363,34 +416,55 @@ function PublicPreview({
 /* -------------------------------------------------------------------- page */
 
 export default function OrganizerProfilePage() {
-  const { session, profile, organizerProfile, updateProfile, refreshOrganizerStatus } = useAuth()
+  const { session, user, profile, organizerProfile, updateProfile, refreshProfile, refreshOrganizerStatus } = useAuth()
   const reduce = useReducedMotion()
 
   const [activeId, setActiveId] = useState<string>("personal")
   const [error, setError] = useState<string | null>(null)
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const avatarUrlRef = useRef<string | null>(null)
+
+  // Set when a link was clicked while dirty: holds where the user was trying to
+  // go until they choose save / leave / stay.
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const router = useRouter()
 
   const formRef = useRef<HTMLFormElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null)
   const logoPreviewRef = useRef<string | null>(null)
+  // handleSubmit swallows its result, and formState is stale inside the closure
+  // right after awaiting it, so the outcome is recorded here instead.
+  const saveSucceededRef = useRef(false)
+
+  // Individuals have no organization, so the organization-only fields are theirs
+  // to fill in or leave, not requirements. Resolver is rebuilt when this flips
+  // (it arrives async with the profile); react-hook-form reads the current
+  // resolver on each validation, so swapping it is safe.
+  const isIndividual = (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+  const resolver = useMemo(() => zodResolver(makeSchema(isIndividual)), [isIndividual])
+  const requiredFields = useMemo(() => requiredFieldsFor(isIndividual), [isIndividual])
 
   const form = useForm<Values>({
-    resolver: zodResolver(schema),
+    resolver,
     mode: "onBlur",
     defaultValues: EMPTY_VALUES,
   })
   const { register, setValue, control } = form
 
   const values = useWatch({ control }) as Partial<Values>
-  const completion = useMemo(() => completionOf(values), [values])
+  const completion = useMemo(() => completionOf(values, requiredFields), [values, requiredFields])
   const description = values.description ?? ""
 
-  // Picking a file does not touch form state, so fold it into the dirty check or
-  // the Save control would never appear for an image-only change.
-  const isDirty = form.formState.isDirty || Boolean(avatarFile) || Boolean(logoFile)
+  // Picking a logo does not touch form state, so fold it into the dirty check or
+  // the Save control would never appear for a logo-only change. The avatar is not
+  // here: it uploads on crop, independently of this form.
+  const isDirty = form.formState.isDirty || Boolean(logoFile)
 
   const activeIndex = Math.max(
     0,
@@ -456,12 +530,63 @@ export default function OrganizerProfilePage() {
     session?.user?.email,
   ])
 
-  // Revoke the object URL on unmount so the picked-logo blob is not leaked.
+  // Seed the avatar from the saved profile. Skipped once a local preview exists,
+  // so an in-flight upload is not clobbered by a profile refresh.
+  useEffect(() => {
+    if (avatarUrlRef.current) return
+    setAvatarPreview(profile?.avatar_url ?? DEFAULT_AVATAR_IMAGE)
+  }, [profile?.avatar_url])
+
+  // Revoke the object URLs on unmount so the picked blobs are not leaked.
   useEffect(() => {
     return () => {
       if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current)
+      if (avatarUrlRef.current) URL.revokeObjectURL(avatarUrlRef.current)
     }
   }, [])
+
+  // Leaving with unsaved changes, part 1: hard navigation (refresh, tab close,
+  // typing a new address). Only the browser's own prompt can stop these.
+  useEffect(() => {
+    if (!isDirty) return
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ""
+    }
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [isDirty])
+
+  // Leaving with unsaved changes, part 2: in-app links (Back to dashboard, the
+  // organizer sidebar). The App Router has no navigation-blocking API, so catch
+  // the click on the way down and hold the destination instead.
+  useEffect(() => {
+    if (!isDirty) return
+    const intercept = (event: MouseEvent) => {
+      // Ignore anything the browser would not treat as a plain in-page nav:
+      // new-tab modifier clicks, middle clicks, already-handled events.
+      if (event.defaultPrevented || event.button !== 0) return
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+
+      const anchor = (event.target as HTMLElement | null)?.closest?.("a")
+      if (!anchor || anchor.target === "_blank") return
+
+      const href = anchor.getAttribute("href")
+      if (!href || href.startsWith("#")) return
+
+      const url = new URL(anchor.href, window.location.href)
+      // External links unload the document, so beforeunload above covers them.
+      if (url.origin !== window.location.origin) return
+      if (url.pathname === window.location.pathname) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      setPendingHref(`${url.pathname}${url.search}`)
+    }
+    // Capture phase: must run before the Link's own click handler navigates.
+    document.addEventListener("click", intercept, true)
+    return () => document.removeEventListener("click", intercept, true)
+  }, [isDirty])
 
   // Description grows to fit its text rather than scrolling inside a fixed box.
   // Height is reset to auto first so the box can shrink as well as grow.
@@ -497,6 +622,37 @@ export default function OrganizerProfilePage() {
     return () => observer.disconnect()
   }, [])
 
+  // Avatar uploads as soon as it is cropped, the same way the user profile does,
+  // rather than waiting for Save. It is not part of the organizer payload, so
+  // tying it to this form's dirty state would only make it feel stuck.
+  const crop = useAvatarCrop({
+    onError: setError,
+    onCropped: async (croppedFile) => {
+      if (avatarUrlRef.current) URL.revokeObjectURL(avatarUrlRef.current)
+      const localUrl = URL.createObjectURL(croppedFile)
+      avatarUrlRef.current = localUrl
+      setAvatarPreview(localUrl)
+
+      setError(null)
+      setAvatarUploading(true)
+      try {
+        const upload = await uploadOrganizerAvatarImage(croppedFile)
+        const fallback = user?.id ? getAvatarImageUrl("users", user.id, upload.version) : null
+        const nextUrl = upload.publicUrl ?? fallback
+        if (nextUrl) setAvatarPreview(nextUrl)
+        try {
+          await refreshProfile()
+        } catch {
+          // Non-fatal: the local preview already shows the new photo.
+        }
+      } catch (uploadError) {
+        setError(uploadError instanceof Error ? uploadError.message : "Could not upload photo.")
+      } finally {
+        setAvatarUploading(false)
+      }
+    },
+  })
+
   const pickLogo = (file: File | null) => {
     if (!file) return
     if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current)
@@ -506,9 +662,10 @@ export default function OrganizerProfilePage() {
     setLogoFile(file)
   }
 
+  // Discards form edits and the pending logo. The avatar is deliberately left
+  // alone: it has already uploaded, so there is nothing local to throw away.
   const discard = () => {
     form.reset()
-    setAvatarFile(null)
     setLogoFile(null)
     if (logoPreviewRef.current) {
       URL.revokeObjectURL(logoPreviewRef.current)
@@ -520,13 +677,10 @@ export default function OrganizerProfilePage() {
 
   const onSubmit = form.handleSubmit(async (submitted) => {
     setError(null)
+    saveSucceededRef.current = false
     try {
       let logoUrl = organizerProfile?.logoUrl ?? null
       let logoPublicId = organizerProfile?.logoPublicId ?? null
-
-      if (avatarFile) {
-        await uploadOrganizerAvatarImage(avatarFile)
-      }
 
       if (logoFile) {
         const upload = await uploadFile(logoFile, "organizerLogo")
@@ -544,21 +698,24 @@ export default function OrganizerProfilePage() {
       })
 
       const entityType = organizerProfile?.entityType ?? "ORGANIZATION"
-      const orgOnly = <T,>(value: T) => (entityType === "INDIVIDUAL" ? null : value)
 
       await apiRequest("/organizer/profile", {
         method: "PUT",
         auth: true,
         body: JSON.stringify({
           entityType,
-          orgName: orgOnly(submitted.orgName.trim() || null),
-          description: orgOnly(submitted.description.trim() || null),
-          contactEmail: orgOnly(submitted.contactEmail.trim() || null),
-          contactPhone: orgOnly(submitted.contactPhone.trim() || null),
-          address: orgOnly(submitted.address.trim() || null),
-          city: orgOnly(submitted.city.trim() || null),
-          state: orgOnly(submitted.state.trim() || null),
-          pincode: orgOnly(submitted.pincode.trim() || null),
+          // Only orgName is genuinely organization-only: an individual is shown
+          // by their own name. Everything else is sent for both, because these
+          // are exactly the fields that fill the public card, and the API allows
+          // them for individuals.
+          orgName: isIndividual ? null : submitted.orgName.trim() || null,
+          description: submitted.description.trim() || null,
+          contactEmail: submitted.contactEmail.trim() || null,
+          contactPhone: submitted.contactPhone.trim() || null,
+          address: submitted.address.trim() || null,
+          city: submitted.city.trim() || null,
+          state: submitted.state.trim() || null,
+          pincode: submitted.pincode.trim() || null,
           panNumber: submitted.panNumber.trim() || null,
           gstNumber: submitted.gstNumber?.trim() || null,
           bankAccountName: submitted.bankAccountName.trim() || null,
@@ -579,14 +736,23 @@ export default function OrganizerProfilePage() {
       })
 
       await refreshOrganizerStatus()
-      setAvatarFile(null)
       setLogoFile(null)
       // reset() re-baselines the form as clean, which drops isDirty and swaps the
       // controls back to Back/Next. That swap is the confirmation.
       form.reset(submitted)
+      saveSucceededRef.current = true
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Profile update failed.")
     }
+  },
+  // Validation failed. On mobile only one step is on screen, so an error on
+  // another step would render on a hidden card and the save would look like it
+  // silently did nothing. Jump to the first step that actually has an error.
+  (fieldErrors) => {
+    const firstBadStep = CHAPTERS.find((chapter) => chapter.fields.some((field) => field in fieldErrors))
+    if (!firstBadStep) return
+    setActiveId(firstBadStep.id)
+    contentRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" })
   })
 
   /**
@@ -611,12 +777,34 @@ export default function OrganizerProfilePage() {
   /** Mobile shows one step; `lg:block` puts every card back on desktop. */
   const stepClass = (id: string) => (activeId === id ? "" : "hidden lg:block")
 
+  /** Abandon the edits and go. Reset first so beforeunload stops arming. */
+  const leaveWithoutSaving = () => {
+    const href = pendingHref
+    setPendingHref(null)
+    discard()
+    if (href) router.push(href)
+  }
+
+  /** Save, then go only if it actually succeeded. */
+  const saveAndLeave = async () => {
+    const href = pendingHref
+    await onSubmit()
+    if (!saveSucceededRef.current) {
+      // Invalid or the request failed. Close the dialog and leave the user on the
+      // page: onInvalid has already moved them to the offending step, and a
+      // request error is showing in the banner.
+      setPendingHref(null)
+      return
+    }
+    setPendingHref(null)
+    if (href) router.push(href)
+  }
+
   const displayLogo = logoPreview ?? organizerProfile?.logoUrl ?? null
 
-  // Individuals have no organization, so they are shown by their own name. An
-  // ORGANIZATION still falls back to the person's name while orgName is empty,
-  // so the heading is never the placeholder once we know who they are.
-  const isIndividual = (organizerProfile?.entityType ?? "ORGANIZATION") === "INDIVIDUAL"
+  // Individuals are shown by their own name. An ORGANIZATION still falls back to
+  // the person's name while orgName is empty, so the heading is never the
+  // placeholder once we know who they are.
   const displayName =
     (isIndividual ? values.fullName : values.orgName || values.fullName) || profile?.full_name || "Your profile"
 
@@ -690,7 +878,9 @@ export default function OrganizerProfilePage() {
                               : "border-slate-900/10 text-slate-500 hover:border-slate-900/30 hover:text-slate-900"
                           }`}
                         >
-                          <span className="flex-1">{chapter.title}</span>
+                          <span className="flex-1">
+                            {isIndividual && chapter.id === "organization" ? "About you" : chapter.title}
+                          </span>
                         </a>
                       )
                     })}
@@ -712,6 +902,7 @@ export default function OrganizerProfilePage() {
                       const active = activeId === chapter.id
                       // Steps behind you read as navy; ahead of you, grey.
                       const passed = index < activeIndex
+                      const hasError = chapter.fields.some((field) => field in form.formState.errors)
                       return (
                         <li key={chapter.id} className="relative flex flex-col items-center gap-1.5">
                           {/* Connector runs from the previous circle's centre to
@@ -725,26 +916,31 @@ export default function OrganizerProfilePage() {
                               }`}
                             />
                           ) : null}
-                          {/* Display only. Steps are moved through with Back/Next,
-                              so a step can never be skipped past unsaved changes. */}
-                          <span
+                          {/* Jumping between steps keeps edits: every step's fields
+                              belong to one form, so switching only hides cards. */}
+                          <button
+                            type="button"
+                            onClick={() => goToStep(index)}
                             aria-current={active ? "step" : undefined}
+                            aria-label={`Go to ${chapter.title}${hasError ? " (has errors)" : ""}`}
                             className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border text-[11px] font-bold tabular-nums transition ${
                               active
                                 ? "border-brand-900 bg-brand-900 text-white"
-                                : passed
-                                  ? "border-brand-900 bg-white text-brand-900"
-                                  : "border-slate-900/20 bg-white text-slate-400"
+                                : hasError
+                                  ? "border-rose-400 bg-white text-rose-600"
+                                  : passed
+                                    ? "border-brand-900 bg-white text-brand-900"
+                                    : "border-slate-900/20 bg-white text-slate-400"
                             }`}
                           >
                             {index + 1}
-                          </span>
+                          </button>
                           <span
                             className={`text-center text-[9px] font-semibold leading-tight transition-colors ${
-                              active ? "text-slate-900" : "text-slate-400"
+                              active ? "text-slate-900" : hasError ? "text-rose-600" : "text-slate-400"
                             }`}
                           >
-                            {chapter.short}
+                            {isIndividual && chapter.id === "organization" ? "About" : chapter.short}
                           </span>
                         </li>
                       )
@@ -803,28 +999,71 @@ export default function OrganizerProfilePage() {
                     <Field label="Profession" name="profession" required>
                       <input className={quietInput} {...register("profession")} />
                     </Field>
-                    <Field label="Profile photo" hint="Optional. Uploads when you save.">
-                      <label className="group inline-flex w-full cursor-pointer items-center gap-2 border-b border-slate-900/15 py-1.5 text-[15px] text-slate-500 transition hover:border-slate-900/30 hover:text-slate-900">
-                        <Camera className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                        <span className="truncate">{avatarFile ? avatarFile.name : "Upload new photo"}</span>
+                    <Field label="Profile photo" hint="PNG, JPG or WEBP, up to 5MB. Saves as soon as you crop." className="sm:col-span-2">
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => avatarInputRef.current?.click()}
+                          disabled={avatarUploading}
+                          aria-label="Change profile photo"
+                          className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 transition hover:border-brand-900 disabled:cursor-wait"
+                        >
+                          <img
+                            src={avatarPreview || DEFAULT_AVATAR_IMAGE}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null
+                              event.currentTarget.src = DEFAULT_AVATAR_IMAGE
+                            }}
+                          />
+                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-900/70 opacity-0 transition group-hover:opacity-100">
+                            <Camera className="h-4 w-4 text-white" />
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => avatarInputRef.current?.click()}
+                          disabled={avatarUploading}
+                          className="rounded-full border border-slate-900/15 bg-white px-4 py-2 text-[13px] font-semibold text-slate-600 transition hover:border-brand-900 hover:text-brand-900 disabled:opacity-60"
+                        >
+                          {avatarUploading ? "Uploading..." : "Change photo"}
+                        </button>
                         <input
+                          ref={avatarInputRef}
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/webp"
                           className="hidden"
-                          onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)}
+                          onChange={(event) => {
+                            crop.handleAvatarChange(event.target.files?.[0] ?? null)
+                            event.target.value = ""
+                          }}
                         />
-                      </label>
+                      </div>
                     </Field>
                   </Chapter>
 
-                  <Chapter chapter={CHAPTERS[1]} className={stepClass(CHAPTERS[1].id)}>
-                    <Field label="Organization name" name="orgName" required className="sm:col-span-2">
-                      <input className={quietInput} {...register("orgName")} />
-                    </Field>
+                  <Chapter
+                    chapter={CHAPTERS[1]}
+                    className={stepClass(CHAPTERS[1].id)}
+                    title={isIndividual ? "About you" : undefined}
+                    standfirst={
+                      isIndividual
+                        ? "How you appear to attendees on event pages. Optional, but this is what fills your public card."
+                        : undefined
+                    }
+                  >
+                    {/* An individual has no organization name; they are shown by
+                        their own name, so the field would be meaningless. */}
+                    {!isIndividual ? (
+                      <Field label="Organization name" name="orgName" required className="sm:col-span-2">
+                        <input className={quietInput} {...register("orgName")} />
+                      </Field>
+                    ) : null}
                     <Field
-                      label="Description"
+                      label={isIndividual ? "About you" : "Description"}
                       name="description"
-                      required
+                      required={!isIndividual}
                       className="sm:col-span-2"
                       hint={`${description.length} characters. Minimum 20. The preview trims after three lines.`}
                     >
@@ -845,10 +1084,10 @@ export default function OrganizerProfilePage() {
                         )
                       })()}
                     </Field>
-                    <Field label="Contact email" name="contactEmail" required>
+                    <Field label="Contact email" name="contactEmail" required={!isIndividual}>
                       <input className={quietInput} {...register("contactEmail")} />
                     </Field>
-                    <Field label="Contact phone" name="contactPhone" required>
+                    <Field label="Contact phone" name="contactPhone" required={!isIndividual}>
                       <input className={quietInput} {...register("contactPhone")} />
                     </Field>
                     <Field label="Primary contact" name="primaryContactName">
@@ -860,16 +1099,38 @@ export default function OrganizerProfilePage() {
                   </Chapter>
 
                   <Chapter chapter={CHAPTERS[2]} className={stepClass(CHAPTERS[2].id)}>
-                    <Field label="Street" name="address" required className="sm:col-span-2">
+                    <Field
+                      label="Find your area"
+                      hint="Enter a pincode or area name, then pick yours. City, state and pincode fill in for you."
+                      className="sm:col-span-2"
+                    >
+                      <LocationAutocomplete
+                        placeholder="Pincode or area"
+                        onSelect={(loc) => {
+                          const fill = (field: "city" | "state" | "pincode", value: string | null) => {
+                            if (value) setValue(field, value, { shouldValidate: true, shouldDirty: true })
+                          }
+                          fill("city", loc.city)
+                          fill("state", loc.state)
+                          fill("pincode", loc.pincode)
+                          // Seed the street line with the area only while it is
+                          // empty: never overwrite an address already typed.
+                          if (loc.area && !form.getValues("address")?.trim()) {
+                            setValue("address", loc.area, { shouldValidate: true, shouldDirty: true })
+                          }
+                        }}
+                      />
+                    </Field>
+                    <Field label="Street" name="address" required={!isIndividual} className="sm:col-span-2">
                       <input className={quietInput} {...register("address")} />
                     </Field>
-                    <Field label="City" name="city" required>
+                    <Field label="City" name="city" required={!isIndividual}>
                       <input className={quietInput} {...register("city")} />
                     </Field>
-                    <Field label="State" name="state" required>
+                    <Field label="State" name="state" required={!isIndividual}>
                       <input className={quietInput} {...register("state")} />
                     </Field>
-                    <Field label="Pincode" name="pincode" required>
+                    <Field label="Pincode" name="pincode" required={!isIndividual}>
                       <input className={`${quietInput} font-mono`} inputMode="numeric" {...register("pincode")} />
                     </Field>
                   </Chapter>
@@ -992,6 +1253,59 @@ export default function OrganizerProfilePage() {
                 </button>
               </div>
             </motion.div>
+          ) : null}
+
+          <AvatarCropDialog crop={crop} />
+
+          {/* Raised when a link is clicked with unsaved changes. */}
+          {pendingHref ? (
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 backdrop-blur-sm sm:items-center"
+              // Clicking the backdrop is the "stay" action: the safe default.
+              onClick={() => setPendingHref(null)}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="unsaved-title"
+            >
+              <motion.div
+                initial={reduce ? false : { opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.25, ease: EASE }}
+                onClick={(event) => event.stopPropagation()}
+                className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_30px_70px_-20px_rgba(12,29,55,0.45)]"
+              >
+                <h2 id="unsaved-title" className="font-bricolage text-xl font-bold tracking-tight text-slate-900">
+                  You have unsaved changes
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  Save them before leaving, or they will be lost.
+                </p>
+                <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    onClick={() => void saveAndLeave()}
+                    disabled={form.formState.isSubmitting}
+                    className="rounded-full bg-brand-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 active:translate-y-px disabled:opacity-60 sm:flex-1"
+                  >
+                    {form.formState.isSubmitting ? "Saving..." : "Save and leave"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingHref(null)}
+                    className="rounded-full border border-slate-900/15 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 sm:flex-1"
+                  >
+                    Stay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={leaveWithoutSaving}
+                    className="rounded-full px-5 py-2.5 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                  >
+                    Leave without saving
+                  </button>
+                </div>
+              </motion.div>
+            </div>
           ) : null}
         </div>
       </FormProvider>
