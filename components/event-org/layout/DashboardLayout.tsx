@@ -23,8 +23,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   // shell here so the card blends into a single seamless white page.
   const whiteShell = pathname === "/organizer/create-event";
 
+  // Profile is laid out on the warm brand background with its own container and
+  // full-bleed sticky bars, so it takes the shell bare and supplies its own
+  // padding rather than fighting the default p-4/md:p-8.
+  const bareShell = pathname === "/organizer/profile";
+
+  const shellBg = whiteShell ? "bg-white" : bareShell ? "bg-background" : "bg-slate-50";
+
   return (
-    <div className={`min-h-screen flex flex-col overflow-x-hidden ${whiteShell ? "bg-white" : "bg-slate-50"}`}>
+    <div className={`min-h-screen flex flex-col overflow-x-hidden ${shellBg}`}>
       <div className="flex flex-1 relative">
         {!hideSidebar ? (
           <Sidebar
@@ -45,7 +52,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           ) : null}
 
           <main className="flex-1 mt-0 min-h-[calc(100vh-64px)] flex flex-col">
-            <div className="flex-1 p-4 md:p-8 pb-24 md:pb-10">
+            <div className={`flex-1 ${bareShell ? "" : "p-4 md:p-8 pb-24 md:pb-10"}`}>
               {children}
             </div>
           </main>
