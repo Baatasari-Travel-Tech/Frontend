@@ -304,10 +304,13 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
   const scrollToBooking = () =>
     document.getElementById("booking-panel")?.scrollIntoView({ behavior: "smooth", block: "center" })
 
-  // Ticket CTA: logged out → login modal; logged in → reveal the tier picker.
+  // Ticket CTA: logged out → login modal (returning here after auth); logged in → reveal the tier picker.
   const handleBookCta = () => {
     if (unavailable || allSoldOut || tiers.length === 0) return
     if (!isLoggedIn) {
+      const params = new URLSearchParams(searchParams?.toString() ?? "")
+      params.set("redirect", pathname)
+      router.replace(`${pathname}?${params.toString()}`)
       openModal("login")
       return
     }
