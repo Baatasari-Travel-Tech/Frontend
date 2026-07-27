@@ -814,7 +814,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             </motion.section>
           ) : null}
 
-          {/* Venue & transport */}
+          {/* Flexible dates */}
           <motion.section
             variants={reduce ? undefined : rise}
             initial="hidden"
@@ -828,56 +828,49 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               style={{ backgroundImage: NOISE_TEXTURE }}
             />
             <div className="relative">
-              <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--gold)">Getting there</p>
-              <h2 className="mt-1.5 font-bricolage text-2xl font-bold tracking-tight text-white">Venue &amp; transport</h2>
+              <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--gold)">Flexible dates</p>
+              <h2 className="mt-1.5 font-bricolage text-2xl font-bold tracking-tight text-white">
+                Can&rsquo;t make it on this date?
+              </h2>
 
               <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3.5">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-(--gold)">
-                    <MapPin className="h-5 w-5" />
+                    <CalendarPlus className="h-5 w-5" />
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Venue</p>
-                    <p className="font-semibold text-white">{event.venue ?? "TBA"}</p>
-                  </div>
+                  <p className="max-w-md text-sm leading-relaxed text-white/70">
+                    Request a date that works for you — the organizer gets notified and you&rsquo;ll hear back.
+                  </p>
                 </div>
-                {mapsUrl ? (
-                  <a
-                    href={mapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {isLoggedIn ? (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-(--brand-navy) shadow-[0_14px_30px_-14px_rgba(0,0,0,0.6)] transition hover:-translate-y-0.5 hover:bg-(--gold-soft-bg) active:scale-[0.98]"
+                      >
+                        Request a date
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-5xl flex-col items-center justify-center overflow-hidden rounded-3xl border-0 bg-(--white) p-0">
+                      <VisuallyHidden>
+                        <DialogTitle>Select Date and View Reviews</DialogTitle>
+                      </VisuallyHidden>
+                      <div className="flex h-full w-full items-center justify-center overflow-y-auto p-6 md:p-8">
+                        <DateReviewsSection eventId={event.id} />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openModal("register")}
                     className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-(--brand-navy) shadow-[0_14px_30px_-14px_rgba(0,0,0,0.6)] transition hover:-translate-y-0.5 hover:bg-(--gold-soft-bg) active:scale-[0.98]"
                   >
-                    <Navigation className="h-4 w-4" /> Get directions
-                  </a>
-                ) : null}
+                    Register to request
+                  </button>
+                )}
               </div>
-
-              {event.entrySide || transportItems.length > 0 || event.transportToEvent ? (
-                <div className="mt-6 flex flex-wrap gap-2 border-t border-white/10 pt-5">
-                  {event.entrySide ? (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/90">
-                      <DoorOpen className="h-3.5 w-3.5 text-(--gold)" />
-                      {event.entrySide}
-                    </span>
-                  ) : null}
-                  {transportItems.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/90"
-                    >
-                      <Bus className="h-3.5 w-3.5 text-(--gold)" />
-                      {t}
-                    </span>
-                  ))}
-                  {event.transportToEvent ? (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/90">
-                      <Bus className="h-3.5 w-3.5 shrink-0 text-(--gold)" />
-                      {event.transportToEvent}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           </motion.section>
 
@@ -925,7 +918,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             </motion.section>
           ) : null}
 
-          {/* Request a different date — a first-class feature */}
+          {/* Venue & transport */}
           <motion.section
             variants={reduce ? undefined : rise}
             initial="hidden"
@@ -933,54 +926,58 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             viewport={{ once: true, margin: "-60px" }}
             className="rounded-3xl border border-(--gold-soft-border) bg-gradient-to-br from-(--gold-soft-bg) via-(--gold-bar-bg) to-white p-6 shadow-[0_24px_60px_-32px_rgba(12,29,55,0.35)] sm:p-8"
           >
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--gold-text)">Getting there</p>
+            <h2 className="mt-1 font-bricolage text-xl font-bold tracking-tight text-(--brand-navy) sm:text-2xl">
+              Venue &amp; transport
+            </h2>
+
+            <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3.5">
                 <span className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-(--brand-navy) text-(--gold) shadow-[0_14px_30px_-14px_rgba(12,29,55,0.6)]">
-                  <CalendarPlus className="h-6 w-6" />
+                  <MapPin className="h-6 w-6" />
                 </span>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--gold-text)">
-                    Flexible dates
-                  </p>
-                  <h2 className="mt-1 font-bricolage text-xl font-bold tracking-tight text-(--brand-navy) sm:text-2xl">
-                    Can&rsquo;t make it on this date?
-                  </h2>
-                  <p className="mt-1.5 max-w-md text-sm leading-relaxed text-(--gray-600)">
-                    Request a date that works for you — the organizer gets notified and you&rsquo;ll hear back.
-                  </p>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Venue</p>
+                  <p className="font-semibold text-(--brand-navy)">{event.venue ?? "TBA"}</p>
                 </div>
               </div>
-              {isLoggedIn ? (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <button
-                      type="button"
-                      className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-(--brand-navy) px-7 py-3.5 font-poppins text-sm font-bold text-white shadow-[0_18px_40px_-15px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--gold) active:scale-[0.98]"
-                    >
-                      Request a date
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-5xl flex-col items-center justify-center overflow-hidden rounded-3xl border-0 bg-(--white) p-0">
-                    <VisuallyHidden>
-                      <DialogTitle>Select Date and View Reviews</DialogTitle>
-                    </VisuallyHidden>
-                    <div className="flex h-full w-full items-center justify-center overflow-y-auto p-6 md:p-8">
-                      <DateReviewsSection eventId={event.id} />
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => openModal("register")}
-                  className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-(--brand-navy) px-7 py-3.5 font-poppins text-sm font-bold text-white shadow-[0_18px_40px_-15px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--gold) active:scale-[0.98]"
+              {mapsUrl ? (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-(--brand-navy) px-7 py-3.5 font-poppins text-sm font-bold text-white shadow-[0_18px_40px_-15px_rgba(12,29,55,0.6)] transition hover:bg-(--brand-navy)/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--gold) active:scale-[0.98]"
                 >
-                  Register to request
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </button>
-              )}
+                  <Navigation className="h-4 w-4" /> Get directions
+                </a>
+              ) : null}
             </div>
+
+            {event.entrySide || transportItems.length > 0 || event.transportToEvent ? (
+              <div className="mt-6 flex flex-wrap gap-2 border-t border-(--gold-soft-border) pt-5">
+                {event.entrySide ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-(--gray-200) bg-(--gray-50) px-3.5 py-1.5 text-xs font-semibold text-(--brand-navy)">
+                    <DoorOpen className="h-3.5 w-3.5 text-(--gold)" />
+                    {event.entrySide}
+                  </span>
+                ) : null}
+                {transportItems.map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center gap-2 rounded-full border border-(--gray-200) bg-(--gray-50) px-3.5 py-1.5 text-xs font-semibold text-(--brand-navy)"
+                  >
+                    <Bus className="h-3.5 w-3.5 text-(--gold)" />
+                    {t}
+                  </span>
+                ))}
+                {event.transportToEvent ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-(--gray-200) bg-(--gray-50) px-3.5 py-1.5 text-xs font-semibold text-(--brand-navy)">
+                    <Bus className="h-3.5 w-3.5 shrink-0 text-(--gold)" />
+                    {event.transportToEvent}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </motion.section>
 
           {/* Hosted by */}
