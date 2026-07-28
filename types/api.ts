@@ -19,6 +19,7 @@ export type SafeUser = {
   emailVerified: boolean;
   organizerDocumentsSubmitted: boolean;
   organizerApproved: boolean;
+  totpEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   // Set to an ISO timestamp when the user is soft-deleted. Admin UI uses
@@ -29,6 +30,11 @@ export type SafeUser = {
 };
 
 export type AuthResponse = ApiEnvelope<{ user: SafeUser }>;
+
+// /auth/login either returns AuthResponse directly, or — when the account
+// has 2FA enabled — a challenge the caller must resolve via
+// POST /auth/verify-2fa before a session actually starts.
+export type LoginChallengeResponse = ApiEnvelope<{ requires2FA: true; pending: string }>;
 
 export type MessageResponse = ApiEnvelope<{ message: string }>;
 

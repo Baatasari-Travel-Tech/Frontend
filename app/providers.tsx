@@ -14,12 +14,17 @@ import type {
   ApiEnvelope,
   AuthResponse,
   LegacyProfile,
+  LoginChallengeResponse,
   OrganizerProfile,
   SafeUser,
   SimplePreferences,
   TalentProfile,
   UserProfile,
 } from "@/types/api"
+
+// login() either completes the session directly, or (2FA-enabled accounts)
+// hands back a pending ticket the caller must resolve via verifyTwoFactor.
+export type LoginResult = { requires2FA: false } | { requires2FA: true; pending: string }
 
 export type AppRole = "USER" | "EVENT_ORGANIZER" | "TALENT"
 
@@ -61,7 +66,10 @@ type AuthCtx = {
   updateProfile: (payload: Record<string, unknown>, options?: { refresh?: boolean }) => Promise<void>
   updateUserPreferences: (payload: Partial<SimplePreferences>) => Promise<void>
   completeRoleOnboarding: (role: AppRole, payload?: Record<string, unknown>) => Promise<void>
-  login: (payload: { email: string; password: string }) => Promise<void>
+  login: (payload: { email: string; password: string }) => Promise<LoginResult>
+  verifyTwoFactor: (pending: string, code: string) => Promise<void>
+  requestTwoFactorRecovery: (pending: string) => Promise<void>
+  confirmTwoFactorRecovery: (pending: string, otp: string) => Promise<void>
   register: (payload: { email: string; password: string; role: "USER" | "ORGANIZER"; acceptedTerms: boolean }) => Promise<void>
   googleAuth: (idToken: string, role?: "USER" | "ORGANIZER") => Promise<void>
   logout: () => Promise<void>
@@ -355,10 +363,43 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     return unsubscribe
   }, [clearSession])
 
-  const login = async (payload: { email: string; password: string }) => {
-    const response = await apiRequest<AuthResponse>("/auth/login", {
+  const login = async (payload: { email: string; password: string }): Promise<LoginResult> => {
+    const response = await apiRequest<AuthResponse | LoginChallengeResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify(payload),
+    })
+
+    if ("requires2FA" in response.data) {
+      return { requires2FA: true, pending: response.data.pending }
+    }
+
+    await hydrateForUser(response.data.user)
+    return { requires2FA: false }
+  }
+
+  const verifyTwoFactor = async (pending: string, code: string) => {
+    const response = await apiRequest<AuthResponse>("/auth/verify-2fa", {
+      method: "POST",
+      body: JSON.stringify({ pending, code }),
+    })
+
+    await hydrateForUser(response.data.user)
+  }
+
+  // Lost-authenticator recovery: emails a code that, once confirmed, turns
+  // 2FA off and completes the login in one step (see auth.service on the
+  // backend). The user can re-enable 2FA from Security settings afterward.
+  const requestTwoFactorRecovery = async (pending: string) => {
+    await apiRequest("/auth/2fa/recovery/request", {
+      method: "POST",
+      body: JSON.stringify({ pending }),
+    })
+  }
+
+  const confirmTwoFactorRecovery = async (pending: string, otp: string) => {
+    const response = await apiRequest<AuthResponse>("/auth/2fa/recovery/confirm", {
+      method: "POST",
+      body: JSON.stringify({ pending, otp }),
     })
 
     await hydrateForUser(response.data.user)
@@ -546,6 +587,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     updateUserPreferences,
     completeRoleOnboarding,
     login,
+    verifyTwoFactor,
+    requestTwoFactorRecovery,
+    confirmTwoFactorRecovery,
     register,
     googleAuth,
     logout,

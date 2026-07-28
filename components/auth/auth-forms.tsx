@@ -90,8 +90,13 @@ const resolveGoogleOAuthRedirectUrl = (role: 'USER' | 'ORGANIZER', redirectPath:
 export function LoginForm({ onSwitchMode }: AuthSwitch) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login } = useAuth()
+  const { login, verifyTwoFactor, requestTwoFactorRecovery, confirmTwoFactorRecovery } = useAuth()
   const { closeModal, setIsAuthenticating } = useAuthModal()
+
+  const [step, setStep] = useState<'credentials' | 'totp' | 'recovery'>('credentials')
+  const [pending, setPending] = useState<string | null>(null)
+  const [totpCode, setTotpCode] = useState('')
+  const [recoveryOtp, setRecoveryOtp] = useState('')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -120,6 +125,11 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
   const errorToShow = error ?? authErrorMessage
   const showPendingDeletionBanner = pendingDeletion || isPendingDeletionFromUrl
 
+  const completeLogin = () => {
+    closeModal()
+    router.replace(resolveAuthDestination(searchParams))
+  }
+
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Please fill in all fields.')
@@ -132,14 +142,75 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
     logAuth('login:submit', { email })
 
     try {
-      await login({ email, password })
-      closeModal()
-      router.replace(resolveAuthDestination(searchParams))
+      const result = await login({ email, password })
+      if (result.requires2FA) {
+        setPending(result.pending)
+        setStep('totp')
+        setIsAuthenticating(false)
+        setLoading(false)
+        return
+      }
+      completeLogin()
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : 'Invalid email or password.'
       logAuthError('login:error', { message })
       setError(message)
       setPendingDeletion(isPendingDeletionError(authError))
+    } finally {
+      setLoading(false)
+      setIsAuthenticating(false)
+    }
+  }
+
+  const handleVerifyTotp = async () => {
+    if (!pending || !/^\d{6}$/.test(totpCode)) return
+
+    setLoading(true)
+    setError(null)
+    setIsAuthenticating(true)
+
+    try {
+      await verifyTwoFactor(pending, totpCode)
+      completeLogin()
+    } catch (authError) {
+      const message = authError instanceof Error ? authError.message : 'Invalid code. Please try again.'
+      setError(message)
+    } finally {
+      setLoading(false)
+      setIsAuthenticating(false)
+    }
+  }
+
+  const handleRequestRecovery = async () => {
+    if (!pending) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      await requestTwoFactorRecovery(pending)
+      setStep('recovery')
+    } catch (authError) {
+      const message = authError instanceof Error ? authError.message : 'Could not send a code. Please try again.'
+      setError(message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleConfirmRecovery = async () => {
+    if (!pending || !/^\d{6}$/.test(recoveryOtp)) return
+
+    setLoading(true)
+    setError(null)
+    setIsAuthenticating(true)
+
+    try {
+      await confirmTwoFactorRecovery(pending, recoveryOtp)
+      completeLogin()
+    } catch (authError) {
+      const message = authError instanceof Error ? authError.message : 'Invalid or expired code.'
+      setError(message)
     } finally {
       setLoading(false)
       setIsAuthenticating(false)
@@ -161,6 +232,131 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
       setError(message)
       setGoogleLoading(false)
     }
+  }
+
+  if (step === 'totp') {
+    return (
+      <div className="space-y-5">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Two-factor authentication</p>
+          <h2 className="text-2xl font-semibold text-slate-900">Enter your code</h2>
+          <p className="text-sm text-slate-500">Open your authenticator app and enter the current 6-digit code.</p>
+        </div>
+
+        <label className="block text-sm font-semibold text-slate-700">
+          Authentication code
+          <input
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-lg tracking-[0.4em] text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
+            inputMode="numeric"
+            pattern="\d{6}"
+            maxLength={6}
+            autoComplete="one-time-code"
+            placeholder="000000"
+            value={totpCode}
+            onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onKeyDown={e => e.key === 'Enter' && void handleVerifyTotp()}
+            autoFocus
+          />
+        </label>
+
+        {errorToShow && (
+          <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
+            {errorToShow}
+          </p>
+        )}
+
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
+          onClick={() => void handleVerifyTotp()}
+          disabled={loading || !/^\d{6}$/.test(totpCode)}
+        >
+          {loading && <InlineSpinner />}
+          <span>{loading ? 'Verifying...' : 'Verify'}</span>
+        </button>
+
+        <button
+          type="button"
+          className="w-full text-center text-xs font-semibold text-brand-800 hover:underline"
+          onClick={() => void handleRequestRecovery()}
+          disabled={loading}
+        >
+          Lost access to your authenticator?
+        </button>
+
+        <button
+          type="button"
+          className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-700"
+          onClick={() => {
+            setStep('credentials')
+            setPending(null)
+            setTotpCode('')
+            setError(null)
+          }}
+          disabled={loading}
+        >
+          Back to login
+        </button>
+      </div>
+    )
+  }
+
+  if (step === 'recovery') {
+    return (
+      <div className="space-y-5">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Two-factor authentication</p>
+          <h2 className="text-2xl font-semibold text-slate-900">Check your email</h2>
+          <p className="text-sm text-slate-500">
+            We emailed a 6-digit code to {email || 'your account email'}. Entering it turns two-factor
+            authentication OFF and signs you in — you can set it back up from Security settings.
+          </p>
+        </div>
+
+        <label className="block text-sm font-semibold text-slate-700">
+          Email code
+          <input
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-lg tracking-[0.4em] text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
+            inputMode="numeric"
+            pattern="\d{6}"
+            maxLength={6}
+            autoComplete="one-time-code"
+            placeholder="000000"
+            value={recoveryOtp}
+            onChange={e => setRecoveryOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onKeyDown={e => e.key === 'Enter' && void handleConfirmRecovery()}
+            autoFocus
+          />
+        </label>
+
+        {errorToShow && (
+          <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
+            {errorToShow}
+          </p>
+        )}
+
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
+          onClick={() => void handleConfirmRecovery()}
+          disabled={loading || !/^\d{6}$/.test(recoveryOtp)}
+        >
+          {loading && <InlineSpinner />}
+          <span>{loading ? 'Disabling...' : 'Disable 2FA & sign in'}</span>
+        </button>
+
+        <button
+          type="button"
+          className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-700"
+          onClick={() => {
+            setStep('totp')
+            setRecoveryOtp('')
+            setError(null)
+          }}
+          disabled={loading}
+        >
+          Back
+        </button>
+      </div>
+    )
   }
 
   return (

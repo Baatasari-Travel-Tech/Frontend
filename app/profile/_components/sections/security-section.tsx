@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import QRCode from "qrcode"
 import { KeyRound, Mail, Shield, ShieldCheck, Smartphone } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
@@ -25,19 +26,111 @@ import { DangerZone, InfoCard, SectionHeader } from "../field-primitives"
 //   confirm → OTP sent; OTP input + "DELETE" string + final Confirm button
 type DeleteStep = "idle" | "request" | "confirm"
 
+// Two-factor setup/disable flow:
+//   idle   → user hasn't opened either dialog
+//   setup  → enable dialog open: QR + manual secret + code input
+//   disable → disable dialog open: current code input only
+type TotpStep = "idle" | "setup" | "disable"
+
 export function SecuritySection() {
-  const { profile, session, user, logout } = useAuth()
+  const { profile, session, user, logout, refreshRoles } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
   const email = session?.user?.email ?? profile?.email ?? ""
   const phone = (profile?.phone ?? "").replace(/^\+91/, "")
   const emailVerified = !!user?.emailVerified
+  const totpEnabled = !!user?.totpEnabled
 
   const [step, setStep] = useState<DeleteStep>("idle")
   const [otp, setOtp] = useState("")
   const [busy, setBusy] = useState(false)
   const dialogOpen = step !== "idle"
+
+  const [totpStep, setTotpStep] = useState<TotpStep>("idle")
+  const [totpBusy, setTotpBusy] = useState(false)
+  const [totpCode, setTotpCode] = useState("")
+  const [totpSecret, setTotpSecret] = useState("")
+  const [totpQrSrc, setTotpQrSrc] = useState<string | null>(null)
+  const totpDialogOpen = totpStep !== "idle"
+  const canVerifyTotp = /^\d{6}$/.test(totpCode) && !totpBusy
+
+  const resetTotpDialog = () => {
+    setTotpStep("idle")
+    setTotpBusy(false)
+    setTotpCode("")
+    setTotpSecret("")
+    setTotpQrSrc(null)
+  }
+
+  const handleOpenEnable2FA = async () => {
+    setTotpStep("setup")
+    setTotpBusy(true)
+    try {
+      const res = await apiRequest<{ data: { secret: string; otpauthUrl?: string } }>(
+        "/user/me/2fa/setup",
+        { method: "POST", auth: true },
+      )
+      setTotpSecret(res.data.secret)
+      if (res.data.otpauthUrl) {
+        const url = await QRCode.toDataURL(res.data.otpauthUrl, { width: 200, margin: 2 }).catch(
+          () => null,
+        )
+        setTotpQrSrc(url)
+      }
+    } catch (err) {
+      toast({
+        title: "Couldn't start setup",
+        description: err instanceof Error ? err.message : "Please try again in a moment.",
+        variant: "destructive",
+      })
+      resetTotpDialog()
+    } finally {
+      setTotpBusy(false)
+    }
+  }
+
+  const handleVerify2FA = async () => {
+    setTotpBusy(true)
+    try {
+      await apiRequest("/user/me/2fa/verify", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ code: totpCode }),
+      })
+      toast({ title: "Two-factor authentication enabled" })
+      resetTotpDialog()
+      await refreshRoles()
+    } catch (err) {
+      toast({
+        title: "Verification failed",
+        description: err instanceof Error ? err.message : "Check the code and try again.",
+        variant: "destructive",
+      })
+      setTotpBusy(false)
+    }
+  }
+
+  const handleDisable2FA = async () => {
+    setTotpBusy(true)
+    try {
+      await apiRequest("/user/me/2fa/disable", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ code: totpCode }),
+      })
+      toast({ title: "Two-factor authentication disabled" })
+      resetTotpDialog()
+      await refreshRoles()
+    } catch (err) {
+      toast({
+        title: "Couldn't disable",
+        description: err instanceof Error ? err.message : "Check the code and try again.",
+        variant: "destructive",
+      })
+      setTotpBusy(false)
+    }
+  }
 
   const resetDialog = () => {
     setStep("idle")
@@ -59,7 +152,7 @@ export function SecuritySection() {
       })
       toast({
         title: "Code sent",
-        description: `We sent a 4-digit code to ${email}. It expires in 10 minutes.`,
+        description: `We sent a 6-digit code to ${email}. It expires in 10 minutes.`,
       })
       setStep("confirm")
     } catch (err) {
@@ -105,7 +198,7 @@ export function SecuritySection() {
     }
   }
 
-  const canConfirm = /^\d{4}$/.test(otp) && !busy
+  const canConfirm = /^\d{6}$/.test(otp) && !busy
 
   return (
     <div className="space-y-5">
@@ -149,13 +242,29 @@ export function SecuritySection() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold text-slate-900">Two-factor authentication</p>
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                Coming soon
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                  totpEnabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+                }`}
+              >
+                {totpEnabled ? "Enabled" : "Disabled"}
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-slate-500">Add an extra layer of security at sign-in.</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {totpEnabled
+                ? "A 6-digit code from your authenticator app is required at sign-in."
+                : "Add an extra layer of security at sign-in."}
+            </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => (totpEnabled ? setTotpStep("disable") : void handleOpenEnable2FA())}
+          disabled={totpBusy}
+          className="shrink-0 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+        >
+          {totpEnabled ? "Disable" : "Enable"}
+        </button>
       </div>
 
       <DangerZone
@@ -178,7 +287,7 @@ export function SecuritySection() {
               <DialogHeader>
                 <DialogTitle>Confirm account deletion</DialogTitle>
                 <DialogDescription>
-                  We&apos;ll email a 4-digit confirmation code to{" "}
+                  We&apos;ll email a 6-digit confirmation code to{" "}
                   <span className="font-medium text-slate-900">{email}</span>.
                   After you enter the code, your account is scheduled for
                   permanent removal in 24 hours.
@@ -200,7 +309,7 @@ export function SecuritySection() {
               <DialogHeader>
                 <DialogTitle>Enter confirmation code</DialogTitle>
                 <DialogDescription>
-                  Check your inbox for the 4-digit code we just sent to{" "}
+                  Check your inbox for the 6-digit code we just sent to{" "}
                   <span className="font-medium text-slate-900">{email}</span>.
                 </DialogDescription>
               </DialogHeader>
@@ -208,18 +317,18 @@ export function SecuritySection() {
               <div className="py-2">
                 <label className="block">
                   <span className="text-xs font-medium text-slate-700">
-                    4-digit code
+                    6-digit code
                   </span>
                   <Input
                     inputMode="numeric"
-                    pattern="\d{4}"
-                    maxLength={4}
+                    pattern="\d{6}"
+                    maxLength={6}
                     autoComplete="one-time-code"
                     value={otp}
                     onChange={(e) =>
-                      setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))
+                      setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
                     }
-                    placeholder="0000"
+                    placeholder="000000"
                     className="mt-1 text-center text-lg tracking-[0.4em]"
                     disabled={busy}
                   />
@@ -236,6 +345,117 @@ export function SecuritySection() {
                   disabled={!canConfirm}
                 >
                   {busy ? "Deleting..." : "Delete my account"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={totpDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) resetTotpDialog()
+        }}
+      >
+        <DialogContent>
+          {totpStep === "setup" && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Set up two-factor authentication</DialogTitle>
+                <DialogDescription>
+                  Scan the QR code with an authenticator app (Google Authenticator, Authy,
+                  1Password, etc.), then enter the 6-digit code it shows.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex flex-col items-center gap-3 py-2">
+                {totpQrSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={totpQrSrc}
+                    alt="Two-factor authentication QR code"
+                    width={180}
+                    height={180}
+                    className="rounded-lg border border-slate-200"
+                  />
+                ) : totpBusy ? (
+                  <p className="text-xs text-slate-500">Generating...</p>
+                ) : null}
+
+                {totpSecret ? (
+                  <p className="text-center text-xs text-slate-500">
+                    Can&apos;t scan? Enter this key manually:
+                    <br />
+                    <span className="font-mono text-sm font-semibold tracking-wider text-slate-900">
+                      {totpSecret}
+                    </span>
+                  </p>
+                ) : null}
+
+                <label className="block w-full">
+                  <span className="text-xs font-medium text-slate-700">6-digit code</span>
+                  <Input
+                    inputMode="numeric"
+                    pattern="\d{6}"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    value={totpCode}
+                    onChange={(e) =>
+                      setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    placeholder="000000"
+                    className="mt-1 text-center text-lg tracking-[0.4em]"
+                    disabled={totpBusy}
+                  />
+                </label>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={resetTotpDialog} disabled={totpBusy}>
+                  Cancel
+                </Button>
+                <Button onClick={handleVerify2FA} disabled={!canVerifyTotp}>
+                  {totpBusy ? "Verifying..." : "Verify & enable"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {totpStep === "disable" && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Disable two-factor authentication</DialogTitle>
+                <DialogDescription>
+                  Enter your current authenticator code to confirm.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-2">
+                <label className="block">
+                  <span className="text-xs font-medium text-slate-700">6-digit code</span>
+                  <Input
+                    inputMode="numeric"
+                    pattern="\d{6}"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    value={totpCode}
+                    onChange={(e) =>
+                      setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    placeholder="000000"
+                    className="mt-1 text-center text-lg tracking-[0.4em]"
+                    disabled={totpBusy}
+                  />
+                </label>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={resetTotpDialog} disabled={totpBusy}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleDisable2FA} disabled={!canVerifyTotp}>
+                  {totpBusy ? "Disabling..." : "Disable"}
                 </Button>
               </DialogFooter>
             </>
