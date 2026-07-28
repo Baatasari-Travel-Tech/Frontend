@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import QRCode from "qrcode"
-import { KeyRound, Mail, Shield, ShieldCheck, Smartphone } from "lucide-react"
+import { Check, Copy, KeyRound, Mail, Shield, ShieldCheck, Smartphone } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
 import { useToast } from "@/components/use-toast"
@@ -52,6 +52,7 @@ export function SecuritySection() {
   const [totpCode, setTotpCode] = useState("")
   const [totpSecret, setTotpSecret] = useState("")
   const [totpQrSrc, setTotpQrSrc] = useState<string | null>(null)
+  const [secretCopied, setSecretCopied] = useState(false)
   const totpDialogOpen = totpStep !== "idle"
   const canVerifyTotp = /^\d{6}$/.test(totpCode) && !totpBusy
 
@@ -61,6 +62,22 @@ export function SecuritySection() {
     setTotpCode("")
     setTotpSecret("")
     setTotpQrSrc(null)
+    setSecretCopied(false)
+  }
+
+  const handleCopySecret = async () => {
+    if (!totpSecret) return
+    try {
+      await navigator.clipboard.writeText(totpSecret)
+      setSecretCopied(true)
+      setTimeout(() => setSecretCopied(false), 2000)
+    } catch {
+      toast({
+        title: "Couldn't copy",
+        description: "Clipboard access was blocked — try copying manually.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleOpenEnable2FA = async () => {
@@ -369,7 +386,7 @@ export function SecuritySection() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="flex flex-col items-center gap-3 py-2">
+              <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4">
                 {totpQrSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -384,13 +401,28 @@ export function SecuritySection() {
                 ) : null}
 
                 {totpSecret ? (
-                  <p className="text-center text-xs text-slate-500">
-                    Can&apos;t scan? Enter this key manually:
-                    <br />
-                    <span className="font-mono text-sm font-semibold tracking-wider text-slate-900">
-                      {totpSecret}
-                    </span>
-                  </p>
+                  <div className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <p className="text-xs font-medium text-slate-600">
+                      Can&apos;t scan? Copy the setup key instead
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleCopySecret()}
+                      className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      {secretCopied ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy
+                        </>
+                      )}
+                    </button>
+                  </div>
                 ) : null}
 
                 <label className="block w-full">
@@ -405,7 +437,7 @@ export function SecuritySection() {
                       setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
                     }
                     placeholder="000000"
-                    className="mt-1 text-center text-lg tracking-[0.4em]"
+                    className="mt-1 border-slate-200 bg-white text-center text-lg tracking-[0.4em]"
                     disabled={totpBusy}
                   />
                 </label>
