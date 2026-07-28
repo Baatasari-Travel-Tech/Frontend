@@ -93,8 +93,13 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
   const { login, verifyTwoFactor, requestTwoFactorRecovery, confirmTwoFactorRecovery } = useAuth()
   const { closeModal, setIsAuthenticating } = useAuthModal()
 
-  const [step, setStep] = useState<'credentials' | 'totp' | 'recovery'>('credentials')
-  const [pending, setPending] = useState<string | null>(null)
+  // A Google sign-in that hit a 2FA-enabled account arrives here via
+  // ?totpPending=<pending> (see app/auth/callback/page.tsx) — open straight
+  // into the code-entry step instead of the credentials form.
+  const [step, setStep] = useState<'credentials' | 'totp' | 'recovery'>(() =>
+    searchParams.get('totpPending') ? 'totp' : 'credentials',
+  )
+  const [pending, setPending] = useState<string | null>(() => searchParams.get('totpPending'))
   const [totpCode, setTotpCode] = useState('')
   const [recoveryOtp, setRecoveryOtp] = useState('')
 

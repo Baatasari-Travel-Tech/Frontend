@@ -29,6 +29,19 @@ export default function AuthCallback() {
       return
     }
 
+    // Google verified identity, but the account also has 2FA enabled — no
+    // session yet. Hand the pending ticket to the login modal so it opens
+    // straight into the code-entry step instead of the credentials form.
+    if (status === '2fa_required') {
+      const pending = searchParams.get('pending')
+      if (pending) {
+        router.replace(
+          `/?auth=login&totpPending=${encodeURIComponent(pending)}&redirect=${encodeURIComponent(redirectPath)}`,
+        )
+        return
+      }
+    }
+
     if (isLoading) return
 
     if (user) {

@@ -314,6 +314,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     params.delete('role')
     params.delete('authError')
     params.delete('authErrorDescription')
+    params.delete('totpPending')
     router.replace(params.size ? `${pathname}?${params}` : pathname)
   }, [open, searchParams, pathname, router])
 
