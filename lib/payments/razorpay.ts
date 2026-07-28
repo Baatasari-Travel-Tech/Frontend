@@ -4,6 +4,9 @@ declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => {
       open: () => void
+      // "payment.failed" is the one event we listen for — fired when a
+      // charge attempt is declined while the checkout widget is open.
+      on: (event: "payment.failed", handler: (response: { error?: { description?: string; reason?: string } }) => void) => void
     }
   }
 }

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Pie, PieChart, Cell } from "recharts"
+import { useQuery } from "@tanstack/react-query"
 import { ArrowUp, ShoppingBag, Users, Clock, BookmarkCheck } from "lucide-react"
 
 import {
@@ -10,8 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { apiRequest } from "@/lib/api/client"
 
-import type { EventDetail } from "@/types/api"
+import type { EventDetail, EventFunnel } from "@/types/api"
 
 // Prevent hydration mismatch
 function ClientOnlyPieChart({ radialData }: { radialData: { name: string; value: number; fill?: string }[] }) {
@@ -88,6 +90,20 @@ type Props = {
 export function RevenueStats({ event, isLoading }: Props) {
   const tiers = event?.ticketTiers ?? []
 
+  // Same queryKey as ViewsVsPurchases's funnel fetch on this page — React
+  // Query dedupes identical keys, so this doesn't cause a second request.
+  const { data: funnel } = useQuery<EventFunnel, Error>({
+    queryKey: ["organizer-event-funnel", event?.id],
+    queryFn: async () => {
+      const response = await apiRequest<{ data: { funnel: EventFunnel } }>(
+        `/organizer/events/${event?.id}/funnel`,
+        { auth: true }
+      )
+      return response.data.funnel
+    },
+    enabled: Boolean(event?.id),
+  })
+
   const totalRevenue = tiers.reduce(
     (sum, tier) => sum + Number(tier.soldCount || 0) * Number(tier.price || 0),
     0
@@ -114,28 +130,24 @@ export function RevenueStats({ event, isLoading }: Props) {
   ]
 
   const [viewMode, setViewMode] = React.useState<"revenue" | "tickets">("revenue")
-  const [revenueTab, setRevenueTab] = React.useState("total")
   const [ticketsTab, setTicketsTab] = React.useState(tiers[0]?.name ?? "")
 
-  const revenueTabs = [
-    { value: "total", label: "Ticket Revenue" },
-    { value: "addons", label: "Add-Ons Revenue" },
-  ]
-
+  // No "Add-Ons Revenue" sub-tab: add-ons are boolean amenity flags on the
+  // event (parking, food, etc.), not priced line items — there's no sales
+  // data to show, so we don't pretend there is. Ticket Revenue is the only
+  // real revenue figure.
   const tierTabs = tiers.map((tier) => ({ value: tier.name, label: tier.name }))
 
-  const currentSubTab = viewMode === "revenue" ? revenueTab : ticketsTab
-  const setCurrentSubTab = viewMode === "revenue" ? setRevenueTab : setTicketsTab
-  const subTabs = viewMode === "revenue" ? revenueTabs : tierTabs
+  const currentSubTab = ticketsTab
+  const setCurrentSubTab = setTicketsTab
+  const subTabs = viewMode === "tickets" ? tierTabs : []
 
   const activeTier = tiers.find((t) => t.name === ticketsTab) ?? tiers[0]
   const tierSold = activeTier ? Number(activeTier.soldCount || 0) : 0
 
   const chartProps =
     viewMode === "revenue"
-      ? revenueTab === "total"
-        ? { amount: formatCurrency(totalRevenue), label: "Ticket Revenue" }
-        : { amount: formatCurrency(0), label: "Add-Ons Revenue" }
+      ? { amount: formatCurrency(totalRevenue), label: "Ticket Revenue" }
       : { amount: String(tierSold), label: `${activeTier?.name ?? ""} Tickets Sold` }
 
   if (isLoading) {
@@ -178,8 +190,9 @@ export function RevenueStats({ event, isLoading }: Props) {
       </CardHeader>
 
       <CardContent>
-        {/* Sub-category tabs - text-only highlight */}
-        <div className="flex gap-4 sm:gap-6 border-b border-border mt-4 mb-6">
+        {/* Sub-category tabs - text-only highlight (ticket-tier switcher only;
+            revenue mode has just one real figure, so no tabs to show) */}
+        <div className={`flex gap-4 sm:gap-6 border-b border-border mt-4 mb-6 ${subTabs.length === 0 ? "hidden" : ""}`}>
           {subTabs.map((tab) => (
             <button
               key={tab.value}
@@ -223,7 +236,7 @@ export function RevenueStats({ event, isLoading }: Props) {
 
           <Card className="flex flex-col items-center justify-center p-4 border-none shadow-sm bg-(--zinc-50)">
             <Clock className="h-6 w-6 text-(--blue-600) mb-2" />
-            <span className="text-2xl font-bold">—</span>
+            <span className="text-2xl font-bold">{funnel ? funnel.lastMinuteCount : "—"}</span>
             <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
               Last-Minute tickets
             </span>
@@ -231,10 +244,14 @@ export function RevenueStats({ event, isLoading }: Props) {
 
           <Card className="flex flex-col items-center justify-center p-4 border-none shadow-sm bg-(--zinc-50)">
             <BookmarkCheck className="h-6 w-6 text-(--blue-600) mb-2" />
-            <span className="text-2xl font-bold">—</span>
+            <span className="text-2xl font-bold">{funnel ? funnel.earlyBirdCount : "—"}</span>
             <span className="text-xs font-semibold text-muted-foreground">Early Birds</span>
           </Card>
         </div>
+
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          Last-minute = bought within 24h of the event. Early bird = bought 7+ days ahead.
+        </p>
       </CardContent>
     </Card>
   )

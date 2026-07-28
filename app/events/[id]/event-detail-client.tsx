@@ -599,7 +599,9 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                         {isCancelled ? "Event cancelled" : "Event ended"}
                       </p>
                       <p className="text-[11px] text-slate-500">
-                        {isCancelled ? "If you booked, you'll be refunded." : "Tickets are no longer available."}
+                        {isCancelled
+                          ? "If you booked, you'll be refunded — minus the gateway and platform fees."
+                          : "Tickets are no longer available."}
                       </p>
                     </div>
                   </div>
@@ -618,7 +620,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                       <span className="relative">{bookCtaLabel}</span>
                     </button>
                     <p className="mt-3 text-center text-[11px] text-(--gray-400)">
-                      Secure checkout · instant QR tickets · full refund if cancelled
+                      Secure checkout · instant QR tickets · refunded if cancelled (minus fees)
                     </p>
                   </>
                 )}
@@ -1029,17 +1031,20 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               </DialogTrigger>
               <DialogContent className="max-h-[80vh] w-[95vw] max-w-lg overflow-y-auto rounded-3xl border border-(--gray-200) bg-(--white) p-6">
                 <DialogTitle className="mb-3 text-lg font-bold text-(--brand-navy)">Guidelines &amp; Rules</DialogTitle>
-                <ul className="list-disc space-y-2 pl-5 text-sm text-(--gray-600)">
-                  {guidelineItems.length > 0 ? (
-                    guidelineItems.map((item) => <li key={item}>{item}</li>)
-                  ) : (
-                    <>
-                      <li>Tickets once booked cannot be exchanged or refunded.</li>
-                      <li>Please arrive at least 20 minutes before the event start time.</li>
-                      <li>Carry a valid ID; rights of admission reserved.</li>
-                    </>
-                  )}
-                </ul>
+                {guidelineItems.length > 0 ? (
+                  <ul className="list-disc space-y-2 pl-5 text-sm text-(--gray-600)">
+                    {guidelineItems.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-(--gray-600)">
+                    The organizer hasn&rsquo;t listed event-specific guidelines yet. Carry a valid ID
+                    and your ticket QR code — see our{" "}
+                    <Link href="/refund-policy" className="font-semibold text-(--brand-blue) underline underline-offset-2">
+                      refund &amp; cancellation policy
+                    </Link>{" "}
+                    for what applies to every booking.
+                  </p>
+                )}
               </DialogContent>
             </Dialog>
 

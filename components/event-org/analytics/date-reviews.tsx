@@ -4,10 +4,37 @@ import * as React from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Star } from "lucide-react"
 import { addMonths, subMonths, format } from "date-fns"
 import { useQuery } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
+import type { EventReviewsResponse } from "@/types/api"
+
+function useEventReviews(eventId?: string) {
+  return useQuery({
+    queryKey: ["event-reviews", eventId],
+    queryFn: async () => {
+      const response = await apiRequest<{ data: EventReviewsResponse }>(`/events/${eventId}/reviews`)
+      return response.data
+    },
+    enabled: Boolean(eventId),
+  })
+}
+
+function StarRow({ rating, size = 14 }: { rating: number; size?: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          width={size}
+          height={size}
+          className={n <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "text-slate-200"}
+        />
+      ))}
+    </div>
+  )
+}
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -51,6 +78,8 @@ export function DateReviewsSection({
 
   const { data: fetchedDates } = useDateRequests(eventId)
   const dateRequests = eventId ? (fetchedDates ?? []) : (propDateRequests ?? [])
+  const { data: reviewsData, isLoading: reviewsLoading } = useEventReviews(eventId)
+  const reviews = reviewsData?.reviews ?? []
 
   return (
     <div className="grid grid-cols-1 gap-8 xl:grid-cols-[520px_1fr] lg:grid-cols-[480px_1fr] w-full">
@@ -134,13 +163,44 @@ export function DateReviewsSection({
       <div className="relative w-full mt-6 lg:mt-0 lg:h-full">
         <div className="lg:absolute lg:inset-x-0 lg:bottom-0 lg:top-0 flex flex-col w-full h-auto lg:h-auto">
           <Card className="flex flex-col h-full">
-            <CardHeader className="pb-4">
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
               <CardTitle className="text-xl font-bold text-blue-soft">Customer Reviews</CardTitle>
+              {reviewsData && reviewsData.count > 0 ? (
+                <div className="flex items-center gap-2">
+                  <StarRow rating={reviewsData.average} size={16} />
+                  <span className="text-sm font-semibold text-slate-700">
+                    {reviewsData.average.toFixed(1)} · {reviewsData.count}
+                  </span>
+                </div>
+              ) : null}
             </CardHeader>
-            <CardContent className="flex flex-1 flex-col items-center justify-center text-center py-12">
-              <p className="text-4xl mb-3">💬</p>
-              <p className="text-base font-semibold text-slate-700">No reviews yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Reviews will appear here once attendees submit them.</p>
+            <CardContent className="flex flex-1 flex-col overflow-y-auto py-4">
+              {reviewsLoading ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Loading reviews...</p>
+              ) : reviews.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center text-center py-12">
+                  <p className="text-4xl mb-3">💬</p>
+                  <p className="text-base font-semibold text-slate-700">No reviews yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Reviews will appear here once attendees submit them.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {reviews.map((review) => (
+                    <div key={review.id} className="border-b border-slate-100 pb-4 last:border-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-slate-900">{review.reviewerName}</p>
+                        <StarRow rating={review.rating} />
+                      </div>
+                      {review.comment ? (
+                        <p className="mt-1.5 text-sm text-slate-600">{review.comment}</p>
+                      ) : null}
+                      <p className="mt-1 text-xs text-slate-400">
+                        {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(review.createdAt))}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

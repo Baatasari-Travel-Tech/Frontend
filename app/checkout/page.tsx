@@ -64,7 +64,7 @@ export default async function CheckoutPage({
         <StateBlock
           tone="error"
           title="Event cancelled"
-          description="This event has been cancelled, so checkout is closed. If you already booked, you'll be refunded."
+          description="This event has been cancelled, so checkout is closed. If you already booked, you'll be refunded — minus the payment-gateway charge and platform fee, per our refund policy."
         />
       </main>
     )

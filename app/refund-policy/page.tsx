@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { SiteFooter } from "@/components/site-footer"
 
 export const metadata: Metadata = {
   title: "Refund & Cancellation Policy — Baatasari",
@@ -31,6 +32,7 @@ function H2({ id, children }: { id: string; children: React.ReactNode }) {
 
 export default function RefundPolicy() {
   return (
+    <>
     <div className="mx-auto max-w-5xl px-6 py-10 text-gray-800">
       <h1 className="mb-2 text-3xl font-bold">Refund &amp; Cancellation Policy</h1>
       <p className="mb-8 text-sm text-gray-500">
@@ -146,14 +148,15 @@ export default function RefundPolicy() {
       <H2 id="fees">7. Fees &amp; Gateway Charges</H2>
       <ul className="mb-4 list-disc space-y-1 pl-6">
         <li>
-          <strong>Event cancelled:</strong> the ticket amount is refunded. The payment-gateway
-          charge levied by the payment provider on the original transaction is a non-refundable
-          third-party cost and may be retained.
+          <strong>Event cancelled:</strong> you receive a <strong>partial refund</strong> — the
+          ticket amount minus the payment-gateway charge and the platform fee. Both are
+          non-refundable costs (charged by our payment processor and by Baatasari respectively)
+          and are retained from the refund.
         </li>
         <li>
           <strong>Where an Organizer permits a discretionary cancellation</strong> (Section 11),
-          the platform/convenience fee and a cancellation charge may be retained from the refund,
-          in addition to the non-refundable gateway charge.
+          the same gateway charge and platform fee are retained, along with any additional
+          cancellation charge the Organizer applies.
         </li>
         <li>
           Refund amounts and any retained components are shown against your order in your booking
@@ -219,5 +222,7 @@ export default function RefundPolicy() {
 
       <p className="mt-10 text-sm text-gray-500">Last updated: 7 July 2026</p>
     </div>
+    <SiteFooter />
+    </>
   )
 }

@@ -6,7 +6,11 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   linkedin: "#",
   twitter: "#",
   contactEmail: "contact-us@baatasari.com",
-  maintenanceMode: false,
+  maintenanceEnabled: false,
+  maintenanceMessage: null,
+  maintenanceFrom: null,
+  maintenanceTo: null,
+  maintenanceActive: false,
 }
 
 // Public site config (social links + maintenance) for the footer / public pages.

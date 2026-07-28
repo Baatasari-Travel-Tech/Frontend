@@ -19,6 +19,12 @@ export type SafeUser = {
   emailVerified: boolean;
   organizerDocumentsSubmitted: boolean;
   organizerApproved: boolean;
+  // PENDING | CHANGES_REQUESTED | APPROVED | REJECTED — the richer review
+  // state behind the organizerApproved boolean latch above.
+  organizerReviewStatus: string;
+  organizerReviewNote: string | null;
+  organizerReviewReasonCode: string | null;
+  organizerReviewAt: string | null;
   totpEnabled: boolean;
   createdAt: string;
   updatedAt: string;
@@ -277,6 +283,9 @@ export type EventFunnel = {
   totalPurchases: number;
   conversionRate: number;
   stages: EventFunnelStages;
+  // Tickets bought in the 24h before the event started, vs. 7+ days ahead.
+  lastMinuteCount: number;
+  earlyBirdCount: number;
 };
 
 export type OrderBreakdown = {
@@ -387,7 +396,82 @@ export type SiteConfig = {
   linkedin: string;
   twitter: string;
   contactEmail: string;
-  maintenanceMode: boolean;
+  maintenanceEnabled: boolean;
+  maintenanceMessage: string | null;
+  maintenanceFrom: string | null;
+  maintenanceTo: string | null;
+  // Computed server-side: maintenanceEnabled AND (no schedule set, or now is
+  // inside the from/to window). This is the one field that actually decides
+  // whether visitors see the maintenance page.
+  maintenanceActive: boolean;
+};
+
+export type EventReviewItem = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  reviewerName: string;
+};
+
+export type EventReviewsResponse = {
+  average: number;
+  count: number;
+  reviews: EventReviewItem[];
+};
+
+// One row of GET /organizer/payments — a single event's payout summary.
+export type OrganizerPayoutSummary = {
+  eventId: string;
+  title: string;
+  eventDate: string;
+  cancelledAt: string | null;
+  ordersCount: number;
+  ticketRevenue: number;
+  tds: number;
+  tcs: number;
+  netPayable: number;
+  paid: number;
+  pending: number;
+  fullySettled: boolean;
+  payoutHold: {
+    level: "EVENT" | "ORGANIZER";
+    reason: string | null;
+    at: string;
+  } | null;
+};
+
+export type OrganizerPayoutLedgerEntry = {
+  id: string;
+  amountPaid: number;
+  reference: string | null;
+  notes: string | null;
+  paidAt: string;
+};
+
+// Addressee/issuer details for the printable payout statement.
+export type OrganizerPayoutParty = {
+  name: string | null;
+  pan: string | null;
+  gstin: string | null;
+  address: string | null;
+  bankName: string | null;
+  bankAccountMasked: string | null;
+  bankIfsc: string | null;
+};
+
+export type PlatformStatementIssuer = {
+  legalName: string;
+  tradeName: string;
+  gstin: string;
+  address: string;
+};
+
+export type OrganizerPayoutDetail = {
+  summary: OrganizerPayoutSummary | null;
+  organizer: OrganizerPayoutParty;
+  platform: PlatformStatementIssuer;
+  history: OrganizerPayoutLedgerEntry[];
 };
 
 export type GstinVerifyResult = {

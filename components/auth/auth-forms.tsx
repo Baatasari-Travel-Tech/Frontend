@@ -60,8 +60,10 @@ const getOrganizerVerificationStatus = () => {
   if (!currentUser || currentUser.role !== 'ORGANIZER') return null
   if (!currentUser.emailVerified) return 'EMAIL_NOT_VERIFIED'
   if (!currentUser.organizerDocumentsSubmitted) return 'DOCUMENTS_REQUIRED'
-  if (!currentUser.organizerApproved) return 'PENDING'
-  return 'APPROVED'
+  if (currentUser.organizerApproved) return 'APPROVED'
+  if (currentUser.organizerReviewStatus === 'CHANGES_REQUESTED') return 'CHANGES_REQUESTED'
+  if (currentUser.organizerReviewStatus === 'REJECTED') return 'REJECTED'
+  return 'PENDING'
 }
 
 const resolvePostAuthDestination = () =>

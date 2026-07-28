@@ -123,6 +123,20 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutSuccess, setCheckoutSuccess] = useState<string | null>(null)
+  // Distinct from checkoutLoading: true only for the gap between Razorpay
+  // reporting a successful charge and our own /verify call finishing. That
+  // window used to render nothing at all — the Razorpay modal had already
+  // closed and the page just sat there until the redirect.
+  const [verifyingPayment, setVerifyingPayment] = useState(false)
+  // Set by the payment.failed listener, read by ondismiss — Razorpay fires
+  // both for a genuine decline (the modal stays open for retry, but a
+  // subsequent manual close should explain what happened rather than
+  // silently resetting to an idle "Pay Now" button). A ref, not state, is
+  // deliberate: both callbacks are created once per Razorpay instance and
+  // fire from the SDK's own event loop outside React's render cycle, so a
+  // state value captured in that closure would be stale by the time
+  // ondismiss reads it — the ref always reads the latest write.
+  const lastFailureReasonRef = useRef<string | null>(null)
   // Idempotency key for order creation; reused across retries of the same
   // tier/quantity selection so a resubmit doesn't create a duplicate order.
   const idempotencyRef = useRef<{ sig: string; key: string } | null>(null)
@@ -280,6 +294,9 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     [gatewayFee, platformFee, subtotal]
   )
 
+  /* eslint-disable react-hooks/refs -- idempotencyRef/lastFailureReasonRef below
+     are read/written only inside async event callbacks (form submit, Razorpay
+     SDK events) that run after user interaction, never during render. */
   const onSubmit = handleSubmit(async (values) => {
     if (!isLoggedIn) {
       setCheckoutError("Please login to continue.")
@@ -363,6 +380,9 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
           razorpay_payment_id: string
           razorpay_signature: string
         }) => {
+          lastFailureReasonRef.current = null
+          setCheckoutError(null)
+          setVerifyingPayment(true)
           try {
             await apiRequest<{ data: { result: { ticket?: { id?: string } } } }>(
               "/payments/razorpay/verify",
@@ -394,11 +414,34 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                 ? verifyError.message
                 : "Payment was received but verification failed. Please contact support."
             )
+          } finally {
+            setVerifyingPayment(false)
           }
         },
         modal: {
-          ondismiss: () => setCheckoutLoading(false),
+          // Fires on a genuine cancel (user closed the widget themselves) —
+          // but if a payment.failed just happened, it also fires right
+          // after, since Razorpay leaves the choice of "try again or close"
+          // to the user. Surface what happened instead of silently
+          // resetting to an idle button in that case.
+          ondismiss: () => {
+            setCheckoutLoading(false)
+            if (lastFailureReasonRef.current) {
+              setCheckoutError(`Your payment didn't go through: ${lastFailureReasonRef.current}. You can try again.`)
+              lastFailureReasonRef.current = null
+            }
+          },
         },
+      })
+
+      // A declined card / failed UPI / etc. Razorpay keeps its own modal
+      // open so the buyer can retry with another method — we just remember
+      // why, so if they close it instead, ondismiss can explain rather than
+      // going silent. error.description is Razorpay's own human-readable
+      // reason ("Payment declined by bank" etc.); reason is a fallback code.
+      razorpay.on("payment.failed", (response: { error?: { description?: string; reason?: string } }) => {
+        lastFailureReasonRef.current =
+          response.error?.description || response.error?.reason || "the payment was declined"
       })
 
       razorpay.open()
@@ -413,6 +456,7 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
       setCheckoutLoading(false)
     }
   })
+  /* eslint-enable react-hooks/refs */
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-linear-to-br from-(--brand-navy) via-[#142a4f] to-[#1a3a6b]">
@@ -862,25 +906,36 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                       <p className="-mt-3 text-xs text-rose-600">{errors.termsAccepted.message}</p>
                     ) : null}
 
-                    {checkoutError ? (
-                      <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
-                        {checkoutError}
-                      </p>
-                    ) : null}
-                    {checkoutSuccess ? (
-                      <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-                        {checkoutSuccess}
-                      </p>
-                    ) : null}
+                    <div role="status" aria-live="polite">
+                      {verifyingPayment ? (
+                        <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
+                          Payment received — confirming your ticket, don&apos;t close this page...
+                        </p>
+                      ) : checkoutError ? (
+                        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                          {checkoutError}
+                        </p>
+                      ) : checkoutSuccess ? (
+                        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+                          {checkoutSuccess}
+                        </p>
+                      ) : null}
+                    </div>
 
                     <motion.button
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.98 }}
                       type="submit"
-                      disabled={checkoutLoading || !tiers.length || totalQty === 0}
+                      disabled={checkoutLoading || verifyingPayment || !tiers.length || totalQty === 0}
                       className="w-full rounded-xl bg-(--brand-navy) px-4 py-3 text-base font-semibold text-(--white) shadow-lg transition-all hover:bg-[#0A172C] hover:shadow-xl disabled:opacity-60 sm:px-6 sm:py-4 sm:text-lg"
                     >
-                      {checkoutLoading ? "Processing..." : isFreeEvent ? "Get Free Ticket" : "Pay Now"}
+                      {verifyingPayment
+                        ? "Confirming..."
+                        : checkoutLoading
+                          ? "Processing..."
+                          : isFreeEvent
+                            ? "Get Free Ticket"
+                            : "Pay Now"}
                     </motion.button>
                   </form>
                 </div>

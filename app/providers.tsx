@@ -73,6 +73,7 @@ type AuthCtx = {
   register: (payload: { email: string; password: string; role: "USER" | "ORGANIZER"; acceptedTerms: boolean }) => Promise<void>
   googleAuth: (idToken: string, role?: "USER" | "ORGANIZER") => Promise<void>
   logout: () => Promise<void>
+  logoutAllDevices: () => Promise<void>
   bootstrap: () => Promise<void>
 }
 
@@ -109,8 +110,13 @@ const getOrganizerVerificationStatus = (user: SafeUser | null) => {
   if (!user || user.role !== "ORGANIZER") return null
   if (!user.emailVerified) return "EMAIL_NOT_VERIFIED"
   if (!user.organizerDocumentsSubmitted) return "DOCUMENTS_REQUIRED"
-  if (!user.organizerApproved) return "PENDING"
-  return "APPROVED"
+  if (user.organizerApproved) return "APPROVED"
+  // CHANGES_REQUESTED / REJECTED / PENDING — the richer status from
+  // Admin-Backend's review state machine, so /organizer/pending can explain
+  // *why* instead of showing the same "under review" copy for all three.
+  if (user.organizerReviewStatus === "CHANGES_REQUESTED") return "CHANGES_REQUESTED"
+  if (user.organizerReviewStatus === "REJECTED") return "REJECTED"
+  return "PENDING"
 }
 
 const userToSession = (user: SafeUser | null): Session | null =>
@@ -429,6 +435,21 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Ends every signed-in session for this account, not just this tab's —
+  // e.g. after recovering from a lost 2FA device, or if a device is suspected
+  // compromised.
+  const logoutAllDevices = async () => {
+    try {
+      await apiRequest("/auth/logout-all", {
+        method: "POST",
+        auth: true,
+      })
+    } finally {
+      clearSession()
+      broadcastSessionCleared("logout")
+    }
+  }
+
   const googleAuth = async (idToken: string, role: "USER" | "ORGANIZER" = "USER") => {
     const response = await apiRequest<AuthResponse>("/auth/google", {
       method: "POST",
@@ -593,6 +614,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     register,
     googleAuth,
     logout,
+    logoutAllDevices,
     bootstrap,
   }
 

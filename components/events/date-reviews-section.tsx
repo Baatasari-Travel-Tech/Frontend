@@ -3,10 +3,14 @@
 import * as React from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Star } from "lucide-react"
 import { format } from "date-fns"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
+import { useAuth } from "@/app/providers"
+import { useToast } from "@/components/use-toast"
+import { ApiError } from "@/types/api"
+import type { EventReviewsResponse } from "@/types/api"
 
 type HighlightedDate = { date: Date; count: number }
 
@@ -37,6 +41,152 @@ function useDateRequests(eventId?: string) {
     },
     enabled: Boolean(eventId),
   })
+}
+
+function useEventReviews(eventId?: string) {
+  return useQuery({
+    queryKey: ["event-reviews", eventId],
+    queryFn: async () => {
+      const response = await apiRequest<{ data: EventReviewsResponse }>(`/events/${eventId}/reviews`)
+      return response.data
+    },
+    enabled: Boolean(eventId),
+  })
+}
+
+function StarPicker({ value, onChange, disabled }: { value: number; onChange: (n: number) => void; disabled?: boolean }) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(n)}
+          aria-label={`${n} star${n > 1 ? "s" : ""}`}
+          className="disabled:cursor-not-allowed"
+        >
+          <Star
+            className={`h-6 w-6 transition ${n <= value ? "fill-amber-400 text-amber-400" : "text-gray-300 hover:text-amber-300"}`}
+          />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function StarRow({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} className={`h-3.5 w-3.5 ${n <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "text-gray-200"}`} />
+      ))}
+    </div>
+  )
+}
+
+function ReviewsPanel({ eventId }: { eventId?: string }) {
+  const { session } = useAuth()
+  const { toast } = useToast()
+  const isLoggedIn = Boolean(session?.user)
+  const queryClient = useQueryClient()
+  const { data, isLoading } = useEventReviews(eventId)
+  const reviews = data?.reviews ?? []
+
+  const [rating, setRating] = React.useState(0)
+  const [comment, setComment] = React.useState("")
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest(`/events/${eventId}/reviews`, {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ rating, comment: comment.trim() || undefined }),
+      })
+    },
+    onSuccess: () => {
+      setRating(0)
+      setComment("")
+      toast({ title: "Thanks for your review!" })
+      void queryClient.invalidateQueries({ queryKey: ["event-reviews", eventId] })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof ApiError && err.code === "FORBIDDEN"
+          ? "Only ticket holders can review this event."
+          : err instanceof Error
+            ? err.message
+            : "Could not submit your review."
+      toast({ title: "Couldn't submit review", description: message, variant: "destructive" })
+    },
+  })
+
+  return (
+    <div className="border border-border rounded-2xl p-6 md:p-8 bg-background shadow-sm flex flex-col overflow-hidden flex-1 min-w-70 lg:min-w-95 max-h-[70vh]">
+      <div className="mb-4 flex items-center justify-between px-2">
+        <h2 className="text-2xl font-bold text-blue-soft">Reviews</h2>
+        {data && data.count > 0 ? (
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <StarRow rating={data.average} />
+            {data.average.toFixed(1)} · {data.count}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-2">
+        {isLoading ? (
+          <p className="py-6 text-center text-sm text-gray-500">Loading reviews...</p>
+        ) : reviews.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-500">
+            No reviews yet — be the first to share how it went.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {reviews.map((review) => (
+              <div key={review.id} className="border-b border-gray-100 pb-4 last:border-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-900">{review.reviewerName}</p>
+                  <StarRow rating={review.rating} />
+                </div>
+                {review.comment ? <p className="mt-1.5 text-sm text-gray-600">{review.comment}</p> : null}
+                <p className="mt-1 text-xs text-gray-400">
+                  {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(review.createdAt))}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 border-t border-gray-100 pt-4 px-2">
+        {isLoggedIn ? (
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-700">Attended? Leave a review</p>
+            <StarPicker value={rating} onChange={setRating} disabled={mutation.isPending} />
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Share your experience (optional)"
+              maxLength={1000}
+              disabled={mutation.isPending}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400"
+              rows={2}
+            />
+            <Button
+              className="w-full rounded-xl"
+              disabled={rating === 0 || mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? "Submitting..." : "Submit review"}
+            </Button>
+            <p className="text-[11px] text-gray-400">Only available to ticket holders for this event.</p>
+          </div>
+        ) : (
+          <p className="text-center text-xs text-gray-500">Log in to write a review.</p>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export function DateReviewsSection({ eventId }: { eventId?: string }) {
@@ -191,6 +341,8 @@ export function DateReviewsSection({ eventId }: { eventId?: string }) {
           </div>
         </div>
       </div>
+
+      <ReviewsPanel eventId={eventId} />
     </div>
   )
 }

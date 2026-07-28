@@ -1,23 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { FaInstagram, FaLinkedin } from "react-icons/fa"
 import { Clock, MessageSquare } from "lucide-react"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
 import { SOCIAL_LINKS } from "@/components/events/footer-social-edit"
-import { fetchPublicSiteConfig } from "@/lib/api/site-config"
+import { SiteFooter } from "@/components/site-footer"
 import { getMyOpenSupportMessage, sendSupportMessage } from "@/lib/api/support"
 import { useAuth } from "@/app/providers"
-import type { SiteConfig } from "@/types/api"
-
-const DEFAULT_CONFIG: SiteConfig = {
-  instagram: "#",
-  linkedin: "#",
-  twitter: "#",
-  contactEmail: "contact-us@baatasari.com",
-  maintenanceMode: false,
-}
 
 const RESPONSE_NOTE =
   "Within 24 hours on a working day, our team will contact you to resolve the problem."
@@ -30,15 +22,11 @@ const formatDate = (iso: string) =>
     new Date(iso),
   )
 
-export default function ContactUsPage() {
+function ContactUsPageContent() {
   const { session, profile } = useAuth()
+  const searchParams = useSearchParams()
   const isLoggedIn = Boolean(session?.user)
   const onboardingDone = profile?.global_onboarding_completed === true
-
-  const [config, setConfig] = useState<SiteConfig>(DEFAULT_CONFIG)
-  useEffect(() => {
-    void fetchPublicSiteConfig().then(setConfig)
-  }, [])
 
   const queryClient = useQueryClient()
   const openQuery = useQuery({
@@ -49,7 +37,12 @@ export default function ContactUsPage() {
   const openMessage = openQuery.data ?? null
 
   const [phone, setPhone] = useState("")
-  const [problem, setProblem] = useState("")
+  // Arriving from a "Cancel ticket" (or similar) link elsewhere in the app —
+  // e.g. /contact-us?problem=... — prefills the request instead of making
+  // the buyer retype order/event context that link already knew. A lazy
+  // initializer, not an effect: the param is only ever relevant once, at
+  // the initial visit.
+  const [problem, setProblem] = useState(() => (searchParams.get("problem") ?? "").slice(0, 2000))
   const [error, setError] = useState<string | null>(null)
 
   // Auto-fill the phone from the profile once onboarding is done.
@@ -83,6 +76,7 @@ export default function ContactUsPage() {
     "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10"
 
   return (
+    <>
     <PageShell
       eyebrow="Contact us"
       title="Get in Touch"
@@ -90,10 +84,10 @@ export default function ContactUsPage() {
     >
       <SectionCard title="Official Email">
         <a
-          href={`mailto:${config.contactEmail}`}
+          href={`mailto:${SOCIAL_LINKS.email}`}
           className="inline-flex rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-800 transition"
         >
-          {config.contactEmail}
+          {SOCIAL_LINKS.email}
         </a>
       </SectionCard>
 
@@ -200,5 +194,15 @@ export default function ContactUsPage() {
         </SectionCard>
       ) : null}
     </PageShell>
+    <SiteFooter />
+    </>
+  )
+}
+
+export default function ContactUsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ContactUsPageContent />
+    </Suspense>
   )
 }

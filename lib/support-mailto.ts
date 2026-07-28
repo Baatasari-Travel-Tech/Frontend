@@ -72,6 +72,23 @@ export const supportMailto = {
       ]),
     ),
 
+  organizerReviewAppeal: (context?: { reason?: string; note?: string }) =>
+    buildMailto(
+      "Organizer application — review question",
+      joinLines([
+        "Hi Baatasari support team,",
+        "",
+        "My organizer application was rejected / changes were requested, and I'd like to understand more or appeal the decision.",
+        "",
+        `Reason given: ${context?.reason ?? ""}`,
+        `Note from the team: ${context?.note ?? ""}`,
+        "",
+        "My question / appeal: ",
+        "",
+        "Thanks.",
+      ]),
+    ),
+
   ticketHelp: () =>
     buildMailto(
       "Ticket / event help",

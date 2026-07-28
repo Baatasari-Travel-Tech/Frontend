@@ -5,10 +5,42 @@ export const metadata = {
   description: "Baatasari is currently undergoing scheduled maintenance.",
 }
 
+type MaintenanceInfo = {
+  message: string | null
+  to: string | null
+}
+
+const DEFAULT_MESSAGE =
+  "Baatasari is taking a short break for some scheduled upgrades. We're working to bring everything back online as quickly as possible. Thanks for your patience."
+
+// Best-effort only — if this fails, the default copy below still renders
+// correctly on its own. This page is excluded from the middleware's
+// maintenance rewrite, so fetching here never recurses into itself.
+async function getMaintenanceInfo(): Promise<MaintenanceInfo> {
+  try {
+    const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? ""
+    const res = await fetch(`${base}/api/v1/site-config`, { cache: "no-store" })
+    if (!res.ok) throw new Error(String(res.status))
+    const json = (await res.json()) as {
+      data?: { maintenanceMessage?: string | null; maintenanceTo?: string | null }
+    }
+    return {
+      message: json?.data?.maintenanceMessage ?? null,
+      to: json?.data?.maintenanceTo ?? null,
+    }
+  } catch {
+    return { message: null, to: null }
+  }
+}
+
 // Static fallback page shown across the whole site while the admin has
 // maintenance mode ON. The middleware rewrites every public route here, so
-// this must stand entirely on its own (no nav, no data fetching).
-export default function MaintenancePage() {
+// this must stand entirely on its own even if the data fetch below fails.
+export default async function MaintenancePage() {
+  const { message, to } = await getMaintenanceInfo()
+  const backAt = to ? new Date(to) : null
+  const backAtValid = backAt && !Number.isNaN(backAt.getTime()) && backAt.getTime() > Date.now()
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0c1D37] px-6 text-center text-white">
       {/* soft glow accents */}
@@ -35,10 +67,15 @@ export default function MaintenancePage() {
         </h1>
 
         <p className="mt-4 text-base leading-relaxed text-white/70">
-          Baatasari is taking a short break for some scheduled upgrades.
-          We&apos;re working to bring everything back online as quickly as
-          possible. Thanks for your patience.
+          {message?.trim() ? message : DEFAULT_MESSAGE}
         </p>
+
+        {backAtValid ? (
+          <p className="mt-2 text-sm text-white/50">
+            Expected back{" "}
+            {backAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+          </p>
+        ) : null}
 
         <a
           href="mailto:contact-us@baatasari.com"

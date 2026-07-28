@@ -4,6 +4,7 @@ import EventOrganizer from "@/components/about/organizer"
 import RestaurantOwner from "@/components/about/restaurant-owner"
 import Performers from "@/components/about/performers"
 import CampusAmbassador from "@/components/about/campus-ambassador"
+import { SiteFooter } from "@/components/site-footer"
 
 export default function AboutPage() {
     return (
@@ -14,6 +15,7 @@ export default function AboutPage() {
             <RestaurantOwner />
             <Performers />
             <CampusAmbassador />
+            <SiteFooter />
         </main>
     )
 }

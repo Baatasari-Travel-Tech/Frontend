@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { SiteFooter } from "@/components/site-footer"
 
 export const metadata: Metadata = {
   title: "Grievance Redressal",
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
 
 export default function GrievanceRedressal() {
   return (
+    <>
     <div className="mx-auto max-w-5xl px-6 py-10 text-gray-800">
       <h1 className="mb-2 text-3xl font-bold">Grievance Redressal</h1>
       <p className="mb-8 text-sm text-gray-500">
@@ -95,5 +97,7 @@ export default function GrievanceRedressal() {
 
       <p className="mt-10 text-sm text-gray-500">Last updated: June 2026</p>
     </div>
+    <SiteFooter />
+    </>
   )
 }

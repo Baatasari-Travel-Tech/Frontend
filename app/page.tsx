@@ -6,9 +6,7 @@ import { useAuth } from '@/app/providers'
 import { getRoleDashboard, getRoleOnboarding } from '@/lib/roles'
 import Hero from "@/components/about/hero"
 import Features from "@/components/about/features"
-import { FooterSocialLinks } from "@/components/events/footer-social-edit";
-import Image from "next/image";
-import Link from "next/link";
+import { SiteFooter } from "@/components/site-footer"
 import EventOrganizer from "@/components/about/organizer"
 import RestaurantOwner from "@/components/about/restaurant-owner"
 import Performers from "@/components/about/performers"
@@ -72,76 +70,7 @@ export default function AboutPage() {
             <RestaurantOwner />
             <CampusAmbassador />
             <Performers />
-            <footer className="text-white border-t border-slate-200 bg-slate-900">
-              <div className="mx-auto w-full max-w-[1680px] px-4 py-10 sm:px-6 md:px-10 lg:px-16">
-                <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-x-6 gap-y-8">
-
-                  {/* Row 1: Logo */}
-                  <div className="md:col-span-1">
-                    <Image
-                      src="/FLogo.png"
-                      alt="Baatasari"
-                      width={132}
-                      height={48}
-                      className="h-10 w-auto"
-                    />
-                  </div>
-
-                  {/* Empty cols for row 1 */}
-                  <div className="hidden md:block" />
-                  <div className="hidden md:block" />
-                  <div className="hidden md:block" />
-
-                  {/* Row 2 */}
-                  {/* Description */}
-                  <div className="text-sm text-slate-300 max-w-sm">
-                    Discover, connect, experience. Official platform for curated events, venues, and experiences.
-                  </div>
-
-                  {/* Company */}
-                  <div className="space-y-3 text-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Company</p>
-                    <div className="grid gap-2 text-slate-300">
-                      <a className="hover:text-white transition" href="/about">About</a>
-                      <a className="hover:text-white transition" href="/contact-us">Contact</a>
-                    </div>
-                  </div>
-
-                  {/* Resources */}
-                  <div className="space-y-3 text-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Resources</p>
-                    <div className="grid gap-2 text-slate-300">
-                      <Link className="hover:text-white transition" href="/events">Events</Link>
-                      <Link className="hover:text-white transition" href="/talent">Talents</Link>
-                      <Link className="hover:text-white transition" href="/for-organizers">Organizers</Link>
-                    </div>
-                  </div>
-
-                  {/* Legal */}
-                  <div className="space-y-3 text-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Legal</p>
-                    <div className="grid gap-2 text-slate-300">
-                      <a className="hover:text-white transition" href="/terms&conditions">Terms & Conditions</a>
-                      <a className="hover:text-white transition" href="/privacy-policy">Privacy Policy</a>
-                      <a className="hover:text-white transition" href="/refund-policy">Refund & Cancellation</a>
-                      <a className="hover:text-white transition" href="/grievance">Grievance Redressal</a>
-                    </div>
-                  </div>
-
-                  {/* Row 3: Socials */}
-                  <div className="mt-4">
-                    <FooterSocialLinks />
-                  </div>
-
-                </div>
-
-                {/* Bottom bar – full width inside container */}
-                <div className="mt-4 border-t border-slate-700 pt-4 text-xs text-slate-400 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <p>© {new Date().getFullYear()} Baatasari. All rights reserved.</p>
-                  <p>Built for personalized experiences.</p>
-                </div>
-              </div>
-            </footer>
+            <SiteFooter />
         </main>
     )
 }

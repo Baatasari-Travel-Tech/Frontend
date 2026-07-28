@@ -2,12 +2,29 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
+import Link from "next/link"
 import QRCode from "qrcode"
 import { useQuery } from "@tanstack/react-query"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { apiRequest } from "@/lib/api/client"
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format"
 import type { OrderTicket, TicketRecord } from "@/types/api"
+
+// Routes into the existing (tracked, admin-notified) support-ticket flow
+// with the order context already filled in, instead of the buyer retyping
+// it or emailing cold. See app/contact-us/page.tsx's `problem` prefill.
+const buildCancelRequestHref = (ticket: TicketRecord): string => {
+  const lines = [
+    "I'd like to request a cancellation/refund for my ticket.",
+    "",
+    `Event: ${ticket.eventTitle}`,
+    `Order ID: ${ticket.orderId}`,
+    `Ticket code: ${ticket.ticketCode}`,
+    "",
+    "Reason: ",
+  ]
+  return `/contact-us?problem=${encodeURIComponent(lines.join("\n"))}`
+}
 
 export default function TicketDetailPage() {
   const params = useParams<{ id: string }>()
@@ -171,6 +188,17 @@ export default function TicketDetailPage() {
                   </div>
                 ) : null}
               </div>
+
+              {query.data.ticketStatus === "ACTIVE" ? (
+                <div className="mt-6 flex justify-end border-t border-slate-100 pt-6">
+                  <Link
+                    href={buildCancelRequestHref(query.data)}
+                    className="inline-flex items-center justify-center rounded-full border border-rose-200 px-5 py-2.5 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                  >
+                    Cancel ticket
+                  </Link>
+                </div>
+              ) : null}
             </>
           ) : null}
         </div>

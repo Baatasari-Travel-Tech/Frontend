@@ -53,10 +53,12 @@ export default function CampusAmbassador() {
             </p>
 
             <Button
+              asChild
               className="font-albert font-medium text-lg leading-6 text-(--white) bg-brand-900 hover:bg-(--brand-navy)/90 px-8 py-3 rounded-full transition h-auto"
-              disabled
             >
-              Coming Soon ...
+              <a href="https://campus-connect.baatasari.com" target="_blank" rel="noopener noreferrer">
+                Become an Ambassador
+              </a>
             </Button>
           </motion.div>
 
