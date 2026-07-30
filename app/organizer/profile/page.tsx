@@ -459,7 +459,13 @@ export default function OrganizerProfilePage() {
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   const router = useRouter()
 
-  const formRef = useRef<HTMLFormElement>(null)
+  // State, not a plain ref: `ProtectedRoute` renders a loader on the first
+  // mount, so the <form> doesn't exist yet when this component's effects
+  // first run. A plain ref would stay null forever (empty-deps effects don't
+  // re-run once the form actually appears); this callback ref updates state,
+  // which the scroll-spy effect below depends on, so it correctly reattaches
+  // once the form is real.
+  const [formNode, setFormNode] = useState<HTMLFormElement | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null)
   const logoPreviewRef = useRef<string | null>(null)
@@ -641,7 +647,7 @@ export default function OrganizerProfilePage() {
   // Scroll-spy for the desktop rail. IntersectionObserver rather than a scroll
   // handler, so nothing runs per frame.
   useEffect(() => {
-    const root = formRef.current
+    const root = formNode
     if (!root) return
     const targets = CHAPTERS.map((chapter) => root.querySelector(`#${chapter.id}`)).filter(
       (node): node is Element => Boolean(node),
@@ -659,7 +665,7 @@ export default function OrganizerProfilePage() {
     )
     targets.forEach((target) => observer.observe(target))
     return () => observer.disconnect()
-  }, [])
+  }, [formNode])
 
   // Avatar uploads as soon as it is cropped, the same way the user profile does,
   // rather than waiting for Save. It is not part of the organizer payload, so
@@ -975,7 +981,7 @@ export default function OrganizerProfilePage() {
                   </ol>
                 </nav>
 
-                <form ref={formRef} onSubmit={onSubmit} className="space-y-5">
+                <form ref={setFormNode} onSubmit={onSubmit} className="space-y-5">
                   <Chapter chapter={CHAPTERS[0]} className={stepClass(CHAPTERS[0].id)}>
                     <Field label="Profile photo" hint="PNG, JPG or WEBP, up to 5MB. Saves as soon as you crop." className="sm:col-span-2">
                       <div className="flex items-center gap-4">
