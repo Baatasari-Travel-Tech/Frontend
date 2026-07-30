@@ -394,7 +394,7 @@ const EventForm: React.FC<EventFormProps> = ({
                     locationLng: loc.lng,
                   }))
                 }
-                placeholder="Search area or locality"
+                placeholder="Search area"
               />
             </div>
           </div>

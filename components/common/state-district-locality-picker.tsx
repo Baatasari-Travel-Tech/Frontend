@@ -19,8 +19,9 @@ const selectClass =
   "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm focus:border-brand-900 focus:outline-none focus:ring-4 focus:ring-brand-900/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
 
 // Three cascading steps — State (full list) -> District (full list, scoped to
-// state) -> Locality (text search, scoped to state+district). Every step's
-// list is bounded by the step before it, so nothing ever floods the dropdown
+// state) -> Area (text search, scoped to state+district; also matches by
+// pincode). Every step's list is bounded by the step before it, so nothing
+// ever floods the dropdown
 // the way a nationwide area-name search would.
 export function StateDistrictLocalityPicker({
   initialState = "",
@@ -214,7 +215,7 @@ export function StateDistrictLocalityPicker({
               setLocalityOpen(true)
             }}
             onFocus={() => setLocalityOpen(true)}
-            placeholder={district ? "Search locality" : "Select district first"}
+            placeholder={district ? "Search area or pincode" : "Select district first"}
             name="baatasari-locality-search"
             autoComplete="off"
             autoCorrect="off"

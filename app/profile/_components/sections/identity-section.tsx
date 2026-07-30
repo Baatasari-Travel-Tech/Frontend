@@ -212,7 +212,7 @@ export function IdentitySection() {
             <FieldShell
               label="Location"
               required
-              hint="Pick your state, district, then locality."
+              hint="Pick your state, district, then area."
             >
               <StateDistrictLocalityPicker
                 initialState={values.locationState ?? ""}
