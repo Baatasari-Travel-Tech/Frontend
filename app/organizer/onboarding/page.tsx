@@ -18,8 +18,8 @@ import { uploadFile, uploadOrganizerAvatarImage } from "@/lib/api/uploads"
 import { DEFAULT_AVATAR_IMAGE, getAvatarImageUrl } from "@/lib/avatar"
 import {
   getDobDateBounds,
+  getProfessionFormValues,
   isDobWithinBounds,
-  isPredefinedProfession,
   ORGANIZER_MIN_AGE,
   OTHER_PROFESSION_VALUE,
   PROFESSION_OPTIONS,
@@ -77,28 +77,6 @@ const isValidGstinChecksum = (gstin: string): boolean => {
 
   const checkCodePoint = (mod - (sum % mod)) % mod
   return GSTN_CODEPOINT_CHARS[checkCodePoint] === providedCheck
-}
-
-const getProfessionFormValues = (profession: string | null | undefined) => {
-  const trimmedProfession = (profession ?? "").trim()
-  if (!trimmedProfession) {
-    return {
-      profession: "",
-      otherProfession: "",
-    }
-  }
-
-  if (isPredefinedProfession(trimmedProfession)) {
-    return {
-      profession: trimmedProfession,
-      otherProfession: "",
-    }
-  }
-
-  return {
-    profession: OTHER_PROFESSION_VALUE,
-    otherProfession: trimmedProfession,
-  }
 }
 
 const schema = z

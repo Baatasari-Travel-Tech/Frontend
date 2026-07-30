@@ -26,7 +26,14 @@ import { AvatarCropDialog, useAvatarCrop } from "@/app/profile/_components/avata
 import { apiRequest } from "@/lib/api/client"
 import { uploadFile, uploadOrganizerAvatarImage } from "@/lib/api/uploads"
 import { DEFAULT_AVATAR_IMAGE, getAvatarImageUrl } from "@/lib/avatar"
-import { getDobDateBounds, isDobWithinBounds, ORGANIZER_MIN_AGE } from "@/lib/profile-validation"
+import {
+  getDobDateBounds,
+  getProfessionFormValues,
+  isDobWithinBounds,
+  ORGANIZER_MIN_AGE,
+  OTHER_PROFESSION_VALUE,
+  PROFESSION_OPTIONS,
+} from "@/lib/profile-validation"
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -95,7 +102,8 @@ const makeSchema = (isIndividual: boolean) => {
     locationLat: z.number().optional().nullable(),
     locationLng: z.number().optional().nullable(),
     gender: z.string().min(1, "Select your gender"),
-    profession: z.string().min(2, "Enter your profession"),
+    profession: z.string().min(1, "Select your profession"),
+    otherProfession: z.string().optional(),
     // Individuals have no organization name; the field is not rendered for them.
     orgName: isIndividual ? z.string() : z.string().min(2, "Enter your organization name"),
     // Legal name/trade name are locked (read-only) once set — see
@@ -121,6 +129,14 @@ const makeSchema = (isIndividual: boolean) => {
     bankAccountName: z.string().min(2, "Enter the account holder name"),
     bankAccountNumber: z.string().min(6, "Enter a valid account number"),
     bankIfsc: z.string().min(4, "Enter a valid IFSC code"),
+  }).superRefine((value, ctx) => {
+    if (value.profession === OTHER_PROFESSION_VALUE && (!value.otherProfession || value.otherProfession.trim().length < 2)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["otherProfession"],
+        message: "Enter your profession",
+      })
+    }
   })
 }
 
@@ -141,6 +157,7 @@ const EMPTY_VALUES: Values = {
   locationLng: null,
   gender: "",
   profession: "",
+  otherProfession: "",
   orgName: "",
   tradeName: "",
   description: "",
@@ -186,7 +203,7 @@ const CHAPTERS = [
     title: "Personal",
     short: "Personal",
     standfirst: "Who we contact about this account. Never shown to attendees.",
-    fields: ["fullName", "personalPhone", "dob", "location", "gender", "profession"],
+    fields: ["fullName", "personalPhone", "dob", "location", "gender", "profession", "otherProfession"],
   },
   {
     id: "organization",
@@ -516,7 +533,7 @@ export default function OrganizerProfilePage() {
       locationLat: profile?.locationLat ?? null,
       locationLng: profile?.locationLng ?? null,
       gender: profile?.gender ?? "",
-      profession: profile?.profession ?? "",
+      ...getProfessionFormValues(profile?.profession),
       orgName: organizerProfile?.orgName ?? "",
       tradeName: organizerProfile?.tradeName ?? "",
       description: organizerProfile?.description ?? "",
@@ -745,7 +762,10 @@ export default function OrganizerProfilePage() {
         locationLat: submitted.locationLat ?? undefined,
         locationLng: submitted.locationLng ?? undefined,
         gender: submitted.gender,
-        profession: submitted.profession.trim(),
+        profession:
+          submitted.profession === OTHER_PROFESSION_VALUE
+            ? (submitted.otherProfession ?? "").trim()
+            : submitted.profession.trim(),
       })
 
       const entityType = organizerProfile?.entityType ?? "ORGANIZATION"
@@ -1085,8 +1105,20 @@ export default function OrganizerProfilePage() {
                       </select>
                     </Field>
                     <Field label="Profession" name="profession" required>
-                      <input className={quietInput} {...register("profession")} />
+                      <select className={quietInput} {...register("profession")}>
+                        <option value="">Select</option>
+                        {PROFESSION_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
                     </Field>
+                    {values.profession === OTHER_PROFESSION_VALUE ? (
+                      <Field label="Other profession" name="otherProfession" required>
+                        <input className={quietInput} placeholder="Enter your profession" {...register("otherProfession")} />
+                      </Field>
+                    ) : null}
                   </Chapter>
 
                   <Chapter

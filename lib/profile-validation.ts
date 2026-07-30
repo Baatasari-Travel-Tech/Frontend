@@ -24,6 +24,24 @@ export const PROFESSION_OPTIONS = [
 export const isPredefinedProfession = (value: string) =>
   PROFESSION_OPTIONS.includes(value as (typeof PROFESSION_OPTIONS)[number])
 
+/**
+ * Splits a saved free-text profession back into the dropdown + "Other" pair
+ * the form uses. A predefined value round-trips as-is; anything else (an
+ * older free-text save, or a custom value) becomes "Other" + that text.
+ */
+export const getProfessionFormValues = (profession: string | null | undefined) => {
+  const trimmedProfession = (profession ?? "").trim()
+  if (!trimmedProfession) {
+    return { profession: "", otherProfession: "" }
+  }
+
+  if (isPredefinedProfession(trimmedProfession)) {
+    return { profession: trimmedProfession, otherProfession: "" }
+  }
+
+  return { profession: OTHER_PROFESSION_VALUE, otherProfession: trimmedProfession }
+}
+
 const pad = (value: number) => value.toString().padStart(2, "0")
 
 const formatDateInputValue = (date: Date) =>
