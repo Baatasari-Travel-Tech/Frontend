@@ -9,7 +9,6 @@ import {
   CalendarIcon,
   CheckCircle2,
   Mail,
-  MapPin,
   Phone,
   Sparkles,
   User as UserIcon,
@@ -19,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useAuth } from "@/app/providers"
 import { USER_MIN_AGE } from "@/lib/profile-validation"
 import { FieldShell, FormSection } from "../field-primitives"
-import { LocationAutocomplete } from "@/components/common/location-autocomplete"
+import { StateDistrictLocalityPicker } from "@/components/common/state-district-locality-picker"
 import type { ProfileFormValues } from "../profile-schema"
 
 export function IdentitySection() {
@@ -29,6 +28,7 @@ export function IdentitySection() {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isDirty },
   } = useFormContext<ProfileFormValues>()
 
@@ -70,6 +70,12 @@ export function IdentitySection() {
         phone: `+91${data.phone.trim()}`,
         dob: data.dob.trim(),
         location: data.location.trim(),
+        locationArea: (data.locationArea ?? "").trim(),
+        locationCity: (data.locationCity ?? "").trim(),
+        locationState: (data.locationState ?? "").trim(),
+        locationPincode: (data.locationPincode ?? "").trim(),
+        locationLat: data.locationLat ?? undefined,
+        locationLng: data.locationLng ?? undefined,
         gender: data.gender.trim(),
         profession: data.profession.trim(),
       })
@@ -203,17 +209,24 @@ export function IdentitySection() {
           accent="emerald"
         >
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <FieldShell label="Location" required hint="Search your area or city and pick from the list.">
-              <Controller
-                control={control}
-                name="location"
-                render={({ field }) => (
-                  <LocationAutocomplete
-                    value={field.value}
-                    onSelect={(loc) => field.onChange(loc.label)}
-                    placeholder="Search your area or city"
-                  />
-                )}
+            <FieldShell
+              label="Location"
+              required
+              hint="Pick your state, district, then locality."
+            >
+              <StateDistrictLocalityPicker
+                initialState={values.locationState ?? ""}
+                initialDistrict={values.locationCity ?? ""}
+                initialLocalityLabel={values.location ?? ""}
+                onSelect={(loc) => {
+                  setValue("location", loc.label, { shouldValidate: true, shouldDirty: true })
+                  setValue("locationArea", loc.area, { shouldDirty: true })
+                  setValue("locationCity", loc.city ?? "", { shouldDirty: true })
+                  setValue("locationState", loc.state ?? "", { shouldDirty: true })
+                  setValue("locationPincode", loc.pincode ?? "", { shouldDirty: true })
+                  setValue("locationLat", loc.lat, { shouldDirty: true })
+                  setValue("locationLng", loc.lng, { shouldDirty: true })
+                }}
               />
               {errors.location ? (
                 <p className="mt-1 text-[11px] text-rose-600">{errors.location.message}</p>

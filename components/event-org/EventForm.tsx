@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import TimePicker from "@/components/ui/time-picker"
+import { AreaAutocomplete } from "@/components/common/area-autocomplete"
 import { cn } from "@/lib/utils"
 import type { EventFormData } from "./validateEventform"
 import { EVENT_CATEGORY_GROUPS } from "@/lib/event-categories"
@@ -376,6 +377,26 @@ const EventForm: React.FC<EventFormProps> = ({
               />
               <FieldError message={formErrors.googleMapsUrl} />
             </div>
+
+            <div className="relative sm:col-span-2">
+              <FieldLabel>Location (Optional)</FieldLabel>
+              <AreaAutocomplete
+                value={formData.location}
+                onSelect={(loc) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    location: loc.label,
+                    locationArea: loc.area,
+                    locationCity: loc.city ?? "",
+                    locationState: loc.state ?? "",
+                    locationPincode: loc.pincode ?? "",
+                    locationLat: loc.lat,
+                    locationLng: loc.lng,
+                  }))
+                }
+                placeholder="Search area or locality"
+              />
+            </div>
           </div>
 
           {/* Transport + Entry side */}
@@ -400,6 +421,54 @@ const EventForm: React.FC<EventFormProps> = ({
                 value={formData.entrySide || ""}
                 onChange={handleInputChange}
               />
+            </div>
+
+            <div className="relative">
+              <FieldLabel>Re-entry allowed? (Optional)</FieldLabel>
+              <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-white p-1">
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, reEntryAllowed: true }))}
+                  className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                    formData.reEntryAllowed === true ? "bg-brand-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, reEntryAllowed: false }))}
+                  className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                    formData.reEntryAllowed === false ? "bg-brand-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+
+            <div className="relative">
+              <FieldLabel>Parking available? (Optional)</FieldLabel>
+              <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-white p-1">
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, parkingAvailable: true }))}
+                  className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                    formData.parkingAvailable === true ? "bg-brand-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, parkingAvailable: false }))}
+                  className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                    formData.parkingAvailable === false ? "bg-brand-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  No
+                </button>
+              </div>
             </div>
           </div>
 

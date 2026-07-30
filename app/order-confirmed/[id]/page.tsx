@@ -530,9 +530,13 @@ function OrderConfirmedContent() {
                     </div>
                   </div>
 
-                  {qrDataUrl && orderTickets.length === 1 ? (
+                  {orderTickets.length === 1 ? (
                     <div className="shrink-0 rounded-2xl border border-(--gray-200) bg-white p-3 text-center shadow-sm">
-                      <img src={qrDataUrl} alt="Ticket QR code" width={120} height={120} className="block" />
+                      {qrDataUrl ? (
+                        <img src={qrDataUrl} alt="Ticket QR code" width={120} height={120} className="block" />
+                      ) : (
+                        <div className="h-[120px] w-[120px] animate-pulse rounded-lg bg-slate-100" />
+                      )}
                       <p className="mt-1 text-[10px] uppercase tracking-wider text-(--gray-400)">
                         Entry pass
                       </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import Link from "next/link";
 
 const ITEMS = [
   "Music",
@@ -41,9 +42,12 @@ export default function Marquee() {
       >
         {track.map((item, i) => (
           <span key={i} className="flex items-center gap-6 md:gap-8">
-            <span className="font-poppins text-[13px] font-semibold uppercase tracking-[0.22em] text-(--brand-navy)/75 md:text-sm">
+            <Link
+              href={`/events?category=${encodeURIComponent(item)}`}
+              className="font-poppins text-[13px] font-semibold uppercase tracking-[0.22em] text-(--brand-navy)/75 transition hover:text-(--brand-navy) md:text-sm"
+            >
               {item}
-            </span>
+            </Link>
             <span className="text-(--gold) text-xs">✦</span>
           </span>
         ))}

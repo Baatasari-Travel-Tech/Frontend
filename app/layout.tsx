@@ -43,6 +43,7 @@ const inter = Inter({
 })
 
 export const metadata = {
+  metadataBase: new URL('https://baatasari.com'),
   title: 'Baatasari - Discover, Connect, Experience',
   description: 'Book the best events, dining, and activities near you.',
   icons: {

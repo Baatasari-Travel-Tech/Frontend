@@ -31,9 +31,9 @@ export function SiteFooter() {
           <div className="space-y-3 text-sm">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Company</p>
             <div className="grid gap-2 text-slate-300">
-              <a className="transition hover:text-white" href="/about">
+              <Link className="transition hover:text-white" href="/">
                 About
-              </a>
+              </Link>
               <a className="transition hover:text-white" href="/contact-us">
                 Contact
               </a>

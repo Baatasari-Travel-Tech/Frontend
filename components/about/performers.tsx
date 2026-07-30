@@ -76,7 +76,7 @@ export default function Performers() {
 
   return (
     <section id="performers" className="py-12 md:py-24 bg-background overflow-hidden relative">
-      <div className="mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-10 relative">
+      <div className="page-x-wide relative">
         {/* Heading */}
         <h2 className="font-bricolage font-bold text-3xl sm:text-4xl md:text-[54px] leading-tight md:leading-18 tracking-[0] text-(--brand-blue) mb-8 md:mb-16">
           Calling All Performers!

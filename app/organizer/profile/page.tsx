@@ -15,12 +15,12 @@ import {
   Globe,
   Instagram,
   Linkedin,
+  Lock,
   MapPin,
-  RotateCcw,
   ShieldCheck,
 } from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { LocationAutocomplete } from "@/components/common/location-autocomplete"
+import { StateDistrictLocalityPicker } from "@/components/common/state-district-locality-picker"
 import { useAuth } from "@/app/providers"
 import { AvatarCropDialog, useAvatarCrop } from "@/app/profile/_components/avatar-crop-dialog"
 import { apiRequest } from "@/lib/api/client"
@@ -45,6 +45,23 @@ const httpsUrl = z
   .url("Enter a valid link")
   .startsWith("https://", "Only https links are accepted")
   .or(z.literal(""))
+
+// Legal identity fields (legal name, trade name, PAN, GSTIN, registered
+// address) are locked after onboarding — changing them needs a manual,
+// verified update, not a silent self-service edit. Routes into the same
+// tracked support-ticket flow used elsewhere (see app/history/[id]/page.tsx's
+// cancel-ticket link) instead of a cold email.
+const buildLegalChangeRequestHref = (): string => {
+  const lines = [
+    "I need to update a legal/organization detail on my organizer profile",
+    "(legal name, trade name, PAN, GSTIN, or registered address).",
+    "",
+    "Field(s) to change: ",
+    "New value(s): ",
+    "Reason: ",
+  ]
+  return `/contact-us?problem=${encodeURIComponent(lines.join("\n"))}`
+}
 
 /**
  * The backend only *requires* orgName/description/contact/address for
@@ -71,15 +88,26 @@ const makeSchema = (isIndividual: boolean) => {
       .min(1, "Select your date of birth")
       .refine((value) => isDobWithinBounds(value, DOB_BOUNDS), `You must be at least ${ORGANIZER_MIN_AGE} years old`),
     location: z.string().min(2, "Enter your location"),
+    locationArea: z.string().optional(),
+    locationCity: z.string().optional(),
+    locationState: z.string().optional(),
+    locationPincode: z.string().optional(),
+    locationLat: z.number().optional().nullable(),
+    locationLng: z.number().optional().nullable(),
     gender: z.string().min(1, "Select your gender"),
     profession: z.string().min(2, "Enter your profession"),
     // Individuals have no organization name; the field is not rendered for them.
     orgName: isIndividual ? z.string() : z.string().min(2, "Enter your organization name"),
+    // Legal name/trade name are locked (read-only) once set — see
+    // buildLegalChangeRequestHref. Kept in the schema/payload so saving the
+    // rest of the form round-trips them unchanged.
+    tradeName: z.string().optional(),
     description: softForIndividual(z.string().min(20, "Add at least 20 characters")),
     contactEmail: softForIndividual(z.string().email("Enter a valid contact email")),
     contactPhone: softForIndividual(z.string().min(6, "Enter a valid contact number")),
     primaryContactName: z.string().optional(),
     secondaryContactPhone: z.string().optional(),
+    landlineNumber: z.string().optional(),
     address: softForIndividual(z.string().min(4, "Enter your address")),
     city: softForIndividual(z.string().min(2, "Enter your city")),
     state: softForIndividual(z.string().min(2, "Enter your state")),
@@ -105,14 +133,22 @@ const EMPTY_VALUES: Values = {
   personalPhone: "",
   dob: "",
   location: "",
+  locationArea: "",
+  locationCity: "",
+  locationState: "",
+  locationPincode: "",
+  locationLat: null,
+  locationLng: null,
   gender: "",
   profession: "",
   orgName: "",
+  tradeName: "",
   description: "",
   contactEmail: "",
   contactPhone: "",
   primaryContactName: "",
   secondaryContactPhone: "",
+  landlineNumber: "",
   address: "",
   city: "",
   state: "",
@@ -157,7 +193,16 @@ const CHAPTERS = [
     title: "Organization",
     short: "Organization",
     standfirst: "How your brand reads on event pages and in confirmation emails.",
-    fields: ["orgName", "description", "contactEmail", "contactPhone", "primaryContactName", "secondaryContactPhone"],
+    fields: [
+      "orgName",
+      "tradeName",
+      "description",
+      "contactEmail",
+      "contactPhone",
+      "primaryContactName",
+      "secondaryContactPhone",
+      "landlineNumber",
+    ],
   },
   {
     id: "address",
@@ -412,7 +457,6 @@ export default function OrganizerProfilePage() {
   // Set when a link was clicked while dirty: holds where the user was trying to
   // go until they choose save / leave / stay.
   const [pendingHref, setPendingHref] = useState<string | null>(null)
-  const [confirmReonboard, setConfirmReonboard] = useState(false)
   const router = useRouter()
 
   const formRef = useRef<HTMLFormElement>(null)
@@ -459,14 +503,22 @@ export default function OrganizerProfilePage() {
       personalPhone: stripIndianCode(profile?.phone),
       dob: profile?.dob ?? "",
       location: profile?.location ?? "",
+      locationArea: profile?.locationArea ?? "",
+      locationCity: profile?.locationCity ?? "",
+      locationState: profile?.locationState ?? "",
+      locationPincode: profile?.locationPincode ?? "",
+      locationLat: profile?.locationLat ?? null,
+      locationLng: profile?.locationLng ?? null,
       gender: profile?.gender ?? "",
       profession: profile?.profession ?? "",
       orgName: organizerProfile?.orgName ?? "",
+      tradeName: organizerProfile?.tradeName ?? "",
       description: organizerProfile?.description ?? "",
       contactEmail: organizerProfile?.contactEmail ?? session?.user?.email ?? "",
       contactPhone: organizerProfile?.contactPhone ?? stripIndianCode(profile?.phone),
       primaryContactName: organizerProfile?.primaryContactName ?? "",
       secondaryContactPhone: organizerProfile?.secondaryContactPhone ?? "",
+      landlineNumber: organizerProfile?.landlineNumber ?? "",
       address: organizerProfile?.address ?? "",
       city: organizerProfile?.city ?? "",
       state: organizerProfile?.state ?? "",
@@ -492,6 +544,7 @@ export default function OrganizerProfilePage() {
     organizerProfile?.description,
     organizerProfile?.gstNumber,
     organizerProfile?.instagramUrl,
+    organizerProfile?.landlineNumber,
     organizerProfile?.linkedinUrl,
     organizerProfile?.orgName,
     organizerProfile?.panNumber,
@@ -499,11 +552,18 @@ export default function OrganizerProfilePage() {
     organizerProfile?.primaryContactName,
     organizerProfile?.secondaryContactPhone,
     organizerProfile?.state,
+    organizerProfile?.tradeName,
     organizerProfile?.websiteUrl,
     profile?.dob,
     profile?.full_name,
     profile?.gender,
     profile?.location,
+    profile?.locationArea,
+    profile?.locationCity,
+    profile?.locationLat,
+    profile?.locationLng,
+    profile?.locationPincode,
+    profile?.locationState,
     profile?.phone,
     profile?.profession,
     session?.user?.email,
@@ -672,6 +732,12 @@ export default function OrganizerProfilePage() {
         phone: `+91${submitted.personalPhone.trim()}`,
         dob: submitted.dob,
         location: submitted.location.trim(),
+        locationArea: (submitted.locationArea ?? "").trim(),
+        locationCity: (submitted.locationCity ?? "").trim(),
+        locationState: (submitted.locationState ?? "").trim(),
+        locationPincode: (submitted.locationPincode ?? "").trim(),
+        locationLat: submitted.locationLat ?? undefined,
+        locationLng: submitted.locationLng ?? undefined,
         gender: submitted.gender,
         profession: submitted.profession.trim(),
       })
@@ -687,10 +753,15 @@ export default function OrganizerProfilePage() {
           // by their own name. Everything else is sent for both, because these
           // are exactly the fields that fill the public card, and the API allows
           // them for individuals.
+          // orgName/tradeName/address/city/state/pincode/panNumber/gstNumber are
+          // locked on this page (read-only inputs) — sent back unchanged so
+          // saving the rest of the form cannot alter them.
           orgName: isIndividual ? null : submitted.orgName.trim() || null,
+          tradeName: isIndividual ? null : submitted.tradeName?.trim() || null,
           description: submitted.description.trim() || null,
           contactEmail: submitted.contactEmail.trim() || null,
           contactPhone: submitted.contactPhone.trim() || null,
+          landlineNumber: submitted.landlineNumber?.trim() || null,
           address: submitted.address.trim() || null,
           city: submitted.city.trim() || null,
           state: submitted.state.trim() || null,
@@ -981,8 +1052,21 @@ export default function OrganizerProfilePage() {
                         {...register("dob")}
                       />
                     </Field>
-                    <Field label="Location" name="location" required>
-                      <input className={quietInput} placeholder="City, State" {...register("location")} />
+                    <Field label="Location" name="location" required className="sm:col-span-2">
+                      <StateDistrictLocalityPicker
+                        initialState={values.locationState ?? ""}
+                        initialDistrict={values.locationCity ?? ""}
+                        initialLocalityLabel={values.location ?? ""}
+                        onSelect={(loc) => {
+                          setValue("location", loc.label, { shouldValidate: true, shouldDirty: true })
+                          setValue("locationArea", loc.area, { shouldDirty: true })
+                          setValue("locationCity", loc.city ?? "", { shouldDirty: true })
+                          setValue("locationState", loc.state ?? "", { shouldDirty: true })
+                          setValue("locationPincode", loc.pincode ?? "", { shouldDirty: true })
+                          setValue("locationLat", loc.lat, { shouldDirty: true })
+                          setValue("locationLng", loc.lng, { shouldDirty: true })
+                        }}
+                      />
                     </Field>
                     <Field label="Gender" name="gender" required>
                       <select className={quietInput} {...register("gender")}>
@@ -1054,11 +1138,18 @@ export default function OrganizerProfilePage() {
                     </Field>
 
                     {/* An individual has no organization name; they are shown by
-                        their own name, so the field would be meaningless. */}
+                        their own name, so the field would be meaningless. Legal
+                        name/trade name are locked — see buildLegalChangeRequestHref
+                        and the "Legal details" note near Bank & compliance. */}
                     {!isIndividual ? (
-                      <Field label="Organization name" name="orgName" required className="sm:col-span-2">
-                        <input className={quietInput} {...register("orgName")} />
-                      </Field>
+                      <>
+                        <Field label="Legal name" name="orgName" hint="Locked — set at onboarding.">
+                          <input className={`${quietInput} cursor-default text-slate-400`} readOnly tabIndex={-1} {...register("orgName")} />
+                        </Field>
+                        <Field label="Trade name" name="tradeName" hint="Locked — set at onboarding.">
+                          <input className={`${quietInput} cursor-default text-slate-400`} readOnly tabIndex={-1} {...register("tradeName")} />
+                        </Field>
+                      </>
                     ) : null}
                     <Field
                       label={isIndividual ? "About you" : "Description"}
@@ -1096,50 +1187,31 @@ export default function OrganizerProfilePage() {
                     <Field label="Secondary phone" name="secondaryContactPhone">
                       <input className={quietInput} placeholder="Optional" {...register("secondaryContactPhone")} />
                     </Field>
+                    <Field label="Landline" name="landlineNumber">
+                      <input className={quietInput} placeholder="Optional, e.g. 040-12345678" {...register("landlineNumber")} />
+                    </Field>
                   </Chapter>
 
-                  <Chapter chapter={CHAPTERS[2]} className={stepClass(CHAPTERS[2].id)}>
-                    <Field
-                      label="Find your address"
-                      hint="Enter your pincode and pick your area. If the list is long, type your area name after the pincode. Everything below fills in from your selection."
-                      className="sm:col-span-2"
-                    >
-                      <LocationAutocomplete
-                        value={
-                          [values.address, values.city, values.state].filter(Boolean).join(", ") +
-                          (values.pincode ? ` - ${values.pincode}` : "")
-                        }
-                        placeholder="Enter pincode"
-                        onSelect={(loc) => {
-                          // The fields below are read-only, so the selection is the
-                          // single source of truth: every one is overwritten,
-                          // including blanks, so a new pick cannot leave a stale
-                          // city or state behind from the previous one.
-                          const fill = (field: "address" | "city" | "state" | "pincode", value: string | null) =>
-                            setValue(field, value ?? "", { shouldValidate: true, shouldDirty: true })
-                          fill("address", loc.area)
-                          fill("city", loc.city)
-                          fill("state", loc.state)
-                          fill("pincode", loc.pincode)
-                        }}
-                      />
+                  <Chapter
+                    chapter={CHAPTERS[2]}
+                    className={stepClass(CHAPTERS[2].id)}
+                    standfirst="Your registered legal address, used on invoices and tax filings. Locked — set at onboarding."
+                  >
+                    {/* Legal/registered address — locked, same as legal/trade name.
+                        See buildLegalChangeRequestHref and the note near Bank &
+                        compliance. */}
+                    <Field label="Area" name="address" hint="Locked — set at onboarding." className="sm:col-span-2">
+                      <input className={`${quietInput} cursor-default text-slate-400`} readOnly tabIndex={-1} {...register("address")} />
                     </Field>
-                    {/* Filled from the lookup only, never typed. readOnly (not
-                        disabled) so the values still submit, and it stops the
-                        browser's saved-address autofill from covering the
-                        lookup's own dropdown. */}
-                    <Field label="Area" name="address" required={!isIndividual} className="sm:col-span-2">
-                      <input className={`${quietInput} cursor-default`} readOnly tabIndex={-1} {...register("address")} />
+                    <Field label="City" name="city" hint="Locked — set at onboarding.">
+                      <input className={`${quietInput} cursor-default text-slate-400`} readOnly tabIndex={-1} {...register("city")} />
                     </Field>
-                    <Field label="City" name="city" required={!isIndividual}>
-                      <input className={`${quietInput} cursor-default`} readOnly tabIndex={-1} {...register("city")} />
+                    <Field label="State" name="state" hint="Locked — set at onboarding.">
+                      <input className={`${quietInput} cursor-default text-slate-400`} readOnly tabIndex={-1} {...register("state")} />
                     </Field>
-                    <Field label="State" name="state" required={!isIndividual}>
-                      <input className={`${quietInput} cursor-default`} readOnly tabIndex={-1} {...register("state")} />
-                    </Field>
-                    <Field label="Pincode" name="pincode" required={!isIndividual}>
+                    <Field label="Pincode" name="pincode" hint="Locked — set at onboarding.">
                       <input
-                        className={`${quietInput} cursor-default font-mono`}
+                        className={`${quietInput} cursor-default font-mono text-slate-400`}
                         readOnly
                         tabIndex={-1}
                         {...register("pincode")}
@@ -1154,11 +1226,11 @@ export default function OrganizerProfilePage() {
                   </Chapter>
 
                   <Chapter chapter={CHAPTERS[4]} className={stepClass(CHAPTERS[4].id)}>
-                    <Field label="PAN number" name="panNumber" required>
-                      <input className={`${quietInput} font-mono uppercase`} {...register("panNumber")} />
+                    <Field label="PAN number" name="panNumber" hint="Locked — set at onboarding.">
+                      <input className={`${quietInput} cursor-default font-mono uppercase text-slate-400`} readOnly tabIndex={-1} {...register("panNumber")} />
                     </Field>
-                    <Field label="GST number" name="gstNumber" hint="Leave blank if you are not GST registered.">
-                      <input className={`${quietInput} font-mono uppercase`} {...register("gstNumber")} />
+                    <Field label="GST number" name="gstNumber" hint="Locked — set at onboarding.">
+                      <input className={`${quietInput} cursor-default font-mono uppercase text-slate-400`} readOnly tabIndex={-1} {...register("gstNumber")} />
                     </Field>
                     <Field label="Account holder" name="bankAccountName" required className="sm:col-span-2">
                       <input className={quietInput} {...register("bankAccountName")} />
@@ -1175,26 +1247,29 @@ export default function OrganizerProfilePage() {
                     </Field>
                   </Chapter>
 
-                  {/* Danger zone. Rides with the last step on mobile; sits at the
-                      bottom of the stack on desktop. */}
+                  {/* Legal details are locked once submitted (verified manually by
+                      our team) — a change needs a tracked request, not a silent
+                      self-service edit. Rides with the last step on mobile; sits at
+                      the bottom of the stack on desktop. */}
                   <div
-                    className={`rounded-3xl border border-rose-200 bg-rose-50/60 p-5 sm:p-7 md:p-8 ${stepClass(
+                    className={`rounded-3xl border border-slate-200 bg-slate-50 p-5 sm:p-7 md:p-8 ${stepClass(
                       CHAPTERS[4].id,
                     )}`}
                   >
-                    <h2 className="font-bricolage text-lg font-bold tracking-tight text-rose-700">Restart onboarding</h2>
-                    <p className="mt-1.5 max-w-[54ch] text-sm leading-6 text-rose-600/90">
-                      Takes you back through organizer onboarding from the beginning. Your saved profile stays exactly as
-                      it is unless you complete onboarding again.
+                    <h2 className="flex items-center gap-2 font-bricolage text-lg font-bold tracking-tight text-slate-900">
+                      <Lock className="h-4 w-4 text-slate-500" />
+                      Legal details are locked
+                    </h2>
+                    <p className="mt-1.5 max-w-[54ch] text-sm leading-6 text-slate-500">
+                      Legal name, trade name, PAN, GSTIN, and registered address were verified at onboarding and can&apos;t
+                      be edited here. To correct one, send a request and our team will verify and update it.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmReonboard(true)}
-                      className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-white px-4 py-2 text-[13px] font-semibold text-rose-700 transition hover:bg-rose-50 active:translate-y-px"
+                    <Link
+                      href={buildLegalChangeRequestHref()}
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-100 active:translate-y-px"
                     >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      Restart onboarding
-                    </button>
+                      Request a change
+                    </Link>
                   </div>
 
                   {error ? (
@@ -1290,57 +1365,6 @@ export default function OrganizerProfilePage() {
           ) : null}
 
           <AvatarCropDialog crop={crop} />
-
-          {/* Restart onboarding needs an explicit confirm: it is a one-way trip
-              out of a page that may hold unsaved edits. */}
-          {confirmReonboard ? (
-            <div
-              className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 backdrop-blur-sm sm:items-center"
-              onClick={() => setConfirmReonboard(false)}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="reonboard-title"
-            >
-              <motion.div
-                initial={reduce ? false : { opacity: 0, y: 16, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.25, ease: EASE }}
-                onClick={(event) => event.stopPropagation()}
-                className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_30px_70px_-20px_rgba(12,29,55,0.45)]"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                  <RotateCcw className="h-5 w-5" />
-                </span>
-                <h2 id="reonboard-title" className="mt-4 font-bricolage text-xl font-bold tracking-tight text-slate-900">
-                  Restart onboarding?
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  You will go through organizer onboarding from the beginning.
-                  {isDirty ? " Unsaved changes on this page will be lost." : " Your saved profile is not changed."}
-                </p>
-                <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConfirmReonboard(false)
-                      discard()
-                      router.push("/organizer/onboarding")
-                    }}
-                    className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 active:translate-y-px sm:flex-1"
-                  >
-                    Yes, restart
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmReonboard(false)}
-                    className="rounded-full border border-slate-900/15 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 sm:flex-1"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          ) : null}
 
           {/* Raised when a link is clicked with unsaved changes. */}
           {pendingHref ? (

@@ -58,6 +58,12 @@ export type UserProfile = {
   avatarUrl: string | null;
   dob: string | null;
   location: string | null;
+  locationArea: string | null;
+  locationCity: string | null;
+  locationState: string | null;
+  locationPincode: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
   gender: string | null;
   profession: string | null;
   organizerDisplayName: string | null;
@@ -75,6 +81,12 @@ export type LegacyProfile = {
   avatar_url: string | null;
   dob: string | null;
   location: string | null;
+  locationArea: string | null;
+  locationCity: string | null;
+  locationState: string | null;
+  locationPincode: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
   gender: string | null;
   profession: string | null;
   global_onboarding_completed: boolean;
@@ -83,9 +95,11 @@ export type LegacyProfile = {
 export type OrganizerProfile = {
   entityType: "ORGANIZATION" | "INDIVIDUAL";
   orgName: string | null;
+  tradeName: string | null;
   description: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  landlineNumber: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -201,6 +215,13 @@ export type EventSummary = {
   description: string;
   date: string;
   venue: string;
+  location: string | null;
+  locationArea: string | null;
+  locationCity: string | null;
+  locationState: string | null;
+  locationPincode: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
   capacity: number;
   slug: string | null;
   category: string | null;
@@ -213,6 +234,8 @@ export type EventSummary = {
   googleMapsUrl: string | null;
   transportToEvent: string | null;
   entrySide: string | null;
+  reEntryAllowed: boolean | null;
+  parkingAvailable: boolean | null;
   transportOptions: Record<string, boolean>;
   artists: Array<{ name: string; genre?: string | null }>;
   sponsors: EventSponsorGroups;
@@ -472,16 +495,6 @@ export type OrganizerPayoutDetail = {
   organizer: OrganizerPayoutParty;
   platform: PlatformStatementIssuer;
   history: OrganizerPayoutLedgerEntry[];
-};
-
-export type GstinVerifyResult = {
-  valid: boolean;
-  embeddedPan: string;
-  legalName?: string;
-  status?: string;
-  registrationDate?: string;
-  address?: string;
-  taxpayerType?: string;
 };
 
 export type PanVerifyResult = {

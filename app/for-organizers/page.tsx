@@ -260,7 +260,7 @@ export default function ForOrganizersPage() {
         </div>
 
         {/* Desktop: two-column hero */}
-        <div className="mx-auto hidden w-full max-w-[1400px] items-center gap-14 px-10 pb-20 pt-8 lg:grid lg:grid-cols-[1fr_1.05fr]">
+        <div className="page-x hidden items-center gap-14 pb-20 pt-8 lg:grid lg:grid-cols-[1fr_1.05fr]">
           <div className="space-y-6">
             <HeroCopy />
           </div>
@@ -275,7 +275,7 @@ export default function ForOrganizersPage() {
       </section>
 
       {/* ============ ATTENDEE vs ORGANIZER PAIN ============ */}
-      <section className="mx-auto w-full max-w-[1400px] px-4 py-16 sm:px-6 lg:px-10">
+      <section className="page-x py-16">
         <div className="max-w-2xl text-left sm:mx-auto sm:text-center">
           <h2 className="text-2xl font-bold text-(--brand-navy) sm:text-3xl">
             Every Event Starts With Excitement.
@@ -351,7 +351,7 @@ export default function ForOrganizersPage() {
       </section>
 
       {/* ============ OLD WAY vs BAATASARI WAY ============ */}
-      <section className="mx-auto w-full max-w-[1400px] px-4 pb-16 sm:px-6 lg:px-10">
+      <section className="page-x pb-16">
         <SparkleHeading>The Old Way vs The Baatasari Way</SparkleHeading>
 
         <div className="mt-10 space-y-4">
@@ -373,7 +373,7 @@ export default function ForOrganizersPage() {
       </section>
 
       {/* ============ IMAGINE IT'S AUTOMATIC ============ */}
-      <section className="mx-auto w-full max-w-[1400px] px-4 pb-16 sm:px-6 lg:px-10">
+      <section className="page-x pb-16">
         <div className="grid items-center gap-10 overflow-hidden rounded-3xl bg-[#fbf4e4] px-8 pt-8 sm:px-10 sm:pt-10 lg:grid-cols-[1fr_1.1fr] lg:px-14 lg:py-0">
           <div>
             <h2 className="text-2xl font-bold leading-snug text-(--brand-navy) sm:text-3xl">
@@ -399,7 +399,7 @@ export default function ForOrganizersPage() {
       </section>
 
       {/* ============ WHY ORGANIZERS CHOOSE BAATASARI ============ */}
-      <section className="mx-auto w-full max-w-[1400px] px-4 pb-16 sm:px-6 lg:px-10">
+      <section className="page-x pb-16">
         <SparkleHeading>Why Organizers Choose Baatasari</SparkleHeading>
 
         <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">

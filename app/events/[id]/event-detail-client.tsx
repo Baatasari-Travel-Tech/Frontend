@@ -13,12 +13,14 @@ import {
   CalendarDays,
   CalendarPlus,
   CalendarX2,
+  Car,
   Clock,
   DoorOpen,
   MapPin,
   Music,
   Navigation,
   Phone,
+  Repeat,
   ScrollText,
   ShieldCheck,
   Sparkles,
@@ -955,7 +957,11 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               ) : null}
             </div>
 
-            {event.entrySide || transportItems.length > 0 || event.transportToEvent ? (
+            {event.entrySide ||
+            transportItems.length > 0 ||
+            event.transportToEvent ||
+            event.reEntryAllowed !== null ||
+            event.parkingAvailable !== null ? (
               <div className="mt-6 flex flex-wrap gap-2 border-t border-(--gold-soft-border) pt-5">
                 {event.entrySide ? (
                   <span className="inline-flex items-center gap-2 rounded-full border border-(--gray-200) bg-(--gray-50) px-3.5 py-1.5 text-xs font-semibold text-(--brand-navy)">
@@ -976,6 +982,30 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   <span className="inline-flex items-center gap-2 rounded-full border border-(--gray-200) bg-(--gray-50) px-3.5 py-1.5 text-xs font-semibold text-(--brand-navy)">
                     <Bus className="h-3.5 w-3.5 shrink-0 text-(--gold)" />
                     {event.transportToEvent}
+                  </span>
+                ) : null}
+                {event.reEntryAllowed !== null ? (
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold ${
+                      event.reEntryAllowed
+                        ? "border-(--gray-200) bg-(--gray-50) text-(--brand-navy)"
+                        : "border-(--gray-200) bg-(--gray-50) text-(--gray-500)"
+                    }`}
+                  >
+                    <Repeat className={`h-3.5 w-3.5 ${event.reEntryAllowed ? "text-(--gold)" : "text-(--gray-400)"}`} />
+                    {event.reEntryAllowed ? "Re-entry allowed" : "No re-entry"}
+                  </span>
+                ) : null}
+                {event.parkingAvailable !== null ? (
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold ${
+                      event.parkingAvailable
+                        ? "border-(--gray-200) bg-(--gray-50) text-(--brand-navy)"
+                        : "border-(--gray-200) bg-(--gray-50) text-(--gray-500)"
+                    }`}
+                  >
+                    <Car className={`h-3.5 w-3.5 ${event.parkingAvailable ? "text-(--gold)" : "text-(--gray-400)"}`} />
+                    {event.parkingAvailable ? "Parking available" : "No parking on-site"}
                   </span>
                 ) : null}
               </div>

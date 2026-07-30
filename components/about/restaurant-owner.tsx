@@ -14,7 +14,7 @@ export default function RestaurantOwner() {
       viewport={{ once: true }}
       className="py-20 lg:py-0 lg:min-h-[88vh] lg:flex lg:items-center bg-(--gold-soft-bg) overflow-hidden relative"
     >
-      <div className="mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-10">
+      <div className="page-x-wide">
         <div className="flex flex-col lg:flex-row-reverse items-center lg:items-start gap-12 lg:gap-16">
 
           {/* Text Content */}

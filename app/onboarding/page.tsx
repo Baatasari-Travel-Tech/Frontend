@@ -13,7 +13,7 @@ import {
   PROFESSION_OPTIONS,
 } from "@/lib/profile-validation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { LocationAutocomplete } from "@/components/common/location-autocomplete"
+import { StateDistrictLocalityPicker } from "@/components/common/state-district-locality-picker"
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
@@ -30,6 +30,12 @@ export default function OnboardingPage() {
   const [phone, setPhone] = useState("")
   const [dob, setDob] = useState("")
   const [location, setLocation] = useState("")
+  const [locationArea, setLocationArea] = useState("")
+  const [locationCity, setLocationCity] = useState("")
+  const [locationState, setLocationState] = useState("")
+  const [locationPincode, setLocationPincode] = useState("")
+  const [locationLat, setLocationLat] = useState<number | null>(null)
+  const [locationLng, setLocationLng] = useState<number | null>(null)
   const [gender, setGender] = useState("")
   const [profession, setProfession] = useState("")
   const [otherProfession, setOtherProfession] = useState("")
@@ -235,6 +241,12 @@ export default function OnboardingPage() {
         phone: `+91${phone.trim()}`,
         dob: dob.trim(),
         location: location.trim(),
+        locationArea: locationArea.trim(),
+        locationCity: locationCity.trim(),
+        locationState: locationState.trim(),
+        locationPincode: locationPincode.trim(),
+        locationLat,
+        locationLng,
         gender: gender.trim(),
         profession: resolvedProfession,
       })
@@ -369,10 +381,19 @@ export default function OnboardingPage() {
                 <div className="block text-sm font-semibold text-slate-700 md:col-span-2">
                   Location *
                   <div className="mt-2">
-                    <LocationAutocomplete
-                      value={location}
-                      onSelect={(loc) => setLocation(loc.label)}
-                      placeholder="Search your area or city"
+                    <StateDistrictLocalityPicker
+                      initialState={locationState}
+                      initialDistrict={locationCity}
+                      initialLocalityLabel={location}
+                      onSelect={(loc) => {
+                        setLocation(loc.label)
+                        setLocationArea(loc.area)
+                        setLocationCity(loc.city ?? "")
+                        setLocationState(loc.state ?? "")
+                        setLocationPincode(loc.pincode ?? "")
+                        setLocationLat(loc.lat)
+                        setLocationLng(loc.lng)
+                      }}
                     />
                   </div>
                 </div>

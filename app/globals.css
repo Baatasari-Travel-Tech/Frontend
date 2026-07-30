@@ -654,6 +654,13 @@
   @apply mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10;
 }
 
+/* Wider variant used by the marketing/content pages (Home, Events) — kept
+   distinct from .page-x (used by app/dashboard-style pages) rather than
+   widening .page-x itself, since that would also widen every dashboard page. */
+.page-x-wide {
+  @apply mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-10;
+}
+
 /* Animations */
 @keyframes tooltipFade {
   from {

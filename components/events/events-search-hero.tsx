@@ -61,11 +61,13 @@ const CATEGORIES = ["All", ...EVENT_CATEGORY_NAMES].map((name) => ({
   icon: CATEGORY_ICONS[name] ?? <Ticket size={14} />,
 }));
 
-// "Where" options — values are the literal city text matched against an event's
-// venue. "all" clears the filter.
-const CITIES = ["Visakhapatnam"];
+interface EventsSearchHeroProps {
+  /** Cities to list under "Where" — derived from real published events by the
+   * caller, so the dropdown never offers a city with zero events in it. */
+  cities?: string[];
+}
 
-export function EventsSearchHero() {
+export function EventsSearchHero({ cities = [] }: EventsSearchHeroProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -257,7 +259,7 @@ export function EventsSearchHero() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All cities</SelectItem>
-                    {CITIES.map((c) => (
+                    {cities.map((c) => (
                       <SelectItem key={c} value={c}>
                         {c}
                       </SelectItem>

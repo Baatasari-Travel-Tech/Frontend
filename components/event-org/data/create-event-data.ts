@@ -12,9 +12,18 @@ export interface EventFormData {
   endTime: string
   timeSlots: { name: string; startTime: string; endTime: string }[]
   venue: string
+  location: string
+  locationArea: string
+  locationCity: string
+  locationState: string
+  locationPincode: string
+  locationLat: number | null
+  locationLng: number | null
   googleMapsUrl: string
   transportToEvent: string
   entrySide: string
+  reEntryAllowed: boolean | null
+  parkingAvailable: boolean | null
   ticketType: "paid" | "free"
   gatewayBearer: "customer" | "organizer"
   audienceCategory: {
@@ -74,9 +83,18 @@ export const INITIAL_EVENT_FORM_DATA: EventFormData = {
   endTime: "",
   timeSlots: [],
   venue: "",
+  location: "",
+  locationArea: "",
+  locationCity: "",
+  locationState: "",
+  locationPincode: "",
+  locationLat: null,
+  locationLng: null,
   googleMapsUrl: "",
   transportToEvent: "",
   entrySide: "",
+  reEntryAllowed: null,
+  parkingAvailable: null,
   guidelines: "",
   ticketName: "",
   ticketPrice: "",

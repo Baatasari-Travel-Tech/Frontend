@@ -8,6 +8,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import {
+  AlertCircle,
   ArrowLeft,
   CalendarDays,
   Gift,
@@ -140,6 +141,11 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
   // Idempotency key for order creation; reused across retries of the same
   // tier/quantity selection so a resubmit doesn't create a duplicate order.
   const idempotencyRef = useRef<{ sig: string; key: string } | null>(null)
+  // The submit button sits far below the fold on a long page — a Razorpay
+  // failure/dismiss can fire after the buyer has scrolled away (e.g. while
+  // the payment iframe was open), so the error needs to bring itself into
+  // view rather than rely on the buyer noticing it appeared.
+  const checkoutErrorRef = useRef<HTMLDivElement>(null)
   // Optional buyer GSTIN for a B2B tax invoice on the platform fee.
   const [buyerGstin, setBuyerGstin] = useState("")
   const [coverImageSrc, setCoverImageSrc] = useState(getEventCoverImageUrl(event.id, event.updatedAt))
@@ -238,6 +244,12 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     const nextHref = params.size ? `${pathname}?${params.toString()}` : pathname
     router.replace(nextHref, { scroll: false })
   }, [isLoggedIn, open, pathname, router, searchParams])
+
+  useEffect(() => {
+    if (checkoutError) {
+      checkoutErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+    }
+  }, [checkoutError])
 
   const tiers = useMemo(() => event.ticketTiers ?? [], [event.ticketTiers])
 
@@ -912,8 +924,12 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
                           Payment received — confirming your ticket, don&apos;t close this page...
                         </p>
                       ) : checkoutError ? (
-                        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
-                          {checkoutError}
+                        <p
+                          ref={checkoutErrorRef}
+                          className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700"
+                        >
+                          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>{checkoutError}</span>
                         </p>
                       ) : checkoutSuccess ? (
                         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">

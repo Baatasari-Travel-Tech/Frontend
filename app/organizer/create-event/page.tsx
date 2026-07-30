@@ -170,12 +170,21 @@ const buildCreateEventPayload = (
     startTime: formData.time || null,
     endTime: formData.endTime || null,
     venue: formData.venue.trim(),
+    location: formData.location.trim() || null,
+    locationArea: formData.locationArea.trim() || null,
+    locationCity: formData.locationCity.trim() || null,
+    locationState: formData.locationState.trim() || null,
+    locationPincode: formData.locationPincode.trim() || null,
+    locationLat: formData.locationLat,
+    locationLng: formData.locationLng,
     capacity: Math.max(1, capacity),
     category: formData.category || null,
     tagline: formData.tagline || null,
     googleMapsUrl: normalizeOptionalUrl(formData.googleMapsUrl),
     transportToEvent: formData.transportToEvent || null,
     entrySide: formData.entrySide || null,
+    reEntryAllowed: formData.reEntryAllowed,
+    parkingAvailable: formData.parkingAvailable,
     artists: (formData.artists || [])
       .filter((artist) => artist.name?.trim())
       .map((artist) => ({

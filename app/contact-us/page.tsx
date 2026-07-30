@@ -169,30 +169,28 @@ function ContactUsPageContent() {
         </SectionCard>
       ) : null}
 
-      {isLoggedIn ? (
-        <SectionCard title="Find Us Online">
-          <div className="flex flex-wrap items-center gap-4">
-            <a
-              href={SOCIAL_LINKS.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
-            >
-              <FaInstagram className="h-4 w-4" />
-              Instagram
-            </a>
-            <a
-              href={SOCIAL_LINKS.linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
-            >
-              <FaLinkedin className="h-4 w-4" />
-              LinkedIn
-            </a>
-          </div>
-        </SectionCard>
-      ) : null}
+      <SectionCard title="Find Us Online">
+        <div className="flex flex-wrap items-center gap-4">
+          <a
+            href={SOCIAL_LINKS.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+          >
+            <FaInstagram className="h-4 w-4" />
+            Instagram
+          </a>
+          <a
+            href={SOCIAL_LINKS.linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+          >
+            <FaLinkedin className="h-4 w-4" />
+            LinkedIn
+          </a>
+        </div>
+      </SectionCard>
     </PageShell>
     <SiteFooter />
     </>

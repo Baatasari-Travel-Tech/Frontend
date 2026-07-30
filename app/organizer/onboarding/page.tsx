@@ -2,18 +2,19 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import NextImage from "next/image"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Building2, CalendarIcon, Landmark, ShieldCheck, Trash2 } from "lucide-react"
+import { Building2, CalendarIcon, Landmark, ShieldCheck, UploadCloud } from "lucide-react"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { LocationAutocomplete } from "@/components/common/location-autocomplete"
+import { StateDistrictLocalityPicker } from "@/components/common/state-district-locality-picker"
 import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
-import { uploadOrganizerAvatarImage } from "@/lib/api/uploads"
+import { uploadFile, uploadOrganizerAvatarImage } from "@/lib/api/uploads"
 import { DEFAULT_AVATAR_IMAGE, getAvatarImageUrl } from "@/lib/avatar"
 import {
   getDobDateBounds,
@@ -24,8 +25,8 @@ import {
   PROFESSION_OPTIONS,
 } from "@/lib/profile-validation"
 
-const DRAFT_STORAGE_KEY = "organizer-onboarding-draft-v2"
-const GST_CHOICE_STORAGE_KEY = "organizer-onboarding-gst-choice"
+const DRAFT_STORAGE_KEY = "organizer-onboarding-draft-v3"
+const GST_CHOICE_STORAGE_KEY = "organizer-onboarding-gst-choice-v2"
 const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 const DOB_BOUNDS = getDobDateBounds(new Date(), ORGANIZER_MIN_AGE)
@@ -36,6 +37,8 @@ const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/
 const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/
 
+// Official CBIC GST state/UT codes — the first 2 digits of any GSTIN. Kept in
+// sync with Backend/src/services/kyc.service.ts's copy.
 const GST_STATE_CODES: Record<string, string> = {
   "01": "Jammu and Kashmir", "02": "Himachal Pradesh", "03": "Punjab", "04": "Chandigarh",
   "05": "Uttarakhand", "06": "Haryana", "07": "Delhi", "08": "Rajasthan", "09": "Uttar Pradesh",
@@ -47,10 +50,6 @@ const GST_STATE_CODES: Record<string, string> = {
   "34": "Puducherry", "35": "Andaman and Nicobar Islands", "36": "Telangana", "37": "Andhra Pradesh",
   "38": "Ladakh", "97": "Other Territory", "99": "Centre"
 }
-
-const INDIAN_STATES = Array.from(new Set(Object.values(GST_STATE_CODES)))
-  .filter((name) => !/[()]/.test(name) && name !== "Centre" && name !== "Other Territory")
-  .sort((a, b) => a.localeCompare(b))
 
 // Return the exact state the GSTIN's state code maps to (no normalization).
 const stateFromGstin = (gstin: string): string => GST_STATE_CODES[gstin.slice(0, 2)] ?? ""
@@ -80,33 +79,6 @@ const isValidGstinChecksum = (gstin: string): boolean => {
   return GSTN_CODEPOINT_CHARS[checkCodePoint] === providedCheck
 }
 
-type GstinVerifyResult = {
-  valid: boolean
-  embeddedPan: string
-  legalName?: string
-  status?: string
-  registrationDate?: string
-  address?: string
-  taxpayerType?: string
-}
-
-type GstinRow = {
-  gstin: string
-  state: string
-  verified: boolean
-  verifying: boolean
-  error: string | null
-  legalName?: string | null
-}
-
-const makeGstinRow = (gstin = "", state = "", verified = false): GstinRow => ({
-  gstin,
-  state,
-  verified,
-  verifying: false,
-  error: null,
-})
-
 const getProfessionFormValues = (profession: string | null | undefined) => {
   const trimmedProfession = (profession ?? "").trim()
   if (!trimmedProfession) {
@@ -131,20 +103,30 @@ const getProfessionFormValues = (profession: string | null | undefined) => {
 
 const schema = z
   .object({
-    entityType: z.enum(["ORGANIZATION", "INDIVIDUAL"]).default("ORGANIZATION"),
     fullName: z.string().min(2, "Enter your full name"),
     personalPhone: z.string().regex(/^\d{10}$/, "Enter a valid 10 digit phone number"),
     dob: z.string().min(1, "Select your date of birth"),
     location: z.string().min(2, "Enter your location"),
+    locationArea: z.string().optional(),
+    locationCity: z.string().optional(),
+    locationState: z.string().optional(),
+    locationPincode: z.string().optional(),
+    locationLat: z.number().optional().nullable(),
+    locationLng: z.number().optional().nullable(),
     gender: z.string().min(1, "Select your gender"),
     profession: z.string().min(1, "Select your profession"),
     otherProfession: z.string().optional(),
+    // Organization Details — organizer types these themselves (there is no
+    // live GSTIN lookup); the Baatasari team verifies and approves manually.
+    // Required-when-GSTIN-present is enforced procedurally in saveStepThree,
+    // not here, since this step is skipped entirely for PAN-only organizers.
     orgName: z.string().optional(),
+    tradeName: z.string().optional(),
     description: z.string().optional(),
     contactEmail: z.string().optional(),
     contactPhone: z.string().optional(),
-    primaryContactName: z.string().optional(),
     secondaryContactPhone: z.string().optional(),
+    landlineNumber: z.string().optional(),
     address: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
@@ -184,28 +166,8 @@ const schema = z
       })
     }
 
-    if (value.entityType === "INDIVIDUAL") return
-    const requiredFields: Array<keyof Omit<typeof value, "entityType">> = [
-      "orgName",
-      "description",
-      "contactEmail",
-      "contactPhone",
-      "address",
-      "city",
-      "state",
-      "pincode",
-    ]
-    for (const field of requiredFields) {
-      const fieldValue = value[field]
-      if (!fieldValue || !String(fieldValue).trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [field],
-          message: "This field is required.",
-        })
-      }
-    }
-
+    // All contact fields below are optional — only their FORMAT is validated
+    // when the organizer actually fills them in.
     if (value.contactEmail && !EMAIL_PATTERN.test(value.contactEmail.trim())) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -214,7 +176,7 @@ const schema = z
       })
     }
 
-    if (value.contactPhone && !TEN_DIGIT_PHONE_PATTERN.test(value.contactPhone.trim())) {
+    if (value.contactPhone && value.contactPhone.trim() && !TEN_DIGIT_PHONE_PATTERN.test(value.contactPhone.trim())) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["contactPhone"],
@@ -227,14 +189,6 @@ const schema = z
         code: z.ZodIssueCode.custom,
         path: ["secondaryContactPhone"],
         message: "Secondary phone must be 10 digits",
-      })
-    }
-
-    if (value.primaryContactName && value.primaryContactName.trim() && value.primaryContactName.trim().length < 2) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["primaryContactName"],
-        message: "Enter a valid primary contact name",
       })
     }
 
@@ -254,31 +208,21 @@ const schema = z
       })
     }
 
-    // ITR is only asked (and only required) when the organizer has a GSTIN —
-    // that branch is validated in onSubmit since it depends on UI state.
+    // ITR and the no-GSTIN undertaking are only relevant when the organizer
+    // has a GSTIN / has chosen "no" — both depend on UI state outside this
+    // schema, so they're validated procedurally in saveStepTwo instead.
   })
 
 type Values = z.infer<typeof schema>
 
-const steps = [
-  {
-    id: 0,
-    title: "Personal Details",
-  },
-  {
-    id: 1,
-    title: "Organization Details",
-  },
-  {
-    id: 2,
-    title: "Bank & Compliance",
-  },
+const allSteps = [
+  { id: 0, title: "Personal Details" },
+  { id: 1, title: "GSTIN / PAN" },
+  { id: 2, title: "Organization Details" },
+  { id: 3, title: "Bank & Compliance" },
 ]
 
-const individualSteps = [steps[0], steps[2]]
-
 const stepOneFields: Array<keyof Values> = [
-  "entityType",
   "fullName",
   "personalPhone",
   "dob",
@@ -288,13 +232,15 @@ const stepOneFields: Array<keyof Values> = [
   "otherProfession",
 ]
 
-const stepTwoFields: Array<keyof Values> = [
+const stepTwoFields: Array<keyof Values> = ["panNumber"]
+
+const stepThreeFields: Array<keyof Values> = [
   "orgName",
   "description",
   "contactEmail",
   "contactPhone",
-  "primaryContactName",
   "secondaryContactPhone",
+  "landlineNumber",
   "address",
   "city",
   "state",
@@ -304,8 +250,7 @@ const stepTwoFields: Array<keyof Values> = [
   "linkedinUrl",
 ]
 
-const stepThreeFields: Array<keyof Values> = [
-  "panNumber",
+const stepFourFields: Array<keyof Values> = [
   "bankAccountName",
   "bankName",
   "bankAccountType",
@@ -392,37 +337,51 @@ export default function OrganizerOnboardingPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSavingStepOne, setIsSavingStepOne] = useState(false)
   const [isSavingStepTwo, setIsSavingStepTwo] = useState(false)
+  const [isSavingStepThree, setIsSavingStepThree] = useState(false)
   const [ifscLoading, setIfscLoading] = useState(false)
   const [ifscBranch, setIfscBranch] = useState<string | null>(null)
   const [dobOpen, setDobOpen] = useState(false)
   const [hasGstin, setHasGstin] = useState<"yes" | "no">("yes")
   const [gstDeclarationAccepted, setGstDeclarationAccepted] = useState(false)
   const [showGstModal, setShowGstModal] = useState(false)
-  const [gstinRows, setGstinRows] = useState<GstinRow[]>([makeGstinRow()])
+  // No live GSTIN lookup — the organizer types their GSTIN and we validate
+  // its format/checksum locally; Baatasari verifies and approves manually.
+  const [gstin, setGstin] = useState("")
   const [gstinError, setGstinError] = useState<string | null>(null)
   const [itrError, setItrError] = useState<string | null>(null)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [logoUploading, setLogoUploading] = useState(false)
 
   const cropContainerRef = useRef<HTMLDivElement>(null)
   const previewUrlRef = useRef<string | null>(null)
+  const logoPreviewRef = useRef<string | null>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const ifscLookupRef = useRef<string | null>(null)
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
-      entityType: "ORGANIZATION",
       fullName: "",
       personalPhone: "",
       dob: "",
       location: "",
+      locationArea: "",
+      locationCity: "",
+      locationState: "",
+      locationPincode: "",
+      locationLat: null,
+      locationLng: null,
       gender: "",
       profession: "",
       otherProfession: "",
       orgName: "",
+      tradeName: "",
       description: "",
       contactEmail: "",
       contactPhone: "",
-      primaryContactName: "",
       secondaryContactPhone: "",
+      landlineNumber: "",
       address: "",
       city: "",
       state: "",
@@ -441,35 +400,41 @@ export default function OrganizerOnboardingPage() {
     },
   })
 
-  const entityType = form.watch("entityType")
   const selectedProfession = form.watch("profession")
   const panValue = form.watch("panNumber")
-  const showOrganizationStep = entityType !== "INDIVIDUAL"
-  const activeSteps = showOrganizationStep ? steps : individualSteps
+  const showOrganizationStep = hasGstin === "yes"
+  const activeSteps = showOrganizationStep ? allSteps : [allSteps[0], allSteps[1], allSteps[3]]
 
+  // PAN-only (no GSTIN) skips the Organization Details step entirely.
   useEffect(() => {
-    if (!showOrganizationStep && step === 1) {
-      setStep(2)
+    if (!showOrganizationStep && step === 2) {
+      setStep(3)
     }
   }, [showOrganizationStep, step])
 
   useEffect(() => {
     const profileProfession = getProfessionFormValues(profile?.profession)
     const baseValues: Values = {
-      entityType: organizerProfile?.entityType ?? "ORGANIZATION",
       fullName: profile?.full_name ?? "",
       personalPhone: stripIndianCode(profile?.phone),
       dob: profile?.dob ?? "",
       location: profile?.location ?? "",
+      locationArea: "",
+      locationCity: "",
+      locationState: "",
+      locationPincode: "",
+      locationLat: null,
+      locationLng: null,
       gender: profile?.gender ?? "",
       profession: profileProfession.profession,
       otherProfession: profileProfession.otherProfession,
       orgName: organizerProfile?.orgName ?? "",
+      tradeName: organizerProfile?.tradeName ?? "",
       description: organizerProfile?.description ?? "",
       contactEmail: organizerProfile?.contactEmail ?? session?.user?.email ?? "",
       contactPhone: organizerProfile?.contactPhone ?? stripIndianCode(profile?.phone),
-      primaryContactName: organizerProfile?.primaryContactName ?? "",
       secondaryContactPhone: organizerProfile?.secondaryContactPhone ?? "",
+      landlineNumber: organizerProfile?.landlineNumber ?? "",
       address: organizerProfile?.address ?? "",
       city: organizerProfile?.city ?? "",
       state: organizerProfile?.state ?? "",
@@ -496,15 +461,10 @@ export default function OrganizerOnboardingPage() {
       ...baseValues,
       ...(draft?.values ?? {}),
     })
-    const normalizedDraftStep = typeof draft?.step === "number" && draft.step >= 0 && draft.step <= 2 ? draft.step : 0
-    const draftEntityType =
-      (draft?.values?.entityType as Values["entityType"] | undefined) ?? baseValues.entityType
-    if (draftEntityType === "INDIVIDUAL" && normalizedDraftStep === 1) {
-      setStep(2)
-    } else {
-      setStep(normalizedDraftStep)
-    }
+    const normalizedDraftStep = typeof draft?.step === "number" && draft.step >= 0 && draft.step <= 3 ? draft.step : 0
+    setStep(normalizedDraftStep)
     setAvatarPreview(profile?.avatar_url ?? DEFAULT_AVATAR_IMAGE)
+    setLogoPreview(organizerProfile?.logoUrl ?? null)
   }, [
     form,
     organizerProfile?.address,
@@ -515,18 +475,19 @@ export default function OrganizerOnboardingPage() {
     organizerProfile?.contactEmail,
     organizerProfile?.contactPhone,
     organizerProfile?.description,
-    organizerProfile?.entityType,
     organizerProfile?.bankName,
     organizerProfile?.bankAccountType,
     organizerProfile?.itrFiledLastTwoYears,
     organizerProfile?.instagramUrl,
+    organizerProfile?.landlineNumber,
     organizerProfile?.linkedinUrl,
+    organizerProfile?.logoUrl,
     organizerProfile?.orgName,
     organizerProfile?.panNumber,
     organizerProfile?.pincode,
-    organizerProfile?.primaryContactName,
     organizerProfile?.secondaryContactPhone,
     organizerProfile?.state,
+    organizerProfile?.tradeName,
     organizerProfile?.websiteUrl,
     profile?.avatar_url,
     profile?.dob,
@@ -538,17 +499,13 @@ export default function OrganizerOnboardingPage() {
     session?.user?.email,
   ])
 
-  // Seed the GSTIN choice + rows: the saved profile is the base, and an
-  // in-progress local choice (if the user already picked one) overrides it.
+  // Seed the GSTIN choice: the saved profile is the base, and an in-progress
+  // local choice (if the user already picked one) wins.
   useEffect(() => {
-    const profileRows = (organizerProfile?.gstDetails ?? [])
-      .map((row) => makeGstinRow(row?.gstin ?? "", row?.state ?? "", true))
-      .filter((row) => row.gstin || row.state)
-
-    let next: { hasGstin: "yes" | "no"; accepted: boolean; rows: GstinRow[] } =
+    let next: { hasGstin: "yes" | "no"; accepted: boolean; gstin: string } =
       organizerProfile?.gstDeclarationMode === "NO_GSTIN"
-        ? { hasGstin: "no", accepted: !!organizerProfile?.undertakingAccepted, rows: [makeGstinRow()] }
-        : { hasGstin: "yes", accepted: false, rows: profileRows.length ? profileRows : [makeGstinRow()] }
+        ? { hasGstin: "no", accepted: !!organizerProfile?.undertakingAccepted, gstin: "" }
+        : { hasGstin: "yes", accepted: false, gstin: organizerProfile?.gstNumber ?? "" }
 
     try {
       const raw = typeof window !== "undefined" ? window.localStorage.getItem(GST_CHOICE_STORAGE_KEY) : null
@@ -556,16 +513,13 @@ export default function OrganizerOnboardingPage() {
         const parsed = JSON.parse(raw) as {
           hasGstin?: "yes" | "no"
           accepted?: boolean
-          rows?: Array<{ gstin?: string; state?: string; verified?: boolean }>
+          gstin?: string
         }
         if (parsed?.hasGstin === "yes" || parsed?.hasGstin === "no") {
-          const storedRows = Array.isArray(parsed.rows)
-            ? parsed.rows.map((row) => makeGstinRow(String(row?.gstin ?? ""), String(row?.state ?? ""), !!row?.verified))
-            : []
           next = {
             hasGstin: parsed.hasGstin,
             accepted: parsed.hasGstin === "no" ? !!parsed.accepted : false,
-            rows: storedRows.length ? storedRows : next.rows,
+            gstin: parsed.gstin ?? next.gstin,
           }
         }
       }
@@ -575,19 +529,14 @@ export default function OrganizerOnboardingPage() {
 
     setHasGstin(next.hasGstin)
     setGstDeclarationAccepted(next.accepted)
-    setGstinRows(next.rows.length ? next.rows : [makeGstinRow()])
-  }, [
-    organizerProfile?.gstDeclarationMode,
-    organizerProfile?.undertakingAccepted,
-    organizerProfile?.gstDetails,
-  ])
+    setGstin(next.gstin)
+  }, [organizerProfile?.gstDeclarationMode, organizerProfile?.undertakingAccepted, organizerProfile?.gstNumber])
 
-  const persistGstChoice = (choice: "yes" | "no", accepted: boolean, rows: GstinRow[]) => {
+  const persistGstChoice = (choice: "yes" | "no", accepted: boolean, gstinValue: string) => {
     if (typeof window === "undefined") return
-    const slimRows = rows.map((row) => ({ gstin: row.gstin, state: row.state, verified: row.verified }))
     window.localStorage.setItem(
       GST_CHOICE_STORAGE_KEY,
-      JSON.stringify({ hasGstin: choice, accepted, rows: slimRows })
+      JSON.stringify({ hasGstin: choice, accepted, gstin: gstinValue })
     )
   }
 
@@ -607,6 +556,9 @@ export default function OrganizerOnboardingPage() {
     return () => {
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current)
+      }
+      if (logoPreviewRef.current) {
+        URL.revokeObjectURL(logoPreviewRef.current)
       }
     }
   }, [])
@@ -734,201 +686,135 @@ export default function OrganizerOnboardingPage() {
     setAvatarPreview(getAvatarImageUrl("organizers", user.id, upload.version))
   }
 
+  const pickLogo = (file: File | null) => {
+    if (!file) return
+    setError(null)
+
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      setError("Only PNG, JPG, GIF, or WEBP images are allowed.")
+      return
+    }
+    if (file.size > MAX_AVATAR_FILE_SIZE) {
+      setError("Logo image must be 5MB or less.")
+      return
+    }
+
+    if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current)
+    const url = URL.createObjectURL(file)
+    logoPreviewRef.current = url
+    setLogoPreview(url)
+    setLogoFile(file)
+  }
+
+  // Uploads the pending logo (if any) and returns the URL/publicId to save —
+  // falls back to whatever's already on file so a step save without a new
+  // logo pick doesn't wipe out a previously-uploaded one.
+  const uploadLogoIfNeeded = async (): Promise<{ logoUrl: string | null; logoPublicId: string | null }> => {
+    if (!logoFile) {
+      return {
+        logoUrl: organizerProfile?.logoUrl ?? null,
+        logoPublicId: organizerProfile?.logoPublicId ?? null,
+      }
+    }
+
+    setLogoUploading(true)
+    try {
+      const upload = await uploadFile(logoFile, "organizerLogo")
+      setLogoFile(null)
+      return { logoUrl: upload.secureUrl, logoPublicId: upload.publicId }
+    } finally {
+      setLogoUploading(false)
+    }
+  }
+
   const resolveProfession = (values: Values) =>
     values.profession === OTHER_PROFESSION_VALUE ? values.otherProfession?.trim() ?? "" : values.profession.trim()
 
-  const buildOrganizerPayload = (values: Values) => {
-    const validGstinRows = gstinRows
-      .map((row) => ({ gstin: row.gstin.trim().toUpperCase(), state: row.state.trim() }))
-      .filter((row) => row.gstin)
-
-    return {
-      entityType: values.entityType,
-      orgName: values.entityType === "INDIVIDUAL" ? null : values.orgName?.trim() || null,
-      description: values.entityType === "INDIVIDUAL" ? null : values.description?.trim() || null,
-      contactEmail: values.entityType === "INDIVIDUAL" ? null : values.contactEmail?.trim() || null,
-      contactPhone: values.entityType === "INDIVIDUAL" ? null : values.contactPhone?.trim() || null,
-      address: values.entityType === "INDIVIDUAL" ? null : values.address?.trim() || null,
-      city: values.entityType === "INDIVIDUAL" ? null : values.city?.trim() || null,
-      state: values.entityType === "INDIVIDUAL" ? null : values.state?.trim() || null,
-      pincode: values.entityType === "INDIVIDUAL" ? null : values.pincode?.trim() || null,
-      panNumber: values.panNumber.trim().toUpperCase() || null,
-      gstNumber: hasGstin === "no" ? null : validGstinRows[0]?.gstin ?? null,
-      gstDeclarationMode: hasGstin === "no" ? "NO_GSTIN" : "HAS_GSTIN",
-      gstDetails: hasGstin === "no" ? [] : validGstinRows,
-      undertakingAccepted: hasGstin === "no" ? gstDeclarationAccepted : false,
-      undertakingState: hasGstin === "no" ? (values.state?.trim() || null) : null,
-      itrFiledLastTwoYears:
-        hasGstin === "no"
-          ? null
-          : values.itrFiledLastTwoYears === "yes"
-            ? true
-            : values.itrFiledLastTwoYears === "no"
-              ? false
-              : null,
-      bankAccountName: values.bankAccountName.trim() || null,
-      bankName: values.bankName?.trim() || null,
-      bankAccountType: values.bankAccountType?.trim() || null,
-      bankAccountNumber: values.bankAccountNumber.trim() || null,
-      bankIfsc: values.bankIfsc.trim().toUpperCase() || null,
-      websiteUrl: values.websiteUrl?.trim() || null,
-      instagramUrl: values.instagramUrl?.trim() || null,
-      linkedinUrl: values.linkedinUrl?.trim() || null,
-      primaryContactName: values.primaryContactName?.trim() || null,
-      secondaryContactPhone: values.secondaryContactPhone?.trim() || null,
-      logoUrl: organizerProfile?.logoUrl ?? null,
-      logoPublicId: organizerProfile?.logoPublicId ?? null,
-      kycDocUrl: organizerProfile?.kycDocUrl ?? null,
-      kycDocPublicId: organizerProfile?.kycDocPublicId ?? null,
-    }
-  }
+  const buildOrganizerPayload = (
+    values: Values,
+    logo: { logoUrl: string | null; logoPublicId: string | null } | null = null
+  ) => ({
+    entityType: hasGstin === "yes" ? "ORGANIZATION" : "INDIVIDUAL",
+    orgName: hasGstin === "no" ? null : values.orgName?.trim() || null,
+    tradeName: hasGstin === "no" ? null : values.tradeName?.trim() || null,
+    description: hasGstin === "no" ? null : values.description?.trim() || null,
+    contactEmail: hasGstin === "no" ? null : values.contactEmail?.trim() || null,
+    contactPhone: hasGstin === "no" ? null : values.contactPhone?.trim() || null,
+    landlineNumber: hasGstin === "no" ? null : values.landlineNumber?.trim() || null,
+    address: hasGstin === "no" ? null : values.address?.trim() || null,
+    city: hasGstin === "no" ? null : values.city?.trim() || null,
+    state: hasGstin === "no" ? null : values.state?.trim() || null,
+    pincode: hasGstin === "no" ? null : values.pincode?.trim() || null,
+    panNumber: values.panNumber.trim().toUpperCase() || null,
+    gstNumber: hasGstin === "no" ? null : gstin.trim().toUpperCase() || null,
+    gstDeclarationMode: hasGstin === "no" ? "NO_GSTIN" : "HAS_GSTIN",
+    gstDetails: hasGstin === "no" || !gstin.trim()
+      ? []
+      : [{ gstin: gstin.trim().toUpperCase(), state: values.state?.trim() || stateFromGstin(gstin) }],
+    undertakingAccepted: hasGstin === "no" ? gstDeclarationAccepted : false,
+    undertakingState: hasGstin === "no" ? (values.locationState?.trim() || null) : null,
+    itrFiledLastTwoYears:
+      hasGstin === "no"
+        ? null
+        : values.itrFiledLastTwoYears === "yes"
+          ? true
+          : values.itrFiledLastTwoYears === "no"
+            ? false
+            : null,
+    bankAccountName: values.bankAccountName.trim() || null,
+    bankName: values.bankName?.trim() || null,
+    bankAccountType: values.bankAccountType?.trim() || null,
+    bankAccountNumber: values.bankAccountNumber.trim() || null,
+    bankIfsc: values.bankIfsc.trim().toUpperCase() || null,
+    websiteUrl: values.websiteUrl?.trim() || null,
+    instagramUrl: values.instagramUrl?.trim() || null,
+    linkedinUrl: values.linkedinUrl?.trim() || null,
+    secondaryContactPhone: values.secondaryContactPhone?.trim() || null,
+    logoUrl: logo?.logoUrl ?? organizerProfile?.logoUrl ?? null,
+    logoPublicId: logo?.logoPublicId ?? organizerProfile?.logoPublicId ?? null,
+    kycDocUrl: organizerProfile?.kycDocUrl ?? null,
+    kycDocPublicId: organizerProfile?.kycDocPublicId ?? null,
+  })
 
   const selectGstinYes = () => {
     setHasGstin("yes")
     setGstDeclarationAccepted(false)
     setShowGstModal(false)
     setGstinError(null)
-    persistGstChoice("yes", false, gstinRows)
+    persistGstChoice("yes", false, gstin)
   }
 
   const selectGstinNo = () => {
     setHasGstin("no")
     setGstinError(null)
-    persistGstChoice("no", gstDeclarationAccepted, gstinRows)
+    persistGstChoice("no", gstDeclarationAccepted, gstin)
     if (!gstDeclarationAccepted) setShowGstModal(true)
   }
 
   const acceptGstDeclaration = () => {
     setGstDeclarationAccepted(true)
     setShowGstModal(false)
-    persistGstChoice("no", true, gstinRows)
+    persistGstChoice("no", true, gstin)
   }
 
   const closeGstModal = () => {
     // The "No" radio already reflects the choice; closing just dismisses the
-    // undertaking. Acceptance is gated separately at submit time.
+    // undertaking. Acceptance is gated separately at the step's Continue.
     setShowGstModal(false)
   }
 
-  const updateGstinRow = (index: number, field: "gstin" | "state", value: string) => {
+  // No live lookup — just format/checksum feedback as they type, and a
+  // state auto-fill nicety (derived from the GSTIN's own digits, not an API).
+  const updateGstinValue = (value: string) => {
+    const upper = value.toUpperCase()
     setGstinError(null)
-    setGstinRows((prev) => {
-      const nextRows = prev.map((row, i) => {
-        if (i !== index) return row
-        if (field === "gstin") {
-          const gstin = value.toUpperCase()
-          // The GSTIN's first two digits are the state code, so it drives the
-          // state: auto-fill/override whenever those map to a known state, and
-          // keep the current value while the code is still incomplete/unknown.
-          const derivedState = stateFromGstin(gstin)
-          // Editing the GSTIN invalidates any prior verification.
-          return {
-            ...row,
-            gstin,
-            state: derivedState || row.state,
-            verified: false,
-            error: null,
-            legalName: null,
-          }
-        }
-        return { ...row, state: value }
-      })
-      persistGstChoice("yes", false, nextRows)
-      return nextRows
-    })
-  }
-
-  const addGstinRow = () => {
-    setGstinRows((prev) => {
-      const nextRows = [...prev, makeGstinRow()]
-      persistGstChoice("yes", false, nextRows)
-      return nextRows
-    })
-  }
-
-  const removeGstinRow = (index: number) => {
-    setGstinRows((prev) => {
-      const filtered = prev.filter((_, i) => i !== index)
-      const nextRows = filtered.length ? filtered : [makeGstinRow()]
-      persistGstChoice("yes", false, nextRows)
-      return nextRows
-    })
-  }
-
-  const verifyGstinRow = async (index: number) => {
-    const row = gstinRows[index]
-    if (!row) return
-    const gstin = row.gstin.trim().toUpperCase()
-    const pan = (panValue ?? "").trim().toUpperCase()
-
-    const setRow = (patch: Partial<GstinRow>) =>
-      setGstinRows((prev) => prev.map((current, i) => (i === index ? { ...current, ...patch } : current)))
-
-    if (!GSTIN_RE.test(gstin)) {
-      setRow({ verified: false, error: "Enter a valid 15-character GSTIN." })
-      return
-    }
-    if (!isValidGstinChecksum(gstin)) {
-      setRow({ verified: false, error: "This GSTIN is not valid — its check digit does not match." })
-      return
-    }
-    if (!pan) {
-      setRow({ verified: false, error: "Enter your PAN above before verifying GSTIN." })
-      return
-    }
-    if (gstin.slice(2, 12) !== pan) {
-      setRow({ verified: false, error: "This GSTIN does not match your PAN." })
-      return
-    }
-
-    setRow({ verifying: true, error: null })
-    try {
-      const res = await apiRequest<{ data: GstinVerifyResult }>("/organizer/verify/gstin", {
-        method: "POST",
-        auth: true,
-        body: JSON.stringify({ gstin }),
-      })
-      const result = res.data
-      if (result.status && result.status !== "Active") {
-        setGstinRows((prev) =>
-          prev.map((current, i) =>
-            i === index ? { ...current, verifying: false, verified: false, error: `GSTIN is ${result.status}. Only active GSTINs are accepted.` } : current
-          )
-        )
-        return
+    setGstin(upper)
+    persistGstChoice("yes", false, upper)
+    if (GSTIN_RE.test(upper)) {
+      const derivedState = stateFromGstin(upper)
+      if (derivedState && !form.getValues().state?.trim()) {
+        form.setValue("state", derivedState, { shouldValidate: true })
       }
-      if (result.embeddedPan && result.embeddedPan.toUpperCase() !== pan) {
-        setGstinRows((prev) =>
-          prev.map((current, i) =>
-            i === index ? { ...current, verifying: false, verified: false, error: "This GSTIN is registered under a different PAN." } : current
-          )
-        )
-        return
-      }
-      setGstinRows((prev) => {
-        const nextRows = prev.map((current, i) =>
-          i === index
-            ? {
-                ...current,
-                verifying: false,
-                verified: true,
-                error: null,
-                legalName: result.legalName ?? null,
-                state: current.state.trim() ? current.state : stateFromGstin(gstin),
-              }
-            : current
-        )
-        persistGstChoice("yes", false, nextRows)
-        return nextRows
-      })
-    } catch (err) {
-      setGstinRows((prev) =>
-        prev.map((current, i) =>
-          i === index
-            ? { ...current, verifying: false, verified: false, error: err instanceof Error ? err.message : "GSTIN verification failed." }
-            : current
-        )
-      )
     }
   }
 
@@ -976,18 +862,19 @@ export default function OrganizerOnboardingPage() {
         phone: `+91${values.personalPhone.trim()}`,
         dob: values.dob,
         location: values.location.trim(),
+        locationArea: (values.locationArea ?? "").trim(),
+        locationCity: (values.locationCity ?? "").trim(),
+        locationState: (values.locationState ?? "").trim(),
+        locationPincode: (values.locationPincode ?? "").trim(),
+        locationLat: values.locationLat ?? undefined,
+        locationLng: values.locationLng ?? undefined,
         gender: values.gender,
         profession: resolveProfession(values),
       })
-      if (values.entityType === "INDIVIDUAL") {
-        persistDraft(2, values)
-        setStep(2)
-        setNotice("Personal details saved. Organization step skipped for individual onboarding.")
-      } else {
-        persistDraft(1, values)
-        setStep(1)
-        setNotice("Personal details saved. You can continue now or return later.")
-      }
+
+      persistDraft(1, values)
+      setStep(1)
+      setNotice("Personal details saved. You can continue now or return later.")
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save your progress.")
     } finally {
@@ -995,6 +882,9 @@ export default function OrganizerOnboardingPage() {
     }
   }
 
+  // GSTIN / PAN step. Validates PAN + (GSTIN verified OR no-GSTIN
+  // undertaking accepted) + ITR question, then saves and either continues to
+  // Organization Details (has GSTIN) or skips straight to Bank (PAN only).
   const saveStepTwo = async () => {
     setNotice(null)
     setError(null)
@@ -1002,8 +892,42 @@ export default function OrganizerOnboardingPage() {
     const isValid = await form.trigger(stepTwoFields)
     if (!isValid) return
 
-    setIsSavingStepTwo(true)
+    if (hasGstin === "no") {
+      if (!gstDeclarationAccepted) {
+        setError("Please review and accept the GST declaration to continue without a GSTIN.")
+        setShowGstModal(true)
+        return
+      }
+    } else {
+      const trimmedGstin = gstin.trim().toUpperCase()
+      const pan = form.getValues().panNumber.trim().toUpperCase()
 
+      if (!trimmedGstin) {
+        setGstinError('Enter your GSTIN, or select "No" if you don\'t have one.')
+        setError('Enter your GSTIN, or select "No" above.')
+        return
+      }
+      if (!GSTIN_RE.test(trimmedGstin) || !isValidGstinChecksum(trimmedGstin)) {
+        setGstinError("Enter a valid GSTIN.")
+        setError("Your GSTIN is not valid.")
+        return
+      }
+      if (pan && trimmedGstin.slice(2, 12) !== pan) {
+        setGstinError("Your GSTIN must match your PAN (characters 3–12).")
+        setError("Your GSTIN does not match your PAN.")
+        return
+      }
+      setGstinError(null)
+
+      if (form.getValues().itrFiledLastTwoYears !== "yes" && form.getValues().itrFiledLastTwoYears !== "no") {
+        setItrError("Please tell us if you have filed the last 2 years' ITR.")
+        setError("Please answer the ITR filing question.")
+        return
+      }
+      setItrError(null)
+    }
+
+    setIsSavingStepTwo(true)
     try {
       const values = form.getValues()
 
@@ -1014,13 +938,61 @@ export default function OrganizerOnboardingPage() {
       })
 
       await refreshOrganizerStatus()
-      persistDraft(2, values)
-      setStep(2)
+      const nextStep = hasGstin === "yes" ? 2 : 3
+      persistDraft(nextStep, values)
+      setStep(nextStep)
+      setNotice("Saved. You can continue now or return later.")
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save your GSTIN/PAN details.")
+    } finally {
+      setIsSavingStepTwo(false)
+    }
+  }
+
+  // Organization Details step — only reachable when hasGstin === "yes". These
+  // fields are typed by the organizer (no live GSTIN lookup); required-ness
+  // is checked here rather than in the schema, since the schema is shared
+  // with the PAN-only path where this whole step never runs.
+  const saveStepThree = async () => {
+    setNotice(null)
+    setError(null)
+
+    const isValid = await form.trigger(stepThreeFields)
+    if (!isValid) return
+
+    const values = form.getValues()
+    const requiredFields: Array<{ key: keyof Values; label: string }> = [
+      { key: "orgName", label: "Legal name" },
+      { key: "description", label: "About Organization" },
+      { key: "address", label: "Address" },
+      { key: "city", label: "Place" },
+      { key: "state", label: "State" },
+      { key: "pincode", label: "Pincode" },
+    ]
+    const missing = requiredFields.find((field) => !String(values[field.key] ?? "").trim())
+    if (missing) {
+      setError(`${missing.label} is required.`)
+      return
+    }
+
+    setIsSavingStepThree(true)
+    try {
+      const logo = await uploadLogoIfNeeded()
+
+      await apiRequest("/organizer/profile", {
+        method: "PUT",
+        auth: true,
+        body: JSON.stringify(buildOrganizerPayload(values, logo)),
+      })
+
+      await refreshOrganizerStatus()
+      persistDraft(3, values)
+      setStep(3)
       setNotice("Organization details saved. You can continue now or return later.")
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save your organization details.")
     } finally {
-      setIsSavingStepTwo(false)
+      setIsSavingStepThree(false)
     }
   }
 
@@ -1029,69 +1001,28 @@ export default function OrganizerOnboardingPage() {
     setError(null)
 
     try {
-      const isValid = await form.trigger(stepThreeFields)
+      const isValid = await form.trigger(stepFourFields)
       if (!isValid) return
 
-      if (hasGstin === "no") {
-        if (!gstDeclarationAccepted) {
-          setError("Please review and accept the GST declaration to continue without a GSTIN.")
-          setShowGstModal(true)
-          return
-        }
-      } else {
-        const pan = values.panNumber.trim().toUpperCase()
-        const filled = gstinRows.filter((row) => row.gstin.trim() || row.state.trim())
-
-        if (filled.length === 0) {
-          setGstinError('Add and verify at least one GSTIN, or select "No" if you don\'t have one.')
-          setError('Add and verify at least one GSTIN number, or select "No" above.')
-          return
-        }
-        for (const row of filled) {
-          const gstin = row.gstin.trim().toUpperCase()
-          if (!GSTIN_RE.test(gstin) || !isValidGstinChecksum(gstin)) {
-            setGstinError("Enter a valid GSTIN for each row.")
-            setError("One of your GSTIN numbers is not a valid GSTIN.")
-            return
-          }
-          if (pan && gstin.slice(2, 12) !== pan) {
-            setGstinError("Each GSTIN must match your PAN (characters 3–12).")
-            setError("A GSTIN you entered does not match your PAN.")
-            return
-          }
-          if (!row.state.trim()) {
-            setGstinError("Select the state for each GSTIN.")
-            setError("Select the state for each GSTIN number.")
-            return
-          }
-          if (!row.verified) {
-            setGstinError("Verify each GSTIN before submitting.")
-            setError("Please verify each GSTIN number before submitting.")
-            return
-          }
-        }
-        setGstinError(null)
-
-        if (values.itrFiledLastTwoYears !== "yes" && values.itrFiledLastTwoYears !== "no") {
-          setItrError("Please tell us if you have filed the last 2 years' ITR.")
-          setError("Please answer the ITR filing question.")
-          return
-        }
-        setItrError(null)
-      }
-
       await uploadAvatarIfNeeded()
+      const logo = await uploadLogoIfNeeded()
 
       await updateProfile({
         fullName: values.fullName.trim(),
         phone: `+91${values.personalPhone.trim()}`,
         dob: values.dob,
         location: values.location.trim(),
+        locationArea: (values.locationArea ?? "").trim(),
+        locationCity: (values.locationCity ?? "").trim(),
+        locationState: (values.locationState ?? "").trim(),
+        locationPincode: (values.locationPincode ?? "").trim(),
+        locationLat: values.locationLat ?? undefined,
+        locationLng: values.locationLng ?? undefined,
         gender: values.gender,
         profession: resolveProfession(values),
       })
 
-      await completeRoleOnboarding("EVENT_ORGANIZER", buildOrganizerPayload(values))
+      await completeRoleOnboarding("EVENT_ORGANIZER", buildOrganizerPayload(values, logo))
       clearDraft()
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(GST_CHOICE_STORAGE_KEY)
@@ -1119,7 +1050,8 @@ export default function OrganizerOnboardingPage() {
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">Organizer Onboarding</h1>
             <p className="max-w-3xl text-sm leading-6 text-slate-500">
-              Complete your personal details and bank details. Organization details are required only for organization onboarding.
+              Complete your personal details, GSTIN or PAN, and bank details. Organization details are required
+              only when you have a GSTIN.
             </p>
             <p className="max-w-3xl text-sm leading-6 text-slate-500">
               Your progress is saved as you move through the flow, so you can come back and continue later.
@@ -1127,7 +1059,7 @@ export default function OrganizerOnboardingPage() {
           </div>
 
           <div className="mt-6 rounded-3xl border border-slate-200/80 bg-slate-50/70 p-4">
-            <div className={`grid gap-3 ${activeSteps.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+            <div className={`grid gap-3 ${activeSteps.length === 4 ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
               {activeSteps.map((item, index) => {
                 const isActive = step === item.id
                 const isDone = step > item.id
@@ -1181,10 +1113,12 @@ export default function OrganizerOnboardingPage() {
                   </div>
 
                   <div className="relative h-52 w-52 overflow-hidden rounded-full border border-slate-200 bg-slate-50 shadow-[0_12px_22px_rgba(15,23,42,0.08)]">
-                    <img
+                    <NextImage
                       src={avatarPreview || DEFAULT_AVATAR_IMAGE}
                       alt="Profile preview"
-                      className="h-full w-full object-cover"
+                      fill
+                      unoptimized
+                      className="object-cover"
                       onError={(event) => {
                         event.currentTarget.onerror = null
                         event.currentTarget.src = DEFAULT_AVATAR_IMAGE
@@ -1272,11 +1206,26 @@ export default function OrganizerOnboardingPage() {
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.dob?.message ?? ""}</p>
                   </div>
 
-                  <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                  <div className="block text-sm font-semibold text-slate-700 md:col-span-2">
                     Location *
-                    <input className={inputClassName} placeholder="City, State" {...form.register("location")} />
+                    <div className="mt-2">
+                      <StateDistrictLocalityPicker
+                        initialState={form.watch("locationState") ?? ""}
+                        initialDistrict={form.watch("locationCity") ?? ""}
+                        initialLocalityLabel={form.watch("location")}
+                        onSelect={(loc) => {
+                          form.setValue("location", loc.label, { shouldValidate: true })
+                          form.setValue("locationArea", loc.area, { shouldValidate: true })
+                          form.setValue("locationCity", loc.city ?? "", { shouldValidate: true })
+                          form.setValue("locationState", loc.state ?? "", { shouldValidate: true })
+                          form.setValue("locationPincode", loc.pincode ?? "", { shouldValidate: true })
+                          form.setValue("locationLat", loc.lat, { shouldValidate: true })
+                          form.setValue("locationLng", loc.lng, { shouldValidate: true })
+                        }}
+                      />
+                    </div>
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.location?.message ?? ""}</p>
-                  </label>
+                  </div>
 
                   <label className="block text-sm font-semibold text-slate-700">
                     Gender *
@@ -1309,35 +1258,159 @@ export default function OrganizerOnboardingPage() {
                       <p className="mt-1 text-xs text-rose-600">{form.formState.errors.otherProfession?.message ?? ""}</p>
                     </label>
                   ) : null}
-
-                  <div className="md:col-span-2">
-                    <p className="text-sm font-semibold text-slate-700">Onboarding type</p>
-                    <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-white p-1">
-                      <button
-                        type="button"
-                        onClick={() => form.setValue("entityType", "ORGANIZATION", { shouldValidate: true })}
-                        className={`rounded-full px-4 py-2 text-xs font-semibold ${
-                          entityType === "ORGANIZATION" ? "bg-brand-900 text-white" : "text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        Organization
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => form.setValue("entityType", "INDIVIDUAL", { shouldValidate: true })}
-                        className={`rounded-full px-4 py-2 text-xs font-semibold ${
-                          entityType === "INDIVIDUAL" ? "bg-brand-900 text-white" : "text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        Individual
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </section>
             ) : null}
 
-            {step === 1 && showOrganizationStep ? (
+            {step === 1 ? (
+              <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+                <div className="flex items-start gap-3 mb-5">
+                  <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-slate-950">GSTIN / PAN</p>
+                    <p className="text-sm text-slate-500">Tell us your tax identity — GSTIN if you have one, PAN either way.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 max-w-xl">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700">PAN number *</label>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        className={inputClassName}
+                        placeholder="ABCDE1234F"
+                        style={{ textTransform: "uppercase" }}
+                        {...form.register("panNumber")}
+                        onChange={(e) => {
+                          form.setValue("panNumber", e.target.value.toUpperCase(), { shouldValidate: true })
+                        }}
+                      />
+                      {panValue && PAN_RE.test((panValue ?? "").toUpperCase()) ? (
+                        <span className="shrink-0 text-xs font-semibold text-emerald-600">✓ Valid</span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.panNumber?.message ?? ""}</p>
+                  </div>
+
+                  <div>
+                    <p className="block text-sm font-semibold text-slate-700">Do you have a GSTIN number?</p>
+                    <div className="mt-2 flex items-center gap-6">
+                      <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="radio"
+                          name="hasGstin"
+                          className="h-4 w-4 accent-brand-900"
+                          checked={hasGstin === "yes"}
+                          onChange={selectGstinYes}
+                        />
+                        Yes
+                      </label>
+                      <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="radio"
+                          name="hasGstin"
+                          className="h-4 w-4 accent-brand-900"
+                          checked={hasGstin === "no"}
+                          onChange={selectGstinNo}
+                        />
+                        No
+                      </label>
+                    </div>
+
+                    {hasGstin === "yes" ? (
+                      <div className="mt-4 space-y-3">
+                        <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                          <label className="block text-xs font-semibold text-slate-600">GSTIN Number</label>
+                          <input
+                            className={`${inputClassName} mt-1`}
+                            placeholder="Enter your GSTIN Number"
+                            style={{ textTransform: "uppercase" }}
+                            maxLength={15}
+                            value={gstin}
+                            onChange={(e) => updateGstinValue(e.target.value)}
+                          />
+                          <p className="mt-2 text-xs text-slate-400">
+                            {gstin && GSTIN_RE.test(gstin.trim().toUpperCase()) && isValidGstinChecksum(gstin.trim().toUpperCase())
+                              ? "Looks valid — we'll verify and approve it manually."
+                              : "We don't auto-verify GSTINs — our team checks and approves it manually against your organization details."}
+                          </p>
+                        </div>
+
+                        {gstinError ? <p className="text-xs text-rose-600">{gstinError}</p> : null}
+                      </div>
+                    ) : (
+                      <div className="mt-4">
+                        <label className="flex items-start gap-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4 accent-brand-900"
+                            checked={gstDeclarationAccepted}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setShowGstModal(true)
+                              } else {
+                                setGstDeclarationAccepted(false)
+                                persistGstChoice("no", false, gstin)
+                              }
+                            }}
+                          />
+                          <span>
+                            I have read and accept the{" "}
+                            <button
+                              type="button"
+                              onClick={() => setShowGstModal(true)}
+                              className="font-semibold text-brand-800 underline underline-offset-2"
+                            >
+                              undertaking
+                            </button>
+                          </span>
+                        </label>
+                        {gstinError ? <p className="mt-2 text-xs text-rose-600">{gstinError}</p> : null}
+                      </div>
+                    )}
+                  </div>
+
+                  {hasGstin === "yes" ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                      <p className="block text-sm font-semibold text-slate-700">Have you filed last 2 years ITR return?</p>
+                      <div className="mt-2 flex items-center gap-6">
+                        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="radio"
+                            name="itr"
+                            className="h-4 w-4 accent-brand-900"
+                            checked={form.watch("itrFiledLastTwoYears") === "yes"}
+                            onChange={() => {
+                              form.setValue("itrFiledLastTwoYears", "yes")
+                              setItrError(null)
+                            }}
+                          />
+                          Yes
+                        </label>
+                        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="radio"
+                            name="itr"
+                            className="h-4 w-4 accent-brand-900"
+                            checked={form.watch("itrFiledLastTwoYears") === "no"}
+                            onChange={() => {
+                              form.setValue("itrFiledLastTwoYears", "no")
+                              setItrError(null)
+                            }}
+                          />
+                          No
+                        </label>
+                      </div>
+                      {itrError ? <p className="mt-1 text-xs text-rose-600">{itrError}</p> : null}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
+
+            {step === 2 && showOrganizationStep ? (
               <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                 <div className="flex items-start gap-3">
                   <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
@@ -1345,30 +1418,114 @@ export default function OrganizerOnboardingPage() {
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-slate-950">Organization details</p>
+                    <p className="text-sm text-slate-500">Address, legal/trade name, and status are locked to your verified GSTIN.</p>
                   </div>
                 </div>
 
                 <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <p className="text-sm font-semibold text-slate-700">Organization logo (optional)</p>
+                    <div className="mt-2 flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        aria-label="Change organization logo"
+                        className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                      >
+                        {logoPreview ? (
+                          <NextImage src={logoPreview} alt="" fill unoptimized className="object-cover" />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-slate-300">
+                            <UploadCloud className="h-6 w-6" />
+                          </span>
+                        )}
+                      </button>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => logoInputRef.current?.click()}
+                          className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          {logoUploading ? "Uploading..." : logoPreview ? "Change logo" : "Add logo"}
+                        </button>
+                        {logoFile ? <p className="mt-1 text-xs text-slate-400">{logoFile.name}</p> : null}
+                        <input
+                          ref={logoInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={(event) => {
+                            pickLogo(event.target.files?.[0] ?? null)
+                            event.target.value = ""
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
-                    Organization name *
-                    <input className={inputClassName} placeholder="Organization name" {...form.register("orgName")} />
+                    GSTIN
+                    <input className={readOnlyInputClassName} value={gstin} readOnly disabled />
+                    <p className="mt-1 text-xs text-slate-400">
+                      From the previous step. Our team verifies and approves it manually — it isn&apos;t auto-checked.
+                    </p>
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Legal Name *
+                    <input className={inputClassName} placeholder="As per GSTIN/PAN records" {...form.register("orgName")} />
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.orgName?.message ?? ""}</p>
                   </label>
 
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Trade Name
+                    <input className={inputClassName} placeholder="Optional, if different from legal name" {...form.register("tradeName")} />
+                  </label>
+
                   <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
-                    Organization description *
+                    About Organization *
                     <textarea className={textareaClassName} placeholder="Tell us about your organization" {...form.register("description")} />
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.description?.message ?? ""}</p>
                   </label>
 
+                  <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
+                    Address *
+                    <input className={inputClassName} placeholder="Registered address" {...form.register("address")} />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.address?.message ?? ""}</p>
+                  </label>
+
                   <label className="block text-sm font-semibold text-slate-700">
-                    Contact email *
+                    Place *
+                    <input className={inputClassName} placeholder="City / area" {...form.register("city")} />
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    State *
+                    <input className={inputClassName} {...form.register("state")} />
+                  </label>
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Pincode *
+                    <input
+                      className={inputClassName}
+                      inputMode="numeric"
+                      maxLength={6}
+                      {...form.register("pincode")}
+                      onChange={(event) => form.setValue("pincode", event.target.value.replace(/\D/g, "").slice(0, 6), { shouldValidate: true })}
+                    />
+                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.pincode?.message ?? ""}</p>
+                  </label>
+
+                  <div className="hidden md:block" />
+
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Email (optional)
                     <input className={inputClassName} placeholder="contact@organization.com" {...form.register("contactEmail")} />
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.contactEmail?.message ?? ""}</p>
                   </label>
 
                   <label className="block text-sm font-semibold text-slate-700">
-                    Contact phone *
+                    Phone number (optional)
                     <input
                       className={inputClassName}
                       placeholder="Organizer contact number"
@@ -1383,13 +1540,7 @@ export default function OrganizerOnboardingPage() {
                   </label>
 
                   <label className="block text-sm font-semibold text-slate-700">
-                    Primary contact name
-                    <input className={inputClassName} placeholder="Primary contact person" {...form.register("primaryContactName")} />
-                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.primaryContactName?.message ?? ""}</p>
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-700">
-                    Secondary contact phone
+                    Secondary phone number (optional)
                     <input
                       className={inputClassName}
                       placeholder="Optional backup number"
@@ -1403,52 +1554,10 @@ export default function OrganizerOnboardingPage() {
                     <p className="mt-1 text-xs text-rose-600">{form.formState.errors.secondaryContactPhone?.message ?? ""}</p>
                   </label>
 
-                  <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
-                    Address *
-                    <input className={inputClassName} placeholder="Street address" {...form.register("address")} />
-                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.address?.message ?? ""}</p>
-                  </label>
-
-                  <div className="block text-sm font-semibold text-slate-700 md:col-span-2">
-                    Search location <span className="font-normal text-slate-400">(auto-fills city, state &amp; pincode)</span>
-                    <div className="mt-2">
-                      <LocationAutocomplete
-                        onSelect={(loc) => {
-                          if (loc.city) form.setValue("city", loc.city, { shouldValidate: true })
-                          if (loc.state) form.setValue("state", loc.state, { shouldValidate: true })
-                          if (loc.pincode) form.setValue("pincode", loc.pincode, { shouldValidate: true })
-                        }}
-                        placeholder="Search your area or city"
-                      />
-                    </div>
-                  </div>
-
                   <label className="block text-sm font-semibold text-slate-700">
-                    City *
-                    <input className={inputClassName} placeholder="City" {...form.register("city")} />
-                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.city?.message ?? ""}</p>
+                    Landline (optional)
+                    <input className={inputClassName} placeholder="e.g. 040-12345678" {...form.register("landlineNumber")} />
                   </label>
-
-                  <label className="block text-sm font-semibold text-slate-700">
-                    State *
-                    <input className={inputClassName} placeholder="State" {...form.register("state")} />
-                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.state?.message ?? ""}</p>
-                  </label>
-
-                  <label className="block text-sm font-semibold text-slate-700">
-                    Pincode *
-                    <input
-                      className={inputClassName}
-                      placeholder="Pincode"
-                      inputMode="numeric"
-                      maxLength={6}
-                      {...form.register("pincode")}
-                      onChange={(event) => form.setValue("pincode", event.target.value.replace(/\D/g, "").slice(0, 6), { shouldValidate: true })}
-                    />
-                    <p className="mt-1 text-xs text-rose-600">{form.formState.errors.pincode?.message ?? ""}</p>
-                  </label>
-
-                  <div className="hidden md:block" />
 
                   <label className="block text-sm font-semibold text-slate-700">
                     Website
@@ -1471,7 +1580,7 @@ export default function OrganizerOnboardingPage() {
               </section>
             ) : null}
 
-            {step === 2 ? (
+            {step === 3 ? (
               <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                 <div className="flex items-start gap-3 mb-5">
                   <div className="rounded-2xl bg-brand-900/10 p-3 text-brand-900">
@@ -1479,219 +1588,11 @@ export default function OrganizerOnboardingPage() {
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-slate-950">Bank &amp; Compliance</p>
-                    <p className="text-sm text-slate-500">Bank details, PAN, and GSTIN verification</p>
+                    <p className="text-sm text-slate-500">Bank account details for payouts.</p>
                   </div>
                 </div>
 
-                <div className="grid gap-5 lg:grid-cols-2">
-                  {/* Left: PAN + GSTIN */}
-                  <div className="grid gap-4 content-start">
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">Tax Identity</p>
-
-                      {/* PAN */}
-                      <div className="mb-3">
-                        <label className="block text-sm font-semibold text-slate-700">
-                          PAN number *
-                        </label>
-                        <div className="mt-2 flex items-center gap-2">
-                          <input
-                            className={inputClassName}
-                            placeholder="ABCDE1234F"
-                            style={{ textTransform: "uppercase" }}
-                            {...form.register("panNumber")}
-                            onChange={(e) => {
-                              form.setValue("panNumber", e.target.value.toUpperCase(), { shouldValidate: true })
-                            }}
-                          />
-                          {panValue && PAN_RE.test((panValue ?? "").toUpperCase()) ? (
-                            <span className="shrink-0 text-xs font-semibold text-emerald-600">✓ Valid</span>
-                          ) : null}
-                        </div>
-                        <p className="mt-1 text-xs text-rose-600">{form.formState.errors.panNumber?.message ?? ""}</p>
-                      </div>
-
-                      {/* GSTIN */}
-                      <div>
-                        <p className="block text-sm font-semibold text-slate-700">Do you have a GSTIN number?</p>
-                        <div className="mt-2 flex items-center gap-6">
-                          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                            <input
-                              type="radio"
-                              name="hasGstin"
-                              className="h-4 w-4 accent-brand-900"
-                              checked={hasGstin === "yes"}
-                              onChange={selectGstinYes}
-                            />
-                            Yes
-                          </label>
-                          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                            <input
-                              type="radio"
-                              name="hasGstin"
-                              className="h-4 w-4 accent-brand-900"
-                              checked={hasGstin === "no"}
-                              onChange={selectGstinNo}
-                            />
-                            No
-                          </label>
-                        </div>
-
-                        {hasGstin === "yes" ? (
-                          <div className="mt-4 space-y-3">
-                            {gstinRows.map((row, index) => (
-                              <div key={index} className="rounded-2xl border border-slate-200 bg-white p-3">
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                  <div>
-                                    <label className="block text-xs font-semibold text-slate-600">GSTIN Number</label>
-                                    <input
-                                      className={`${inputClassName} mt-1`}
-                                      placeholder="Enter your GSTIN Number"
-                                      style={{ textTransform: "uppercase" }}
-                                      value={row.gstin}
-                                      onChange={(e) => updateGstinRow(index, "gstin", e.target.value)}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-semibold text-slate-600">State</label>
-                                    <select
-                                      className={`${inputClassName} mt-1`}
-                                      value={row.state}
-                                      onChange={(e) => updateGstinRow(index, "state", e.target.value)}
-                                    >
-                                      <option value="">State</option>
-                                      {row.state && !INDIAN_STATES.includes(row.state) ? (
-                                        <option value={row.state}>{row.state}</option>
-                                      ) : null}
-                                      {INDIAN_STATES.map((stateName) => (
-                                        <option key={stateName} value={stateName}>{stateName}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </div>
-
-                                <div className="mt-2 flex items-center justify-between gap-2">
-                                  <div className="text-xs">
-                                    {row.verifying ? (
-                                      <span className="text-slate-400">Verifying…</span>
-                                    ) : row.verified ? (
-                                      <span className="font-medium text-emerald-700">✓ Verified{row.legalName ? ` · ${row.legalName}` : ""}</span>
-                                    ) : row.error ? (
-                                      <span className="text-rose-600">{row.error}</span>
-                                    ) : (
-                                      <span className="text-slate-400">Verify this GSTIN to continue.</span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      disabled={row.verifying || !GSTIN_RE.test(row.gstin.trim().toUpperCase())}
-                                      onClick={() => void verifyGstinRow(index)}
-                                      className="shrink-0 rounded-full bg-brand-900 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
-                                    >
-                                      {row.verifying ? "Checking..." : row.verified ? "Re-verify" : "Verify"}
-                                    </button>
-                                    {gstinRows.length > 1 ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => removeGstinRow(index)}
-                                        className="shrink-0 rounded-full border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50"
-                                        aria-label={`Remove GSTIN ${index + 1}`}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-
-                            <button
-                              type="button"
-                              onClick={addGstinRow}
-                              className="text-sm font-semibold text-brand-800 hover:underline"
-                            >
-                              +Add another GSTIN number
-                            </button>
-
-                            {gstinError ? <p className="text-xs text-rose-600">{gstinError}</p> : null}
-
-                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                              Note: You can add multiple GSTIN numbers and certificates for different states later through the profile section.
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="mt-4">
-                            <label className="flex items-start gap-2 text-sm text-slate-700">
-                              <input
-                                type="checkbox"
-                                className="mt-0.5 h-4 w-4 accent-brand-900"
-                                checked={gstDeclarationAccepted}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setShowGstModal(true)
-                                  } else {
-                                    setGstDeclarationAccepted(false)
-                                    persistGstChoice("no", false, gstinRows)
-                                  }
-                                }}
-                              />
-                              <span>
-                                I have read and accept the{" "}
-                                <button
-                                  type="button"
-                                  onClick={() => setShowGstModal(true)}
-                                  className="font-semibold text-brand-800 underline underline-offset-2"
-                                >
-                                  undertaking
-                                </button>
-                              </span>
-                            </label>
-                            {gstinError ? <p className="mt-2 text-xs text-rose-600">{gstinError}</p> : null}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* ITR filing — only relevant when the organizer has a GSTIN */}
-                    {hasGstin === "yes" ? (
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                        <p className="block text-sm font-semibold text-slate-700">Have you filed last 2 years ITR return?</p>
-                        <div className="mt-2 flex items-center gap-6">
-                          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                            <input
-                              type="radio"
-                              name="itr"
-                              className="h-4 w-4 accent-brand-900"
-                              checked={form.watch("itrFiledLastTwoYears") === "yes"}
-                              onChange={() => {
-                                form.setValue("itrFiledLastTwoYears", "yes")
-                                setItrError(null)
-                              }}
-                            />
-                            Yes
-                          </label>
-                          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                            <input
-                              type="radio"
-                              name="itr"
-                              className="h-4 w-4 accent-brand-900"
-                              checked={form.watch("itrFiledLastTwoYears") === "no"}
-                              onChange={() => {
-                                form.setValue("itrFiledLastTwoYears", "no")
-                                setItrError(null)
-                              }}
-                            />
-                            No
-                          </label>
-                        </div>
-                        {itrError ? <p className="mt-1 text-xs text-rose-600">{itrError}</p> : null}
-                      </div>
-                    ) : null}
-
-                  </div>
-
-                  {/* Right: Bank details */}
+                <div className="grid gap-5 lg:grid-cols-2 max-w-3xl">
                   <div className="grid gap-4 content-start">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">Bank Account</p>
@@ -1767,7 +1668,7 @@ export default function OrganizerOnboardingPage() {
                           <ShieldCheck className="h-4 w-4" />
                         </div>
                         <p className="text-xs leading-5 text-slate-500">
-                          Keep your PAN, GSTIN, and bank details ready. These are verified during the approval process to confirm your identity and enable payouts.
+                          Keep your bank details ready. These are verified during the approval process to enable payouts.
                         </p>
                       </div>
                     </div>
@@ -1790,7 +1691,7 @@ export default function OrganizerOnboardingPage() {
                     type="button"
                     onClick={() =>
                       setStep((current) => {
-                        if (!showOrganizationStep && current === 2) return 0
+                        if (!showOrganizationStep && current === 3) return 1
                         return Math.max(current - 1, 0)
                       })
                     }
@@ -1819,6 +1720,15 @@ export default function OrganizerOnboardingPage() {
                     className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
                   >
                     {isSavingStepTwo ? "Saving..." : "Save & Continue"}
+                  </button>
+                ) : step === 2 ? (
+                  <button
+                    type="button"
+                    onClick={() => void saveStepThree()}
+                    disabled={isSavingStepThree || logoUploading}
+                    className="rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-60"
+                  >
+                    {isSavingStepThree || logoUploading ? "Saving..." : "Save & Continue"}
                   </button>
                 ) : (
                   <button

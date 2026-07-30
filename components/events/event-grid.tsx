@@ -17,7 +17,7 @@ interface EventGridProps {
 /** YouTube-style placeholder cards shown while the events data is still loading. */
 export function EventGridSkeleton({ count = 10 }: { count?: number }) {
     return (
-        <section className="mx-auto w-full max-w-[1680px] px-4 py-10 md:px-6 md:py-12 lg:px-10">
+        <section className="page-x-wide py-10 md:py-12">
             <div className="grid auto-rows-fr grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
                 {Array.from({ length: count }).map((_, i) => (
                     <div
@@ -75,7 +75,7 @@ export function EventGrid({ events, title = "Events", pageSize = 12, hideHeader 
 
     if (events.length === 0) {
         return (
-            <section className="mx-auto w-full max-w-[1680px] px-4 py-16 text-center md:px-6 lg:px-10">
+            <section className="page-x-wide py-16 text-center">
                 <p className="text-lg font-semibold text-(--brand-blue)">
                     No events available right now
                 </p>
@@ -87,7 +87,7 @@ export function EventGrid({ events, title = "Events", pageSize = 12, hideHeader 
     }
 
     return (
-        <section className="mx-auto w-full max-w-[1680px] px-4 py-10 md:px-6 md:py-12 lg:px-10">
+        <section className="page-x-wide py-10 md:py-12">
             {!hideHeader && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
