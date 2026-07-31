@@ -3,15 +3,15 @@
 import { useState } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { BringToFront, ChevronDown, ChevronUp, MoveDiagonal2, SendToBack } from "lucide-react"
+import { BringToFront, ChevronDown, ChevronUp, Link as LinkIcon, MoveDiagonal2, SendToBack } from "lucide-react"
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   BG_SWATCHES,
   BLOCK_LIBRARY,
   CANVAS_WIDTH,
+  CHOICE_FIELD_TYPES,
   MIN_BLOCK_HEIGHT,
   MIN_BLOCK_WIDTH,
-  TEXT_BLOCK_TYPES,
   TEXT_SWATCHES,
   clampX,
   newBlock,
@@ -87,7 +87,20 @@ export function CanvasBuilder() {
       <div className="space-y-5" onClick={(e) => e.stopPropagation()}>
         <div className="space-y-2">
           <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Blocks</p>
-          {BLOCK_LIBRARY.map((b) => (
+          {BLOCK_LIBRARY.filter((b) => b.group === "content").map((b) => (
+            <button
+              key={b.type}
+              onClick={() => appendBlock(b.type)}
+              className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-brand-900 transition-colors hover:border-(--royal-blue)/30 hover:bg-(--royal-blue)/5"
+            >
+              + {b.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Form fields</p>
+          {BLOCK_LIBRARY.filter((b) => b.group === "field").map((b) => (
             <button
               key={b.type}
               onClick={() => appendBlock(b.type)}
@@ -206,6 +219,83 @@ function textClassFor(type: BlockType): string {
   return "text-sm leading-relaxed outline-none"
 }
 
+const FIELD_LABEL_CLS = "text-sm font-medium text-brand-900 outline-none"
+const FIELD_BOX_CLS = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-400"
+
+/** The recruitment form's field types (lib/recruitment.ts), as static
+ * preview blocks — visual only, no real input state, this canvas has no
+ * backend. */
+function FormFieldContent({ block, onChange }: { block: Block; onChange: (patch: Partial<Block>) => void }) {
+  const label = (
+    <div
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={(e) => onChange({ text: e.currentTarget.textContent ?? "" })}
+      className={FIELD_LABEL_CLS}
+    >
+      {block.text}
+    </div>
+  )
+
+  if (block.type === "field_short_text") {
+    return (
+      <div className="flex h-full w-full flex-col gap-1.5">
+        {label}
+        <div className={FIELD_BOX_CLS}>Your answer</div>
+      </div>
+    )
+  }
+  if (block.type === "field_paragraph") {
+    return (
+      <div className="flex h-full w-full flex-col gap-1.5">
+        {label}
+        <div className={`${FIELD_BOX_CLS} flex-1`}>Your answer</div>
+      </div>
+    )
+  }
+  if (block.type === "field_dropdown") {
+    return (
+      <div className="flex h-full w-full flex-col gap-1.5">
+        {label}
+        <div className={`${FIELD_BOX_CLS} flex items-center justify-between`}>
+          <span>{block.options[0] ?? "Select…"}</span>
+          <span>⌄</span>
+        </div>
+      </div>
+    )
+  }
+  if (block.type === "field_single_choice" || block.type === "field_multi_choice") {
+    const round = block.type === "field_single_choice"
+    return (
+      <div className="flex h-full w-full flex-col gap-1.5 overflow-auto">
+        {label}
+        <div className="space-y-1.5">
+          {block.options.map((o, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm text-slate-600">
+              <span className={`h-3.5 w-3.5 shrink-0 border border-slate-300 ${round ? "rounded-full" : "rounded"}`} />
+              {o}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  // field_link
+  return (
+    <div className="flex h-full w-full items-center gap-2 rounded-lg border border-(--gold-soft-border) bg-(--gold-soft-bg) px-3 text-sm font-semibold text-brand-900">
+      <LinkIcon size={14} className="shrink-0 text-(--gold-icon)" />
+      <div
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => onChange({ text: e.currentTarget.textContent ?? "" })}
+        className="flex-1 truncate outline-none"
+      >
+        {block.text}
+      </div>
+    </div>
+  )
+}
+
 function BlockContent({ block, onChange }: { block: Block; onChange: (patch: Partial<Block>) => void }) {
   if (block.type === "divider") {
     return (
@@ -218,6 +308,9 @@ function BlockContent({ block, onChange }: { block: Block; onChange: (patch: Par
     return block.src ? (
       <Image src={block.src} alt="" fill draggable={false} sizes={`${block.width}px`} className="rounded-lg object-contain" />
     ) : null
+  }
+  if (block.type.startsWith("field_")) {
+    return <FormFieldContent block={block} onChange={onChange} />
   }
   return (
     <div
@@ -397,15 +490,21 @@ function CanvasBlock({
         onOpenAutoFocus={(e) => e.preventDefault()}
         onClick={(e) => e.stopPropagation()}
       >
-        <ColorToolbar
-          bg={block.bg}
-          color={block.color}
-          showTextColor={block.type !== "image" && block.type !== "divider"}
-          onBg={(bg) => onChange({ bg })}
-          onColor={(color) => onChange({ color })}
-          onDelete={onDelete}
-          onReorder={onReorder}
-        />
+        <div className="space-y-3">
+          {CHOICE_FIELD_TYPES.has(block.type) && (
+            <OptionsEditor options={block.options} onChange={(options) => onChange({ options })} />
+          )}
+          {block.type === "field_link" && <UrlEditor url={block.src} onChange={(src) => onChange({ src })} />}
+          <ColorToolbar
+            bg={block.bg}
+            color={block.color}
+            showTextColor={block.type !== "image" && block.type !== "divider"}
+            onBg={(bg) => onChange({ bg })}
+            onColor={(color) => onChange({ color })}
+            onDelete={onDelete}
+            onReorder={onReorder}
+          />
+        </div>
       </PopoverContent>
     </Popover>
   )
@@ -420,7 +519,10 @@ function CardContents({
   images: string[]
   onChange: (patch: Partial<Block>) => void
 }) {
-  function addChild(type: (typeof TEXT_BLOCK_TYPES)[number] | "divider") {
+  // Runtime value is never "card" (filtered out of the palette below), but
+  // the type here matches newBlock's own parameter type to avoid fighting
+  // Array.filter's lack of narrowing on a plain inequality check.
+  function addChild(type: Exclude<BlockType, "image">) {
     const child = newBlock(type, 0, 0)
     onChange({ children: [...block.children, child] })
   }
@@ -444,16 +546,16 @@ function CardContents({
     // which is the narrower thing that actually needed guarding.
     <div className="flex h-full flex-col gap-2 overflow-auto">
       <div className="flex flex-wrap items-center gap-1.5">
-        {[...TEXT_BLOCK_TYPES, "divider" as const].map((t) => (
+        {BLOCK_LIBRARY.filter((b) => b.type !== "card").map((b) => (
           <button
-            key={t}
+            key={b.type}
             onClick={(e) => {
               e.stopPropagation()
-              addChild(t)
+              addChild(b.type)
             }}
             className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-brand-900 hover:bg-slate-50"
           >
-            + {t}
+            + {b.label}
           </button>
         ))}
         <Popover>
@@ -501,44 +603,84 @@ function ChildBlock({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
         <div
-          className="relative overflow-hidden rounded-lg p-2 ring-1 ring-black/5"
+          className="relative min-h-[2.5rem] overflow-hidden rounded-lg p-2 ring-1 ring-black/5"
           style={{ background: block.bg ?? "transparent", color: block.color ?? undefined }}
           onClick={(e) => {
             e.stopPropagation()
             setOpen(true)
           }}
         >
-          {block.type === "image" ? (
-            block.src ? (
-              <div className="relative h-24 w-full overflow-hidden rounded-md">
-                <Image src={block.src} alt="" fill draggable={false} sizes="240px" className="object-contain" />
-              </div>
-            ) : null
-          ) : block.type === "divider" ? (
-            <div className="h-0.5 w-full rounded-full" style={{ background: block.bg ?? "#cbd5e1" }} />
-          ) : (
-            <div
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={(e) => onChange({ text: e.currentTarget.textContent ?? "" })}
-              className={textClassFor(block.type)}
-            >
-              {block.text}
-            </div>
-          )}
+          <BlockContent block={block} onChange={onChange} />
         </div>
       </PopoverAnchor>
-      <PopoverContent className="w-auto p-3" onOpenAutoFocus={(e) => e.preventDefault()} onClick={(e) => e.stopPropagation()}>
-        <ColorToolbar
-          bg={block.bg}
-          color={block.color}
-          showTextColor={block.type !== "image" && block.type !== "divider"}
-          onBg={(bg) => onChange({ bg })}
-          onColor={(color) => onChange({ color })}
-          onDelete={onDelete}
-        />
+      <PopoverContent
+        className="w-auto p-3"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="space-y-3">
+          {CHOICE_FIELD_TYPES.has(block.type) && (
+            <OptionsEditor options={block.options} onChange={(options) => onChange({ options })} />
+          )}
+          {block.type === "field_link" && <UrlEditor url={block.src} onChange={(src) => onChange({ src })} />}
+          <ColorToolbar
+            bg={block.bg}
+            color={block.color}
+            showTextColor={block.type !== "image" && block.type !== "divider"}
+            onBg={(bg) => onChange({ bg })}
+            onColor={(color) => onChange({ color })}
+            onDelete={onDelete}
+          />
+        </div>
       </PopoverContent>
     </Popover>
+  )
+}
+
+function OptionsEditor({ options, onChange }: { options: string[]; onChange: (options: string[]) => void }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold text-slate-500">Options</p>
+      <div className="space-y-1.5">
+        {options.map((o, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <input
+              value={o}
+              onChange={(e) => onChange(options.map((x, j) => (j === i ? e.target.value : x)))}
+              className="w-40 flex-1 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-900 outline-none focus:border-(--royal-blue)"
+            />
+            {options.length > 1 && (
+              <button
+                onClick={() => onChange(options.filter((_, j) => j !== i))}
+                className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-rose-600 hover:bg-rose-50"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => onChange([...options, `Option ${options.length + 1}`])}
+        className="mt-1.5 text-xs font-semibold text-(--royal-blue) hover:underline"
+      >
+        + Add option
+      </button>
+    </div>
+  )
+}
+
+function UrlEditor({ url, onChange }: { url: string | null; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold text-slate-500">Link URL</p>
+      <input
+        value={url ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="https://…"
+        className="w-48 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-900 outline-none focus:border-(--royal-blue)"
+      />
+    </div>
   )
 }
 

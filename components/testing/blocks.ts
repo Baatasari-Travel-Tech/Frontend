@@ -1,6 +1,10 @@
 // Types + helpers for the canvas builder playground. Purely client-side —
 // no persistence, no backend. See lib/recruitment.ts for the sibling
-// "schema + helpers" pattern this mirrors.
+// "schema + helpers" pattern this mirrors — the field_* block types below
+// are the same short_text/paragraph/single_choice/multi_choice/dropdown/link
+// field types from that recruitment-form schema, brought in as placeable
+// canvas blocks (visual only here — no real form data/submission tied to
+// them, this canvas has no backend).
 //
 // Positioning is plain pixels on a fixed-size canvas (not a column/row
 // grid) — a percentage-of-container grid meant float math (canvasWidth/12)
@@ -19,6 +23,12 @@ export type BlockType =
   | "divider"
   | "card"
   | "image"
+  | "field_short_text"
+  | "field_paragraph"
+  | "field_single_choice"
+  | "field_multi_choice"
+  | "field_dropdown"
+  | "field_link"
 
 export type Block = {
   id: string
@@ -30,8 +40,10 @@ export type Block = {
   text: string
   bg: string | null
   color: string | null
-  /** Only set for "image". */
+  /** Image src for "image", link URL for "field_link". */
   src: string | null
+  /** Choices for field_single_choice / field_multi_choice / field_dropdown. */
+  options: string[]
   /** Only meaningful for "card" — nested blocks rendered inside it. */
   children: Block[]
 }
@@ -43,18 +55,33 @@ export const CANVAS_WIDTH = 1120
 export const MIN_BLOCK_WIDTH = 40
 export const MIN_BLOCK_HEIGHT = 24
 
-// Text/container blocks — added via the "+ Add block" palette (click to
-// append). Images are added separately, from the image picker, since they
-// need a source picked first.
-export const BLOCK_LIBRARY: { type: Exclude<BlockType, "image">; label: string; width: number; height: number }[] = [
-  { type: "heading", label: "Heading", width: 480, height: 64 },
-  { type: "subheading", label: "Subheading", width: 480, height: 40 },
-  { type: "paragraph", label: "Paragraph", width: 480, height: 110 },
-  { type: "quote", label: "Quote", width: 480, height: 100 },
-  { type: "button", label: "Button", width: 160, height: 48 },
-  { type: "badge", label: "Badge", width: 110, height: 32 },
-  { type: "divider", label: "Divider", width: CANVAS_WIDTH - 80, height: 8 },
-  { type: "card", label: "Card", width: 480, height: 320 },
+export const CHOICE_FIELD_TYPES = new Set<BlockType>(["field_single_choice", "field_multi_choice", "field_dropdown"])
+
+// Added via the "+ Add block" palette (click to append) or inside a card's
+// mini palette. Images are added separately, from the image picker, since
+// they need a source picked first. `group` just splits the sidebar into two
+// labeled sections — "content" blocks and recruitment-style "field" blocks.
+export const BLOCK_LIBRARY: {
+  type: Exclude<BlockType, "image">
+  label: string
+  width: number
+  height: number
+  group: "content" | "field"
+}[] = [
+  { type: "heading", label: "Heading", width: 480, height: 64, group: "content" },
+  { type: "subheading", label: "Subheading", width: 480, height: 40, group: "content" },
+  { type: "paragraph", label: "Paragraph", width: 480, height: 110, group: "content" },
+  { type: "quote", label: "Quote", width: 480, height: 100, group: "content" },
+  { type: "button", label: "Button", width: 160, height: 48, group: "content" },
+  { type: "badge", label: "Badge", width: 110, height: 32, group: "content" },
+  { type: "divider", label: "Divider", width: CANVAS_WIDTH - 80, height: 8, group: "content" },
+  { type: "card", label: "Card", width: 480, height: 320, group: "content" },
+  { type: "field_short_text", label: "Short answer", width: 400, height: 90, group: "field" },
+  { type: "field_paragraph", label: "Paragraph answer", width: 400, height: 150, group: "field" },
+  { type: "field_single_choice", label: "Single choice", width: 400, height: 170, group: "field" },
+  { type: "field_multi_choice", label: "Checkboxes", width: 400, height: 170, group: "field" },
+  { type: "field_dropdown", label: "Dropdown", width: 400, height: 90, group: "field" },
+  { type: "field_link", label: "Link", width: 320, height: 56, group: "field" },
 ]
 
 const DEFAULT_TEXT: Record<BlockType, string> = {
@@ -67,16 +94,13 @@ const DEFAULT_TEXT: Record<BlockType, string> = {
   divider: "",
   card: "",
   image: "",
+  field_short_text: "Short answer question",
+  field_paragraph: "Paragraph question",
+  field_single_choice: "Single choice question",
+  field_multi_choice: "Checkboxes question",
+  field_dropdown: "Dropdown question",
+  field_link: "Link text",
 }
-
-export const TEXT_BLOCK_TYPES: Exclude<BlockType, "card" | "image" | "divider">[] = [
-  "heading",
-  "subheading",
-  "paragraph",
-  "quote",
-  "button",
-  "badge",
-]
 
 // Curated swatches — brand palette first, then a few vivid extras so the
 // canvas doesn't feel locked to one mood.
@@ -110,6 +134,7 @@ export function newBlock(type: Exclude<BlockType, "image">, x: number, y: number
     bg: type === "card" ? "#ffffff" : type === "button" ? "#0c1D37" : type === "divider" ? "#cbd5e1" : null,
     color: type === "button" ? "#ffffff" : null,
     src: null,
+    options: CHOICE_FIELD_TYPES.has(type) ? ["Option 1", "Option 2"] : [],
     children: [],
   }
 }
@@ -126,6 +151,7 @@ export function newImageBlock(src: string, x: number, y: number): Block {
     bg: null,
     color: null,
     src,
+    options: [],
     children: [],
   }
 }
