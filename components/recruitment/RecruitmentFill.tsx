@@ -76,17 +76,17 @@ export function RecruitmentFill({
           {steps.map((s, i) => (
             <div
               key={s.id}
-              className={`h-1.5 flex-1 rounded-full transition-colors ${i <= stepIdx ? "bg-slate-900" : "bg-slate-200"}`}
+              className={`h-1.5 flex-1 rounded-full transition-colors ${i <= stepIdx ? "bg-(--gold)" : "bg-slate-200"}`}
             />
           ))}
         </div>
       )}
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-(--gold-text)">
           Step {stepIdx + 1} of {steps.length}
         </p>
-        <h3 className="mt-0.5 text-lg font-semibold text-slate-900">{step.title}</h3>
+        <h3 className="mt-0.5 font-bricolage text-lg font-semibold text-brand-900">{step.title}</h3>
       </div>
 
       <div className="space-y-4">
@@ -102,7 +102,7 @@ export function RecruitmentFill({
           <button
             type="button"
             onClick={() => setStepIdx((i) => i - 1)}
-            className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-brand-900 transition-colors hover:bg-slate-50"
           >
             Back
           </button>
@@ -111,7 +111,7 @@ export function RecruitmentFill({
           type="button"
           onClick={advance}
           disabled={submitting}
-          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition-all disabled:opacity-60"
+          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-brand-900 py-3 text-sm font-semibold text-white shadow-[0_14px_32px_color-mix(in_srgb,var(--brand-navy)_18%,transparent)] transition-all hover:bg-(--brand-navy-hover) disabled:opacity-60"
         >
           {submitting ? "Submitting…" : isLast ? "Submit application" : "Continue"}
         </button>
@@ -136,7 +136,7 @@ function FieldInput({
     </label>
   )
   const inputCls =
-    "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+    "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-brand-900 outline-none transition-all focus:border-(--royal-blue) focus:ring-4 focus:ring-(--royal-blue)/10"
   const opts = field.options ?? []
 
   if (field.type === "link") {
@@ -144,14 +144,14 @@ function FieldInput({
     // javascript:/data: URI an admin may have entered) renders as inert text.
     const safeUrl = safeLinkUrl(field.url)
     const blockCls =
-      "flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-300"
+      "flex items-center gap-2.5 rounded-xl border border-(--gold-soft-border) bg-(--gold-soft-bg) px-3.5 py-2.5 text-sm font-semibold text-brand-900 transition-colors hover:border-(--gold)"
     if (!safeUrl) {
       return <span className={blockCls}>{field.label}</span>
     }
     return (
       <a href={safeUrl} target="_blank" rel="noopener noreferrer" className={blockCls}>
         <span className="flex-1">{field.label}</span>
-        <span className="text-slate-400">↗</span>
+        <span className="text-(--gold-icon)">↗</span>
       </a>
     )
   }
@@ -196,8 +196,11 @@ function FieldInput({
         {label}
         <div className="space-y-2">
           {opts.map((o, i) => (
-            <label key={i} className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm transition ${v === o ? "border-slate-900 bg-slate-50 text-slate-900" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
-              <input type="radio" name={field.id} checked={v === o} onChange={() => onChange(o)} className="h-4 w-4" />
+            <label
+              key={i}
+              className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm transition ${v === o ? "border-(--royal-blue) bg-(--royal-blue)/5 text-brand-900" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}
+            >
+              <input type="radio" name={field.id} checked={v === o} onChange={() => onChange(o)} className="h-4 w-4 accent-(--royal-blue)" />
               {o}
             </label>
           ))}
@@ -217,8 +220,11 @@ function FieldInput({
         {opts.map((o, i) => {
           const checked = arr.includes(o)
           return (
-            <label key={i} className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm transition ${checked ? "border-slate-900 bg-slate-50 text-slate-900" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
-              <input type="checkbox" checked={checked} onChange={() => toggle(o)} className="h-4 w-4" />
+            <label
+              key={i}
+              className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm transition ${checked ? "border-(--royal-blue) bg-(--royal-blue)/5 text-brand-900" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}
+            >
+              <input type="checkbox" checked={checked} onChange={() => toggle(o)} className="h-4 w-4 accent-(--royal-blue)" />
               {o}
             </label>
           )

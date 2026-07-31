@@ -12,9 +12,9 @@ import {
 } from "@/lib/recruitment"
 
 const INPUT =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:opacity-60"
+  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-brand-900 outline-none transition-all focus:border-(--royal-blue) focus:ring-4 focus:ring-(--royal-blue)/10 disabled:opacity-60"
 const BTN_GHOST =
-  "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+  "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-brand-900 transition-colors hover:border-(--gold-soft-border) hover:bg-(--gold-soft-bg) disabled:opacity-50"
 
 /**
  * Reusable multi-step form builder. The parent owns the form state and save;
@@ -91,7 +91,9 @@ export function FormBuilder({
             key={s.id}
             onClick={() => setActive(i)}
             className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
-              active === i ? "border-slate-900 bg-slate-50 font-semibold text-slate-900" : "border-slate-200 text-slate-500 hover:border-slate-300"
+              active === i
+                ? "border-(--gold) bg-(--gold-soft-bg) font-semibold text-brand-900"
+                : "border-slate-200 text-slate-500 hover:border-slate-300"
             }`}
           >
             <span className="truncate">{s.title || `Step ${i + 1}`}</span>
@@ -110,7 +112,7 @@ export function FormBuilder({
             disabled={!editable}
             onChange={(e) => updateStep(step.id, (s) => ({ ...s, title: e.target.value }))}
             placeholder="Step title"
-            className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-semibold text-slate-900 outline-none focus:ring-4 focus:ring-slate-100 disabled:opacity-60"
+            className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 font-bricolage text-base font-semibold text-brand-900 outline-none focus:ring-4 focus:ring-(--royal-blue)/10 disabled:opacity-60"
           />
           {form.steps.length > 1 && editable && (
             <button
@@ -156,7 +158,7 @@ export function FormBuilder({
                 <button
                   key={ft.type}
                   onClick={() => addField(step.id, ft.type)}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-brand-900 transition-colors hover:border-(--royal-blue)/30 hover:bg-(--royal-blue)/5"
                 >
                   + {ft.label}
                 </button>
@@ -203,7 +205,7 @@ function FieldCard({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-(--gold-soft-bg) px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-(--gold-text)">
           {meta.label}
         </span>
         {editable && (
@@ -237,7 +239,7 @@ function FieldCard({
             value={field.type}
             disabled={!editable}
             onChange={(e) => onType(e.target.value as RecruitmentFieldType)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none disabled:opacity-60"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-brand-900 outline-none disabled:opacity-60"
           >
             {FIELD_TYPES.filter((t) => t.type !== "link").map((ft) => (
               <option key={ft.type} value={ft.type}>
@@ -246,7 +248,7 @@ function FieldCard({
             ))}
           </select>
           <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-500">
-            <input type="checkbox" checked={field.required} disabled={!editable} onChange={(e) => onRequired(e.target.checked)} className="h-4 w-4" />
+            <input type="checkbox" checked={field.required} disabled={!editable} onChange={(e) => onRequired(e.target.checked)} className="h-4 w-4 accent-(--royal-blue)" />
             Required
           </label>
         </div>
@@ -261,7 +263,7 @@ function FieldCard({
                 disabled={!editable}
                 onChange={(e) => onOption(i, e.target.value)}
                 placeholder={`Option ${i + 1}`}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none disabled:opacity-60"
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-brand-900 outline-none disabled:opacity-60"
               />
               {editable && (field.options?.length ?? 0) > 1 && (
                 <button onClick={() => onRemoveOption(i)} className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-rose-600 hover:bg-rose-50">
@@ -271,7 +273,7 @@ function FieldCard({
             </div>
           ))}
           {editable && (
-            <button onClick={onAddOption} className="inline-flex cursor-pointer items-center gap-1 text-sm font-semibold text-slate-600 hover:underline">
+            <button onClick={onAddOption} className="inline-flex cursor-pointer items-center gap-1 text-sm font-semibold text-(--royal-blue) hover:underline">
               + Add option
             </button>
           )}
