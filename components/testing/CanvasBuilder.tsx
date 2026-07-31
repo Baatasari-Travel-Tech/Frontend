@@ -436,7 +436,13 @@ function CardContents({
   }
 
   return (
-    <div className="flex h-full flex-col gap-2 overflow-auto" onPointerDown={(e) => e.stopPropagation()}>
+    // No pointerdown-stopPropagation here (there used to be one) — that
+    // swallowed every press inside a card before it could reach the card's
+    // own handleBodyPointerDown on the parent, so cards could never be
+    // moved by holding their body. The "+ type" buttons and the image
+    // popover trigger below already stopPropagation on their own onClick,
+    // which is the narrower thing that actually needed guarding.
+    <div className="flex h-full flex-col gap-2 overflow-auto">
       <div className="flex flex-wrap items-center gap-1.5">
         {[...TEXT_BLOCK_TYPES, "divider" as const].map((t) => (
           <button
