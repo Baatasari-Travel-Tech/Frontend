@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { motion, type PanInfo } from "framer-motion"
+import { Move, MoveDiagonal2 } from "lucide-react"
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   BG_SWATCHES,
   BLOCK_LIBRARY,
   COLS,
   ROW_UNIT,
+  TEXT_BLOCK_TYPES,
   TEXT_SWATCHES,
   clampCol,
   newBlock,
@@ -184,7 +185,43 @@ function ImagePickerGrid({ images, onPick }: { images: string[]; onPick: (src: s
 function textClassFor(type: BlockType): string {
   if (type === "heading") return "font-bricolage text-2xl font-bold leading-tight outline-none"
   if (type === "subheading") return "font-bricolage text-lg font-semibold leading-tight outline-none"
+  if (type === "quote") return "border-l-4 border-(--gold) pl-3 text-sm italic leading-relaxed text-slate-700 outline-none"
+  if (type === "button")
+    return "grid h-full w-full place-items-center rounded-lg text-center text-sm font-semibold outline-none"
+  if (type === "badge")
+    return "grid h-full w-full place-items-center rounded-full px-2 text-center text-xs font-semibold outline-none"
   return "text-sm leading-relaxed outline-none"
+}
+
+function BlockContent({ block, onChange }: { block: Block; onChange: (patch: Partial<Block>) => void }) {
+  if (block.type === "divider") {
+    return (
+      <div className="flex h-full w-full items-center">
+        <div className="h-0.5 w-full rounded-full" style={{ background: block.bg ?? "#cbd5e1" }} />
+      </div>
+    )
+  }
+  if (block.type === "image") {
+    return block.src ? (
+      <Image
+        src={block.src}
+        alt=""
+        fill
+        sizes={`${Math.round((block.colSpan / COLS) * 100)}vw`}
+        className="rounded-lg object-contain"
+      />
+    ) : null
+  }
+  return (
+    <div
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={(e) => onChange({ text: e.currentTarget.textContent ?? "" })}
+      className={textClassFor(block.type)}
+    >
+      {block.text}
+    </div>
+  )
 }
 
 function CanvasBlock({
@@ -214,15 +251,30 @@ function CanvasBlock({
   const width = block.colSpan * cellWidth
   const height = block.rowSpan * ROW_UNIT
 
-  function handleDrag(_: unknown, info: PanInfo) {
-    setDragOffset({ x: info.offset.x, y: info.offset.y })
-  }
-  function handleDragEnd(_: unknown, info: PanInfo) {
-    const dCol = Math.round(info.offset.x / cellWidth)
-    const dRow = Math.round(info.offset.y / ROW_UNIT)
-    onChange({ col: clampCol(block.col + dCol, block.colSpan), row: Math.max(0, block.row + dRow) })
-    setDragging(false)
-    setDragOffset({ x: 0, y: 0 })
+  // Plain pointer events (not framer-motion drag) — same proven approach as
+  // the resize handle below. Live offset is only ever visual (CSS transform
+  // via React state); the block's real position (col/row) is committed once,
+  // on pointerup, so there's no drag-library internal transform left behind
+  // to fight with it on the next render.
+  function handleMovePointerDown(e: React.PointerEvent) {
+    e.stopPropagation()
+    e.preventDefault()
+    const start = { x: e.clientX, y: e.clientY }
+    setDragging(true)
+    function onMove(ev: PointerEvent) {
+      setDragOffset({ x: ev.clientX - start.x, y: ev.clientY - start.y })
+    }
+    function onUp(ev: PointerEvent) {
+      const dCol = Math.round((ev.clientX - start.x) / cellWidth)
+      const dRow = Math.round((ev.clientY - start.y) / ROW_UNIT)
+      onChange({ col: clampCol(block.col + dCol, block.colSpan), row: Math.max(0, block.row + dRow) })
+      setDragging(false)
+      setDragOffset({ x: 0, y: 0 })
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+    }
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", onUp)
   }
 
   function handleResizePointerDown(e: React.PointerEvent) {
@@ -270,44 +322,27 @@ function CanvasBlock({
             style={{ background: bg, color: block.color ?? undefined }}
           >
             {/* Move handle — centered on the top-left border corner */}
-            <motion.div
-              drag
-              dragMomentum={false}
-              dragElastic={0}
-              onPointerDown={(e) => e.stopPropagation()}
-              onDragStart={() => setDragging(true)}
-              onDrag={handleDrag}
-              onDragEnd={handleDragEnd}
-              className="absolute left-0 top-0 z-10 grid h-6 w-6 -translate-x-1/2 -translate-y-1/2 cursor-grab place-items-center rounded-full border-2 border-white bg-brand-900 text-xs text-white opacity-0 shadow-sm group-hover:opacity-100 active:cursor-grabbing"
+            <div
+              onPointerDown={handleMovePointerDown}
+              className="absolute left-0 top-0 z-10 grid h-6 w-6 -translate-x-1/2 -translate-y-1/2 cursor-grab place-items-center rounded-full border-2 border-white bg-brand-900 text-white opacity-0 shadow-sm group-hover:opacity-100 active:cursor-grabbing"
               title="Drag to move"
             >
-              ⠿
-            </motion.div>
+              <Move size={12} strokeWidth={2.5} />
+            </div>
 
             {block.type === "card" ? (
               <CardContents block={block} images={images} onChange={onChange} />
-            ) : block.type === "image" ? (
-              block.src ? (
-                <Image src={block.src} alt="" fill sizes={`${Math.round((block.colSpan / COLS) * 100)}vw`} className="rounded-lg object-cover" />
-              ) : null
             ) : (
-              <div
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={(e) => onChange({ text: e.currentTarget.textContent ?? "" })}
-                className={textClassFor(block.type)}
-              >
-                {block.text}
-              </div>
+              <BlockContent block={block} onChange={onChange} />
             )}
 
             {/* Resize handle — centered on the bottom-right border corner */}
             <div
               onPointerDown={handleResizePointerDown}
-              className="absolute bottom-0 right-0 z-10 grid h-5 w-5 translate-x-1/2 translate-y-1/2 cursor-se-resize place-items-center rounded-full border-2 border-white bg-brand-900 opacity-0 shadow-sm group-hover:opacity-100"
+              className="absolute bottom-0 right-0 z-10 grid h-6 w-6 translate-x-1/2 translate-y-1/2 cursor-se-resize place-items-center rounded-full border-2 border-white bg-brand-900 text-white opacity-0 shadow-sm group-hover:opacity-100"
               title="Drag to resize"
             >
-              <div className="h-1.5 w-1.5 rounded-sm bg-white" />
+              <MoveDiagonal2 size={12} strokeWidth={2.5} />
             </div>
           </div>
         </div>
@@ -320,7 +355,7 @@ function CanvasBlock({
         <ColorToolbar
           bg={block.bg}
           color={block.color}
-          showTextColor={block.type !== "image"}
+          showTextColor={block.type !== "image" && block.type !== "divider"}
           onBg={(bg) => onChange({ bg })}
           onColor={(color) => onChange({ color })}
           onDelete={onDelete}
@@ -339,7 +374,7 @@ function CardContents({
   images: string[]
   onChange: (patch: Partial<Block>) => void
 }) {
-  function addChild(type: Exclude<BlockType, "card" | "image">) {
+  function addChild(type: (typeof TEXT_BLOCK_TYPES)[number] | "divider") {
     const child = newBlock(type, 0, 0)
     onChange({ children: [...block.children, child] })
   }
@@ -357,7 +392,7 @@ function CardContents({
   return (
     <div className="flex h-full flex-col gap-2" onPointerDown={(e) => e.stopPropagation()}>
       <div className="flex flex-wrap items-center gap-1.5">
-        {(["heading", "subheading", "paragraph"] as const).map((t) => (
+        {[...TEXT_BLOCK_TYPES, "divider" as const].map((t) => (
           <button
             key={t}
             onClick={(e) => {
@@ -389,7 +424,7 @@ function CardContents({
       </div>
       <div className="flex-1 space-y-2 overflow-auto">
         {block.children.length === 0 ? (
-          <p className="text-xs text-slate-400">Empty card — add a heading, subheading, paragraph, or image.</p>
+          <p className="text-xs text-slate-400">Empty card — add a block above.</p>
         ) : (
           block.children.map((child) => (
             <ChildBlock key={child.id} block={child} onChange={(p) => updateChild(child.id, p)} onDelete={() => removeChild(child.id)} />
@@ -424,9 +459,11 @@ function ChildBlock({
           {block.type === "image" ? (
             block.src ? (
               <div className="relative h-24 w-full overflow-hidden rounded-md">
-                <Image src={block.src} alt="" fill sizes="240px" className="object-cover" />
+                <Image src={block.src} alt="" fill sizes="240px" className="object-contain" />
               </div>
             ) : null
+          ) : block.type === "divider" ? (
+            <div className="h-0.5 w-full rounded-full" style={{ background: block.bg ?? "#cbd5e1" }} />
           ) : (
             <div
               contentEditable
@@ -443,7 +480,7 @@ function ChildBlock({
         <ColorToolbar
           bg={block.bg}
           color={block.color}
-          showTextColor={block.type !== "image"}
+          showTextColor={block.type !== "image" && block.type !== "divider"}
           onBg={(bg) => onChange({ bg })}
           onColor={(color) => onChange({ color })}
           onDelete={onDelete}

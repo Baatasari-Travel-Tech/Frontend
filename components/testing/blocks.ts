@@ -2,7 +2,16 @@
 // no persistence, no backend. See lib/recruitment.ts for the sibling
 // "schema + helpers" pattern this mirrors.
 
-export type BlockType = "heading" | "subheading" | "paragraph" | "card" | "image"
+export type BlockType =
+  | "heading"
+  | "subheading"
+  | "paragraph"
+  | "quote"
+  | "button"
+  | "badge"
+  | "divider"
+  | "card"
+  | "image"
 
 export type Block = {
   id: string
@@ -30,6 +39,10 @@ export const BLOCK_LIBRARY: { type: Exclude<BlockType, "image">; label: string; 
   { type: "heading", label: "Heading", colSpan: 6, rowSpan: 2 },
   { type: "subheading", label: "Subheading", colSpan: 6, rowSpan: 1 },
   { type: "paragraph", label: "Paragraph", colSpan: 6, rowSpan: 3 },
+  { type: "quote", label: "Quote", colSpan: 6, rowSpan: 3 },
+  { type: "button", label: "Button", colSpan: 3, rowSpan: 2 },
+  { type: "badge", label: "Badge", colSpan: 2, rowSpan: 1 },
+  { type: "divider", label: "Divider", colSpan: 12, rowSpan: 1 },
   { type: "card", label: "Card", colSpan: 6, rowSpan: 6 },
 ]
 
@@ -37,9 +50,22 @@ const DEFAULT_TEXT: Record<BlockType, string> = {
   heading: "Heading",
   subheading: "Subheading",
   paragraph: "Write something…",
+  quote: "A short quote goes here.",
+  button: "Button",
+  badge: "Badge",
+  divider: "",
   card: "",
   image: "",
 }
+
+export const TEXT_BLOCK_TYPES: Exclude<BlockType, "card" | "image" | "divider">[] = [
+  "heading",
+  "subheading",
+  "paragraph",
+  "quote",
+  "button",
+  "badge",
+]
 
 // Curated swatches — brand palette first, then a few vivid extras so the
 // canvas doesn't feel locked to one mood.
@@ -70,8 +96,8 @@ export function newBlock(type: Exclude<BlockType, "image">, col: number, row: nu
     colSpan: meta.colSpan,
     rowSpan: meta.rowSpan,
     text: DEFAULT_TEXT[type],
-    bg: type === "card" ? "#ffffff" : null,
-    color: null,
+    bg: type === "card" ? "#ffffff" : type === "button" ? "#0c1D37" : type === "divider" ? "#cbd5e1" : null,
+    color: type === "button" ? "#ffffff" : null,
     src: null,
     children: [],
   }
