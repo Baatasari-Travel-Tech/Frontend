@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { Move, MoveDiagonal2 } from "lucide-react"
+import { BringToFront, ChevronDown, ChevronUp, MoveDiagonal2, SendToBack } from "lucide-react"
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   BG_SWATCHES,
@@ -20,6 +20,8 @@ import {
   type Block,
   type BlockType,
 } from "./blocks"
+
+type ReorderAction = "front" | "back" | "forward" | "backward"
 
 function useLocalImages() {
   return useQuery({
@@ -62,6 +64,22 @@ export function CanvasBuilder() {
     setSelectedId((s) => (s === id ? null : s))
   }
 
+  // Stacking order among top-level blocks is just array order (later =
+  // painted on top) — reordering the array is all "bring to front" etc need.
+  function reorderBlock(id: string, action: ReorderAction) {
+    setBlocks((prev) => {
+      const idx = prev.findIndex((b) => b.id === id)
+      if (idx === -1) return prev
+      const arr = [...prev]
+      const [item] = arr.splice(idx, 1)
+      if (action === "front") arr.push(item)
+      else if (action === "back") arr.unshift(item)
+      else if (action === "forward") arr.splice(Math.min(idx + 1, arr.length), 0, item)
+      else arr.splice(Math.max(idx - 1, 0), 0, item)
+      return arr
+    })
+  }
+
   const canvasHeight = Math.max(600, nextFreeY(blocks) + 200)
 
   return (
@@ -92,7 +110,8 @@ export function CanvasBuilder() {
         </div>
 
         <p className="px-1 text-xs text-slate-400">
-          Drag the top-left grip to move a block, drag the bottom-right corner to resize. Click a block for colors.
+          Press and drag a block to move it, drag its bottom-right corner to resize. Click a block for colors and
+          layer order.
         </p>
       </div>
 
@@ -148,6 +167,7 @@ export function CanvasBuilder() {
                 onDeselect={() => setSelectedId(null)}
                 onChange={(patch) => updateBlock(b.id, patch)}
                 onDelete={() => deleteBlock(b.id)}
+                onReorder={(action) => reorderBlock(b.id, action)}
               />
             ))}
           </div>
@@ -210,6 +230,8 @@ function BlockContent({ block, onChange }: { block: Block; onChange: (patch: Par
   )
 }
 
+const DRAG_THRESHOLD = 4
+
 function CanvasBlock({
   block,
   images,
@@ -218,6 +240,7 @@ function CanvasBlock({
   onDeselect,
   onChange,
   onDelete,
+  onReorder,
 }: {
   block: Block
   images: string[]
@@ -226,31 +249,43 @@ function CanvasBlock({
   onDeselect: () => void
   onChange: (patch: Partial<Block>) => void
   onDelete: () => void
+  onReorder: (action: ReorderAction) => void
 }) {
   const [dragging, setDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
 
-  // Plain pixel pointer events (not framer-motion drag, and not divided
-  // through any grid-cell math) — the live offset is only ever a CSS
-  // transform via React state; the block's real position is committed once,
-  // on pointerup, so there's nothing left behind to conflict with the next
-  // render.
-  function handleMovePointerDown(e: React.PointerEvent) {
-    e.stopPropagation()
-    e.preventDefault()
+  // Press-and-hold anywhere on the block body to move it — no separate grip
+  // icon. A small movement threshold distinguishes "click to select/edit
+  // text" from "drag to move": below it, nothing happens here and the
+  // browser's normal click/focus behavior proceeds untouched (so text stays
+  // directly editable); past it, we take over. Position commits once on
+  // pointerup — same reliable pattern as the resize handle.
+  function handleBodyPointerDown(e: React.PointerEvent) {
     const start = { x: e.clientX, y: e.clientY }
-    setDragging(true)
+    let moved = false
     function onMove(ev: PointerEvent) {
-      setDragOffset({ x: ev.clientX - start.x, y: ev.clientY - start.y })
-    }
-    function onUp(ev: PointerEvent) {
       const dx = ev.clientX - start.x
       const dy = ev.clientY - start.y
-      onChange({ x: clampX(Math.round(block.x + dx), block.width), y: Math.max(0, Math.round(block.y + dy)) })
-      setDragging(false)
-      setDragOffset({ x: 0, y: 0 })
+      if (!moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+        moved = true
+        setDragging(true)
+        ;(document.activeElement as HTMLElement | null)?.blur?.()
+      }
+      if (moved) {
+        ev.preventDefault()
+        setDragOffset({ x: dx, y: dy })
+      }
+    }
+    function onUp(ev: PointerEvent) {
       window.removeEventListener("pointermove", onMove)
       window.removeEventListener("pointerup", onUp)
+      if (moved) {
+        const dx = ev.clientX - start.x
+        const dy = ev.clientY - start.y
+        onChange({ x: clampX(Math.round(block.x + dx), block.width), y: Math.max(0, Math.round(block.y + dy)) })
+        setDragging(false)
+        setDragOffset({ x: 0, y: 0 })
+      }
     }
     window.addEventListener("pointermove", onMove)
     window.addEventListener("pointerup", onUp)
@@ -292,38 +327,34 @@ function CanvasBlock({
             transform: dragging ? `translate(${dragOffset.x}px, ${dragOffset.y}px)` : undefined,
             zIndex: dragging || selected ? 30 : 1,
           }}
-          onClick={(e) => {
-            e.stopPropagation()
-            onSelect()
-          }}
         >
+          {/* Content — clips its own contents (image/text overflow), but the
+              resize handle below is a SIBLING, not a child, so it's never
+              clipped even though it visually sits half outside this box. */}
           <div
-            className={`relative h-full w-full overflow-hidden rounded-xl shadow-sm transition-shadow ${noPadding ? "" : "p-3"} ${selected ? "ring-2 ring-(--royal-blue)" : "ring-1 ring-black/5"} ${block.type === "card" ? "shadow-md" : ""}`}
+            onPointerDown={handleBodyPointerDown}
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect()
+            }}
+            className={`relative h-full w-full cursor-grab overflow-hidden rounded-xl shadow-sm transition-shadow active:cursor-grabbing ${noPadding ? "" : "p-3"} ${selected ? "ring-2 ring-(--royal-blue)" : "ring-1 ring-black/5"} ${block.type === "card" ? "shadow-md" : ""}`}
             style={{ background: bg, color: block.color ?? undefined }}
           >
-            {/* Move handle — centered on the top-left border corner */}
-            <div
-              onPointerDown={handleMovePointerDown}
-              className="absolute left-0 top-0 z-10 grid h-6 w-6 -translate-x-1/2 -translate-y-1/2 cursor-grab place-items-center rounded-full border-2 border-white bg-brand-900 text-white opacity-0 shadow-sm group-hover:opacity-100 active:cursor-grabbing"
-              title="Drag to move"
-            >
-              <Move size={12} strokeWidth={2.5} />
-            </div>
-
             {block.type === "card" ? (
               <CardContents block={block} images={images} onChange={onChange} />
             ) : (
               <BlockContent block={block} onChange={onChange} />
             )}
+          </div>
 
-            {/* Resize handle — centered on the bottom-right border corner */}
-            <div
-              onPointerDown={handleResizePointerDown}
-              className="absolute bottom-0 right-0 z-10 grid h-6 w-6 translate-x-1/2 translate-y-1/2 cursor-se-resize place-items-center rounded-full border-2 border-white bg-brand-900 text-white opacity-0 shadow-sm group-hover:opacity-100"
-              title="Drag to resize"
-            >
-              <MoveDiagonal2 size={12} strokeWidth={2.5} />
-            </div>
+          {/* Resize handle — centered on the bottom-right border corner,
+              outside the clipped content box above. */}
+          <div
+            onPointerDown={handleResizePointerDown}
+            className="absolute bottom-0 right-0 z-10 grid h-6 w-6 translate-x-1/2 translate-y-1/2 cursor-se-resize place-items-center rounded-full border-2 border-white bg-brand-900 text-white opacity-0 shadow-sm group-hover:opacity-100"
+            title="Drag to resize"
+          >
+            <MoveDiagonal2 size={12} strokeWidth={2.5} />
           </div>
         </div>
       </PopoverAnchor>
@@ -339,6 +370,7 @@ function CanvasBlock({
           onBg={(bg) => onChange({ bg })}
           onColor={(color) => onChange({ color })}
           onDelete={onDelete}
+          onReorder={onReorder}
         />
       </PopoverContent>
     </Popover>
@@ -477,6 +509,7 @@ function ColorToolbar({
   onBg,
   onColor,
   onDelete,
+  onReorder,
 }: {
   bg: string | null
   color: string | null
@@ -484,9 +517,46 @@ function ColorToolbar({
   onBg: (v: string | null) => void
   onColor: (v: string | null) => void
   onDelete: () => void
+  /** Omitted for card-nested children — they can't overlap, so layer order is meaningless there. */
+  onReorder?: (action: ReorderAction) => void
 }) {
   return (
     <div className="space-y-3">
+      {onReorder && (
+        <div>
+          <p className="mb-1.5 text-xs font-semibold text-slate-500">Layer order</p>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => onReorder("front")}
+              title="Bring to front"
+              className="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              <BringToFront size={14} />
+            </button>
+            <button
+              onClick={() => onReorder("forward")}
+              title="Bring forward"
+              className="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              <ChevronUp size={14} />
+            </button>
+            <button
+              onClick={() => onReorder("backward")}
+              title="Send backward"
+              className="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              <ChevronDown size={14} />
+            </button>
+            <button
+              onClick={() => onReorder("back")}
+              title="Send to back"
+              className="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              <SendToBack size={14} />
+            </button>
+          </div>
+        </div>
+      )}
       <div>
         <p className="mb-1.5 text-xs font-semibold text-slate-500">Background</p>
         <div className="flex flex-wrap gap-1.5">
