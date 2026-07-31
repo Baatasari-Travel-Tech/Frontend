@@ -464,7 +464,13 @@ function CanvasBlock({
               e.stopPropagation()
               onSelect()
             }}
-            className={`relative h-full w-full cursor-grab overflow-hidden rounded-xl shadow-sm transition-shadow active:cursor-grabbing ${noPadding ? "" : "p-3"} ${selected ? "ring-2 ring-(--royal-blue)" : "ring-1 ring-black/5"} ${block.type === "card" ? "shadow-md" : ""}`}
+            // touch-none: without it, a touch "hold" starts the browser's own
+            // page-scroll gesture before our pointer logic gets a chance to
+            // take over. Skipped for cards specifically — their body can
+            // contain a scrollable list of children, and touch-action:none
+            // on an ancestor can't be re-enabled by a descendant, so it would
+            // permanently break scrolling inside a tall card on touch.
+            className={`relative h-full w-full cursor-grab overflow-hidden rounded-xl shadow-sm transition-shadow active:cursor-grabbing ${noPadding ? "" : "p-3"} ${block.type === "card" ? "" : "touch-none"} ${selected ? "ring-2 ring-(--royal-blue)" : "ring-1 ring-black/5"} ${block.type === "card" ? "shadow-md" : ""}`}
             style={{ background: bg, color: block.color ?? undefined }}
           >
             {block.type === "card" ? (
@@ -478,7 +484,7 @@ function CanvasBlock({
               outside the clipped content box above. */}
           <div
             onPointerDown={handleResizePointerDown}
-            className="absolute bottom-0 right-0 z-10 grid h-6 w-6 translate-x-1/2 translate-y-1/2 cursor-se-resize place-items-center rounded-full border-2 border-white bg-brand-900 text-white opacity-0 shadow-sm group-hover:opacity-100"
+            className="absolute bottom-0 right-0 z-10 grid h-6 w-6 translate-x-1/2 translate-y-1/2 cursor-se-resize touch-none place-items-center rounded-full border-2 border-white bg-brand-900 text-white opacity-0 shadow-sm group-hover:opacity-100"
             title="Drag to resize"
           >
             <MoveDiagonal2 size={12} strokeWidth={2.5} />
