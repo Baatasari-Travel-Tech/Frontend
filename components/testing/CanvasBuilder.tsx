@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import { Move, MoveDiagonal2 } from "lucide-react"
@@ -8,14 +8,15 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/compon
 import {
   BG_SWATCHES,
   BLOCK_LIBRARY,
-  COLS,
-  ROW_UNIT,
+  CANVAS_WIDTH,
+  MIN_BLOCK_HEIGHT,
+  MIN_BLOCK_WIDTH,
   TEXT_BLOCK_TYPES,
   TEXT_SWATCHES,
-  clampCol,
+  clampX,
   newBlock,
   newImageBlock,
-  nextFreeRow,
+  nextFreeY,
   type Block,
   type BlockType,
 } from "./blocks"
@@ -35,32 +36,19 @@ export function CanvasBuilder() {
   const [blocks, setBlocks] = useState<Block[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [canvasBg, setCanvasBg] = useState<string>("#ffffff")
-  const canvasRef = useRef<HTMLDivElement>(null)
-  const [canvasWidth, setCanvasWidth] = useState(0)
   const imagesQuery = useLocalImages()
   const images = imagesQuery.data ?? []
 
-  useEffect(() => {
-    const el = canvasRef.current
-    if (!el) return
-    const observer = new ResizeObserver((entries) => setCanvasWidth(entries[0].contentRect.width))
-    observer.observe(el)
-    setCanvasWidth(el.getBoundingClientRect().width)
-    return () => observer.disconnect()
-  }, [])
-
-  const cellWidth = canvasWidth / COLS
-
   function appendBlock(type: Exclude<BlockType, "image">) {
-    const row = nextFreeRow(blocks)
-    const b = newBlock(type, 0, row)
+    const y = blocks.length === 0 ? 24 : nextFreeY(blocks) + 20
+    const b = newBlock(type, 40, y)
     setBlocks((prev) => [...prev, b])
     setSelectedId(b.id)
   }
 
   function appendImage(src: string) {
-    const row = nextFreeRow(blocks)
-    const b = newImageBlock(src, 0, row)
+    const y = blocks.length === 0 ? 24 : nextFreeY(blocks) + 20
+    const b = newImageBlock(src, 40, y)
     setBlocks((prev) => [...prev, b])
     setSelectedId(b.id)
   }
@@ -74,7 +62,7 @@ export function CanvasBuilder() {
     setSelectedId((s) => (s === id ? null : s))
   }
 
-  const canvasHeight = Math.max(600, (nextFreeRow(blocks) + 4) * ROW_UNIT)
+  const canvasHeight = Math.max(600, nextFreeY(blocks) + 200)
 
   return (
     <div className="grid gap-5 lg:grid-cols-[240px_1fr]" onClick={() => setSelectedId(null)}>
@@ -129,28 +117,31 @@ export function CanvasBuilder() {
           </div>
         </div>
 
-        <div
-          ref={canvasRef}
-          className="relative overflow-hidden rounded-2xl border border-dashed border-slate-300"
-          style={{
-            height: canvasHeight,
-            backgroundColor: canvasBg,
-            backgroundImage:
-              "linear-gradient(to right, rgba(15,23,42,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.06) 1px, transparent 1px)",
-            backgroundSize: `${100 / COLS}% ${ROW_UNIT}px`,
-          }}
-        >
-          {blocks.length === 0 && (
-            <p className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-slate-400">
-              Add a block to get started.
-            </p>
-          )}
-          {cellWidth > 0 &&
-            blocks.map((b) => (
+        {/* Fixed-width canvas — scrolls horizontally if the viewport is
+            narrower, same model as a real design-tool canvas. Positions are
+            plain pixels within this fixed frame, so they never depend on a
+            measured/responsive container width. */}
+        <div className="overflow-x-auto rounded-2xl border border-dashed border-slate-300">
+          <div
+            className="relative"
+            style={{
+              width: CANVAS_WIDTH,
+              height: canvasHeight,
+              backgroundColor: canvasBg,
+              backgroundImage:
+                "linear-gradient(to right, rgba(15,23,42,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.06) 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+            }}
+          >
+            {blocks.length === 0 && (
+              <p className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-slate-400">
+                Add a block to get started.
+              </p>
+            )}
+            {blocks.map((b) => (
               <CanvasBlock
                 key={b.id}
                 block={b}
-                cellWidth={cellWidth}
                 images={images}
                 selected={selectedId === b.id}
                 onSelect={() => setSelectedId(b.id)}
@@ -159,6 +150,7 @@ export function CanvasBuilder() {
                 onDelete={() => deleteBlock(b.id)}
               />
             ))}
+          </div>
         </div>
       </div>
     </div>
@@ -203,13 +195,7 @@ function BlockContent({ block, onChange }: { block: Block; onChange: (patch: Par
   }
   if (block.type === "image") {
     return block.src ? (
-      <Image
-        src={block.src}
-        alt=""
-        fill
-        sizes={`${Math.round((block.colSpan / COLS) * 100)}vw`}
-        className="rounded-lg object-contain"
-      />
+      <Image src={block.src} alt="" fill sizes={`${block.width}px`} className="rounded-lg object-contain" />
     ) : null
   }
   return (
@@ -226,7 +212,6 @@ function BlockContent({ block, onChange }: { block: Block; onChange: (patch: Par
 
 function CanvasBlock({
   block,
-  cellWidth,
   images,
   selected,
   onSelect,
@@ -235,7 +220,6 @@ function CanvasBlock({
   onDelete,
 }: {
   block: Block
-  cellWidth: number
   images: string[]
   selected: boolean
   onSelect: () => void
@@ -246,16 +230,11 @@ function CanvasBlock({
   const [dragging, setDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
 
-  const left = block.col * cellWidth
-  const top = block.row * ROW_UNIT
-  const width = block.colSpan * cellWidth
-  const height = block.rowSpan * ROW_UNIT
-
-  // Plain pointer events (not framer-motion drag) — same proven approach as
-  // the resize handle below. Live offset is only ever visual (CSS transform
-  // via React state); the block's real position (col/row) is committed once,
-  // on pointerup, so there's no drag-library internal transform left behind
-  // to fight with it on the next render.
+  // Plain pixel pointer events (not framer-motion drag, and not divided
+  // through any grid-cell math) — the live offset is only ever a CSS
+  // transform via React state; the block's real position is committed once,
+  // on pointerup, so there's nothing left behind to conflict with the next
+  // render.
   function handleMovePointerDown(e: React.PointerEvent) {
     e.stopPropagation()
     e.preventDefault()
@@ -265,9 +244,9 @@ function CanvasBlock({
       setDragOffset({ x: ev.clientX - start.x, y: ev.clientY - start.y })
     }
     function onUp(ev: PointerEvent) {
-      const dCol = Math.round((ev.clientX - start.x) / cellWidth)
-      const dRow = Math.round((ev.clientY - start.y) / ROW_UNIT)
-      onChange({ col: clampCol(block.col + dCol, block.colSpan), row: Math.max(0, block.row + dRow) })
+      const dx = ev.clientX - start.x
+      const dy = ev.clientY - start.y
+      onChange({ x: clampX(Math.round(block.x + dx), block.width), y: Math.max(0, Math.round(block.y + dy)) })
       setDragging(false)
       setDragOffset({ x: 0, y: 0 })
       window.removeEventListener("pointermove", onMove)
@@ -280,13 +259,13 @@ function CanvasBlock({
   function handleResizePointerDown(e: React.PointerEvent) {
     e.stopPropagation()
     e.preventDefault()
-    const start = { x: e.clientX, y: e.clientY, colSpan: block.colSpan, rowSpan: block.rowSpan }
+    const start = { x: e.clientX, y: e.clientY, width: block.width, height: block.height }
     function onMove(ev: PointerEvent) {
-      const dCol = Math.round((ev.clientX - start.x) / cellWidth)
-      const dRow = Math.round((ev.clientY - start.y) / ROW_UNIT)
+      const dx = ev.clientX - start.x
+      const dy = ev.clientY - start.y
       onChange({
-        colSpan: Math.min(Math.max(start.colSpan + dCol, 2), COLS - block.col),
-        rowSpan: Math.max(start.rowSpan + dRow, 1),
+        width: Math.min(Math.max(Math.round(start.width + dx), MIN_BLOCK_WIDTH), CANVAS_WIDTH - block.x),
+        height: Math.max(Math.round(start.height + dy), MIN_BLOCK_HEIGHT),
       })
     }
     function onUp() {
@@ -298,6 +277,7 @@ function CanvasBlock({
   }
 
   const bg = block.bg ?? (block.type === "card" ? "#ffffff" : "transparent")
+  const noPadding = block.type === "image" || block.type === "divider"
 
   return (
     <Popover open={selected} onOpenChange={(open) => !open && onDeselect()}>
@@ -305,10 +285,10 @@ function CanvasBlock({
         <div
           className="group absolute"
           style={{
-            left,
-            top,
-            width,
-            height,
+            left: block.x,
+            top: block.y,
+            width: block.width,
+            height: block.height,
             transform: dragging ? `translate(${dragOffset.x}px, ${dragOffset.y}px)` : undefined,
             zIndex: dragging || selected ? 30 : 1,
           }}
@@ -318,7 +298,7 @@ function CanvasBlock({
           }}
         >
           <div
-            className={`relative h-full w-full overflow-auto rounded-xl p-3 shadow-sm transition-shadow ${selected ? "ring-2 ring-(--royal-blue)" : "ring-1 ring-black/5"} ${block.type === "card" ? "shadow-md" : ""}`}
+            className={`relative h-full w-full overflow-hidden rounded-xl shadow-sm transition-shadow ${noPadding ? "" : "p-3"} ${selected ? "ring-2 ring-(--royal-blue)" : "ring-1 ring-black/5"} ${block.type === "card" ? "shadow-md" : ""}`}
             style={{ background: bg, color: block.color ?? undefined }}
           >
             {/* Move handle — centered on the top-left border corner */}
@@ -390,7 +370,7 @@ function CardContents({
   }
 
   return (
-    <div className="flex h-full flex-col gap-2" onPointerDown={(e) => e.stopPropagation()}>
+    <div className="flex h-full flex-col gap-2 overflow-auto" onPointerDown={(e) => e.stopPropagation()}>
       <div className="flex flex-wrap items-center gap-1.5">
         {[...TEXT_BLOCK_TYPES, "divider" as const].map((t) => (
           <button
@@ -449,7 +429,7 @@ function ChildBlock({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
         <div
-          className="relative rounded-lg p-2 ring-1 ring-black/5"
+          className="relative overflow-hidden rounded-lg p-2 ring-1 ring-black/5"
           style={{ background: block.bg ?? "transparent", color: block.color ?? undefined }}
           onClick={(e) => {
             e.stopPropagation()

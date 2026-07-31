@@ -1,6 +1,13 @@
 // Types + helpers for the canvas builder playground. Purely client-side —
 // no persistence, no backend. See lib/recruitment.ts for the sibling
 // "schema + helpers" pattern this mirrors.
+//
+// Positioning is plain pixels on a fixed-size canvas (not a column/row
+// grid) — a percentage-of-container grid meant float math (canvasWidth/12)
+// had to stay perfectly in sync with the rendered container on every
+// resize, which is exactly the kind of thing that quietly drifts by a
+// sub-pixel and causes stray scrollbars / blocks that don't land where
+// dropped. Fixed pixel canvas removes that entire class of bug.
 
 export type BlockType =
   | "heading"
@@ -16,10 +23,10 @@ export type BlockType =
 export type Block = {
   id: string
   type: BlockType
-  col: number // 0-based grid column, 0..COLS-1
-  row: number // 0-based grid row (unbounded, canvas grows)
-  colSpan: number
-  rowSpan: number
+  x: number
+  y: number
+  width: number
+  height: number
   text: string
   bg: string | null
   color: string | null
@@ -29,21 +36,25 @@ export type Block = {
   children: Block[]
 }
 
-export const COLS = 12
-export const ROW_UNIT = 28 // px per grid row
+/** Fixed authoring width of the canvas, in px. The canvas area scrolls
+ * horizontally if the viewport is narrower — same model as a real design
+ * tool canvas, not a fluid/responsive one. */
+export const CANVAS_WIDTH = 1120
+export const MIN_BLOCK_WIDTH = 40
+export const MIN_BLOCK_HEIGHT = 24
 
 // Text/container blocks — added via the "+ Add block" palette (click to
 // append). Images are added separately, from the image picker, since they
 // need a source picked first.
-export const BLOCK_LIBRARY: { type: Exclude<BlockType, "image">; label: string; colSpan: number; rowSpan: number }[] = [
-  { type: "heading", label: "Heading", colSpan: 6, rowSpan: 2 },
-  { type: "subheading", label: "Subheading", colSpan: 6, rowSpan: 1 },
-  { type: "paragraph", label: "Paragraph", colSpan: 6, rowSpan: 3 },
-  { type: "quote", label: "Quote", colSpan: 6, rowSpan: 3 },
-  { type: "button", label: "Button", colSpan: 3, rowSpan: 2 },
-  { type: "badge", label: "Badge", colSpan: 2, rowSpan: 1 },
-  { type: "divider", label: "Divider", colSpan: 12, rowSpan: 1 },
-  { type: "card", label: "Card", colSpan: 6, rowSpan: 6 },
+export const BLOCK_LIBRARY: { type: Exclude<BlockType, "image">; label: string; width: number; height: number }[] = [
+  { type: "heading", label: "Heading", width: 480, height: 64 },
+  { type: "subheading", label: "Subheading", width: 480, height: 40 },
+  { type: "paragraph", label: "Paragraph", width: 480, height: 110 },
+  { type: "quote", label: "Quote", width: 480, height: 100 },
+  { type: "button", label: "Button", width: 160, height: 48 },
+  { type: "badge", label: "Badge", width: 110, height: 32 },
+  { type: "divider", label: "Divider", width: CANVAS_WIDTH - 80, height: 8 },
+  { type: "card", label: "Card", width: 480, height: 320 },
 ]
 
 const DEFAULT_TEXT: Record<BlockType, string> = {
@@ -86,15 +97,15 @@ export function uid(prefix = "b"): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`
 }
 
-export function newBlock(type: Exclude<BlockType, "image">, col: number, row: number): Block {
+export function newBlock(type: Exclude<BlockType, "image">, x: number, y: number): Block {
   const meta = BLOCK_LIBRARY.find((b) => b.type === type)!
   return {
     id: uid(),
     type,
-    col,
-    row,
-    colSpan: meta.colSpan,
-    rowSpan: meta.rowSpan,
+    x,
+    y,
+    width: meta.width,
+    height: meta.height,
     text: DEFAULT_TEXT[type],
     bg: type === "card" ? "#ffffff" : type === "button" ? "#0c1D37" : type === "divider" ? "#cbd5e1" : null,
     color: type === "button" ? "#ffffff" : null,
@@ -103,14 +114,14 @@ export function newBlock(type: Exclude<BlockType, "image">, col: number, row: nu
   }
 }
 
-export function newImageBlock(src: string, col: number, row: number): Block {
+export function newImageBlock(src: string, x: number, y: number): Block {
   return {
     id: uid(),
     type: "image",
-    col,
-    row,
-    colSpan: 4,
-    rowSpan: 5,
+    x,
+    y,
+    width: 320,
+    height: 240,
     text: "",
     bg: null,
     color: null,
@@ -119,11 +130,11 @@ export function newImageBlock(src: string, col: number, row: number): Block {
   }
 }
 
-/** Next free row at the bottom of a block list — used for click-to-append. */
-export function nextFreeRow(blocks: Block[]): number {
-  return blocks.reduce((max, b) => Math.max(max, b.row + b.rowSpan), 0)
+/** Next free y at the bottom of the block list — used for click-to-append. */
+export function nextFreeY(blocks: Block[]): number {
+  return blocks.reduce((max, b) => Math.max(max, b.y + b.height), 0)
 }
 
-export function clampCol(col: number, colSpan: number): number {
-  return Math.min(Math.max(col, 0), COLS - colSpan)
+export function clampX(x: number, width: number): number {
+  return Math.min(Math.max(x, 0), Math.max(0, CANVAS_WIDTH - width))
 }
