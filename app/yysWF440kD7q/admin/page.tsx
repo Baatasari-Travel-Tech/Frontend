@@ -7,23 +7,25 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
 import type { ApiEnvelope } from "@/types/api"
+import { RecruitmentFormsPanel } from "./RecruitmentFormsPanel"
 
-// Unguessable path, not linked anywhere in the app — this is the entire
-// recruitment-tool admin surface (auth only, for now). Auth here is
-// intentionally independent of the main site's User auth and of
-// Admin-Backend's AdminUser auth — a separate cookie, a separate table.
+// Unguessable path, not linked anywhere in the app — this is the internal
+// admin surface for tools we build here (recruitment forms, and whatever
+// follows). Auth here is intentionally independent of the main site's User
+// auth and of Admin-Backend's AdminUser auth — a separate cookie, a separate
+// table.
 
-type RecruitmentAdminRole = "SUPERADMIN" | "ADMIN"
+type AdminRole = "SUPERADMIN" | "ADMIN"
 
-type RecruitmentAdmin = {
+type Admin = {
   id: string
   username: string
-  role: RecruitmentAdminRole
+  role: AdminRole
   createdAt?: string
 }
 
-const meQueryKey = ["recruitment-admin-me"]
-const adminsQueryKey = ["recruitment-admin-admins"]
+const meQueryKey = ["admin-me"]
+const adminsQueryKey = ["admin-admins"]
 
 const loginSchema = z.object({
   username: z.string().min(3, "Too short").max(100),
@@ -37,11 +39,10 @@ const createAdminSchema = z.object({
 })
 type CreateAdminValues = z.infer<typeof createAdminSchema>
 
-export default function RecruitmentAdminPage() {
+export default function AdminPage() {
   const meQuery = useQuery({
     queryKey: meQueryKey,
-    queryFn: () =>
-      apiRequest<ApiEnvelope<{ admin: RecruitmentAdmin }>>("/recruitment-admin/auth/me", { retryOn401: false }),
+    queryFn: () => apiRequest<ApiEnvelope<{ admin: Admin }>>("/admin/auth/me", { retryOn401: false }),
     retry: false,
   })
 
@@ -56,7 +57,7 @@ export default function RecruitmentAdminPage() {
   const admin = meQuery.data?.data.admin ?? null
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
+    <main className={`flex min-h-screen justify-center bg-slate-50 px-4 py-12 ${admin ? "items-start" : "items-center"}`}>
       {admin ? <Dashboard admin={admin} /> : <LoginForm />}
     </main>
   )
@@ -72,7 +73,7 @@ function LoginForm() {
 
   const loginMutation = useMutation({
     mutationFn: (values: LoginValues) =>
-      apiRequest<ApiEnvelope<{ admin: RecruitmentAdmin }>>("/recruitment-admin/auth/login", {
+      apiRequest<ApiEnvelope<{ admin: Admin }>>("/admin/auth/login", {
         method: "POST",
         body: JSON.stringify(values),
         retryOn401: false,
@@ -92,7 +93,7 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-lg font-semibold text-slate-900">Recruitment admin</h1>
+      <h1 className="text-lg font-semibold text-slate-900">Admin</h1>
       <p className="mt-1 text-sm text-slate-500">Sign in to manage recruitment forms.</p>
 
       <form className="mt-6 space-y-4" onSubmit={onSubmit}>
@@ -132,11 +133,11 @@ function LoginForm() {
   )
 }
 
-function Dashboard({ admin }: { admin: RecruitmentAdmin }) {
+function Dashboard({ admin }: { admin: Admin }) {
   const queryClient = useQueryClient()
 
   const logoutMutation = useMutation({
-    mutationFn: () => apiRequest("/recruitment-admin/auth/logout", { method: "POST", retryOn401: false }),
+    mutationFn: () => apiRequest("/admin/auth/logout", { method: "POST", retryOn401: false }),
     onSettled: () => {
       queryClient.removeQueries({ queryKey: meQueryKey })
       queryClient.removeQueries({ queryKey: adminsQueryKey })
@@ -144,7 +145,7 @@ function Dashboard({ admin }: { admin: RecruitmentAdmin }) {
   })
 
   return (
-    <div className="w-full max-w-2xl space-y-6">
+    <div className="w-full max-w-4xl space-y-6">
       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>
           <p className="text-sm text-slate-500">Logged in as</p>
@@ -161,12 +162,9 @@ function Dashboard({ admin }: { admin: RecruitmentAdmin }) {
         </button>
       </div>
 
-      {admin.role === "SUPERADMIN" ? <AdminManagement /> : null}
+      <RecruitmentFormsPanel />
 
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-        Form builder and submissions are next — this page currently only handles admin
-        access.
-      </div>
+      {admin.role === "SUPERADMIN" ? <AdminManagement /> : null}
     </div>
   )
 }
@@ -182,14 +180,13 @@ function AdminManagement() {
 
   const adminsQuery = useQuery({
     queryKey: adminsQueryKey,
-    queryFn: () =>
-      apiRequest<ApiEnvelope<{ admins: RecruitmentAdmin[] }>>("/recruitment-admin/admins", { retryOn401: false }),
+    queryFn: () => apiRequest<ApiEnvelope<{ admins: Admin[] }>>("/admin/admins", { retryOn401: false }),
     retry: false,
   })
 
   const createAdminMutation = useMutation({
     mutationFn: (values: CreateAdminValues) =>
-      apiRequest("/recruitment-admin/admins", {
+      apiRequest("/admin/admins", {
         method: "POST",
         body: JSON.stringify(values),
         retryOn401: false,
