@@ -26,7 +26,7 @@ async function isMaintenanceOn(): Promise<boolean> {
   }
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   if (await isMaintenanceOn()) {
     const url = req.nextUrl.clone()
     url.pathname = "/maintenance"
