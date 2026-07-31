@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -8,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiRequest } from "@/lib/api/client"
 import type { ApiEnvelope } from "@/types/api"
 import { RecruitmentFormsPanel } from "./RecruitmentFormsPanel"
+import { useAdminSession, meQueryKey, type Admin } from "./useAdminSession"
 
 // Unguessable path, not linked anywhere in the app — this is the internal
 // admin surface for tools we build here (recruitment forms, and whatever
@@ -15,16 +17,6 @@ import { RecruitmentFormsPanel } from "./RecruitmentFormsPanel"
 // auth and of Admin-Backend's AdminUser auth — a separate cookie, a separate
 // table.
 
-type AdminRole = "SUPERADMIN" | "ADMIN"
-
-type Admin = {
-  id: string
-  username: string
-  role: AdminRole
-  createdAt?: string
-}
-
-const meQueryKey = ["admin-me"]
 const adminsQueryKey = ["admin-admins"]
 
 const loginSchema = z.object({
@@ -40,11 +32,7 @@ const createAdminSchema = z.object({
 type CreateAdminValues = z.infer<typeof createAdminSchema>
 
 export default function AdminPage() {
-  const meQuery = useQuery({
-    queryKey: meQueryKey,
-    queryFn: () => apiRequest<ApiEnvelope<{ admin: Admin }>>("/admin/auth/me", { retryOn401: false }),
-    retry: false,
-  })
+  const meQuery = useAdminSession()
 
   if (meQuery.isLoading) {
     return (
@@ -153,13 +141,21 @@ function Dashboard({ admin }: { admin: Admin }) {
             {admin.username} <span className="text-sm font-normal text-slate-400">({admin.role})</span>
           </p>
         </div>
-        <button
-          onClick={() => logoutMutation.mutate()}
-          disabled={logoutMutation.isPending}
-          className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-        >
-          {logoutMutation.isPending ? "Signing out…" : "Sign out"}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/yysWF440kD7q/admin/testing"
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Testing
+          </Link>
+          <button
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {logoutMutation.isPending ? "Signing out…" : "Sign out"}
+          </button>
+        </div>
       </div>
 
       <RecruitmentFormsPanel />
@@ -251,14 +247,103 @@ function AdminManagement() {
         ) : admins.length === 0 ? (
           <li className="py-3 text-sm text-slate-400">No admins yet.</li>
         ) : (
-          admins.map((a) => (
-            <li key={a.id} className="flex items-center justify-between py-3 text-sm">
-              <span className="font-medium text-slate-800">{a.username}</span>
-              <span className="text-slate-400">{a.role}</span>
-            </li>
-          ))
+          admins.map((a) => <AdminRow key={a.id} admin={a} />)
         )}
       </ul>
     </div>
+  )
+}
+
+const changePasswordSchema = z.object({
+  password: z.string().min(8, "Too short").max(200),
+})
+type ChangePasswordValues = z.infer<typeof changePasswordSchema>
+
+function AdminRow({ admin }: { admin: Admin }) {
+  const queryClient = useQueryClient()
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const form = useForm<ChangePasswordValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: { password: "" },
+  })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: (values: ChangePasswordValues) =>
+      apiRequest(`/admin/admins/${admin.id}/password`, {
+        method: "PATCH",
+        body: JSON.stringify(values),
+        retryOn401: false,
+      }),
+    onSuccess: () => {
+      setChangingPassword(false)
+      form.reset()
+    },
+    onError: (err) => setError(err instanceof Error ? err.message : "Failed to change password."),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => apiRequest(`/admin/admins/${admin.id}`, { method: "DELETE", retryOn401: false }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminsQueryKey }),
+    onError: (err) => setError(err instanceof Error ? err.message : "Failed to delete admin."),
+  })
+
+  const onSubmit = form.handleSubmit((values) => {
+    setError(null)
+    changePasswordMutation.mutate(values)
+  })
+
+  return (
+    <li className="py-3 text-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="font-medium text-slate-800">{admin.username}</span>{" "}
+          <span className="text-slate-400">({admin.role})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setError(null)
+              setChangingPassword((v) => !v)
+            }}
+            className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Change password
+          </button>
+          <button
+            onClick={() => {
+              setError(null)
+              if (window.confirm(`Delete admin "${admin.username}"?`)) deleteMutation.mutate()
+            }}
+            disabled={deleteMutation.isPending}
+            className="rounded-xl border border-rose-200 px-3 py-1.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {changingPassword && (
+        <form className="mt-3 flex flex-wrap items-start gap-2" onSubmit={onSubmit}>
+          <div className="min-w-[10rem] flex-1">
+            <input
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              type="password"
+              placeholder="New password"
+              autoComplete="new-password"
+              {...form.register("password")}
+            />
+            <p className="mt-1 text-xs text-rose-600">{form.formState.errors.password?.message}</p>
+          </div>
+          <button
+            className="rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            disabled={changePasswordMutation.isPending}
+          >
+            {changePasswordMutation.isPending ? "Saving…" : "Save"}
+          </button>
+        </form>
+      )}
+      {error ? <p className="mt-2 text-xs text-rose-600">{error}</p> : null}
+    </li>
   )
 }
