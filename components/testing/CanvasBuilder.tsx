@@ -188,7 +188,7 @@ function ImagePickerGrid({ images, onPick }: { images: string[]; onPick: (src: s
           className="relative aspect-square overflow-hidden rounded-lg ring-1 ring-slate-200 transition hover:ring-2 hover:ring-(--royal-blue)"
           title={src}
         >
-          <Image src={src} alt="" fill sizes="80px" className="object-cover" />
+          <Image src={src} alt="" fill draggable={false} sizes="80px" className="object-cover" />
         </button>
       ))}
     </div>
@@ -216,7 +216,7 @@ function BlockContent({ block, onChange }: { block: Block; onChange: (patch: Par
   }
   if (block.type === "image") {
     return block.src ? (
-      <Image src={block.src} alt="" fill sizes={`${block.width}px`} className="rounded-lg object-contain" />
+      <Image src={block.src} alt="" fill draggable={false} sizes={`${block.width}px`} className="rounded-lg object-contain" />
     ) : null
   }
   return (
@@ -511,7 +511,7 @@ function ChildBlock({
           {block.type === "image" ? (
             block.src ? (
               <div className="relative h-24 w-full overflow-hidden rounded-md">
-                <Image src={block.src} alt="" fill sizes="240px" className="object-contain" />
+                <Image src={block.src} alt="" fill draggable={false} sizes="240px" className="object-contain" />
               </div>
             ) : null
           ) : block.type === "divider" ? (
