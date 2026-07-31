@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Image from "next/image"
+import { useQuery } from "@tanstack/react-query"
 import { motion, type PanInfo } from "framer-motion"
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   BG_SWATCHES,
   BLOCK_LIBRARY,
@@ -11,16 +13,31 @@ import {
   TEXT_SWATCHES,
   clampCol,
   newBlock,
+  newImageBlock,
   nextFreeRow,
   type Block,
   type BlockType,
 } from "./blocks"
 
+function useLocalImages() {
+  return useQuery({
+    queryKey: ["local-images"],
+    queryFn: async () => {
+      const res = await fetch("/api/local-images")
+      const json = (await res.json()) as { images: string[] }
+      return json.images
+    },
+  })
+}
+
 export function CanvasBuilder() {
   const [blocks, setBlocks] = useState<Block[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [canvasBg, setCanvasBg] = useState<string>("#ffffff")
   const canvasRef = useRef<HTMLDivElement>(null)
   const [canvasWidth, setCanvasWidth] = useState(0)
+  const imagesQuery = useLocalImages()
+  const images = imagesQuery.data ?? []
 
   useEffect(() => {
     const el = canvasRef.current
@@ -33,9 +50,16 @@ export function CanvasBuilder() {
 
   const cellWidth = canvasWidth / COLS
 
-  function appendBlock(type: BlockType) {
+  function appendBlock(type: Exclude<BlockType, "image">) {
     const row = nextFreeRow(blocks)
     const b = newBlock(type, 0, row)
+    setBlocks((prev) => [...prev, b])
+    setSelectedId(b.id)
+  }
+
+  function appendImage(src: string) {
+    const row = nextFreeRow(blocks)
+    const b = newImageBlock(src, 0, row)
     setBlocks((prev) => [...prev, b])
     setSelectedId(b.id)
   }
@@ -52,47 +76,107 @@ export function CanvasBuilder() {
   const canvasHeight = Math.max(600, (nextFreeRow(blocks) + 4) * ROW_UNIT)
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[220px_1fr]" onClick={() => setSelectedId(null)}>
-      <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Blocks</p>
-        {BLOCK_LIBRARY.map((b) => (
-          <button
-            key={b.type}
-            onClick={() => appendBlock(b.type)}
-            className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-brand-900 transition-colors hover:border-(--royal-blue)/30 hover:bg-(--royal-blue)/5"
-          >
-            + {b.label}
-          </button>
-        ))}
-        <p className="px-1 pt-3 text-xs text-slate-400">
-          Drag the grip to move a block, drag its bottom-right corner to resize. Click a block for colors.
+    <div className="grid gap-5 lg:grid-cols-[240px_1fr]" onClick={() => setSelectedId(null)}>
+      <div className="space-y-5" onClick={(e) => e.stopPropagation()}>
+        <div className="space-y-2">
+          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Blocks</p>
+          {BLOCK_LIBRARY.map((b) => (
+            <button
+              key={b.type}
+              onClick={() => appendBlock(b.type)}
+              className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-semibold text-brand-900 transition-colors hover:border-(--royal-blue)/30 hover:bg-(--royal-blue)/5"
+            >
+              + {b.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Images</p>
+          {imagesQuery.isLoading ? (
+            <p className="px-1 text-xs text-slate-400">Loading…</p>
+          ) : images.length === 0 ? (
+            <p className="px-1 text-xs text-slate-400">No images found in /public.</p>
+          ) : (
+            <ImagePickerGrid images={images} onPick={appendImage} />
+          )}
+        </div>
+
+        <p className="px-1 text-xs text-slate-400">
+          Drag the top-left grip to move a block, drag the bottom-right corner to resize. Click a block for colors.
         </p>
       </div>
 
-      <div
-        ref={canvasRef}
-        className="relative overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)]"
-        style={{ height: canvasHeight, backgroundSize: `${100 / COLS}% ${ROW_UNIT}px` }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {blocks.length === 0 && (
-          <p className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-slate-400">
-            Add a block to get started.
-          </p>
-        )}
-        {cellWidth > 0 &&
-          blocks.map((b) => (
-            <CanvasBlock
-              key={b.id}
-              block={b}
-              cellWidth={cellWidth}
-              selected={selectedId === b.id}
-              onSelect={() => setSelectedId(b.id)}
-              onChange={(patch) => updateBlock(b.id, patch)}
-              onDelete={() => deleteBlock(b.id)}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Board color</span>
+          <div className="flex items-center gap-1.5">
+            {["#ffffff", "#f5efe4", "#0c1D37", "#f8fafc"].map((c) => (
+              <button
+                key={c}
+                onClick={() => setCanvasBg(c)}
+                style={{ background: c }}
+                className={`h-5 w-5 rounded-full border-2 ${canvasBg === c ? "border-(--royal-blue)" : "border-slate-200"}`}
+              />
+            ))}
+            <input
+              type="color"
+              value={canvasBg}
+              onChange={(e) => setCanvasBg(e.target.value)}
+              className="h-5 w-5 cursor-pointer rounded-full border-2 border-slate-200 p-0"
             />
-          ))}
+          </div>
+        </div>
+
+        <div
+          ref={canvasRef}
+          className="relative overflow-hidden rounded-2xl border border-dashed border-slate-300"
+          style={{
+            height: canvasHeight,
+            backgroundColor: canvasBg,
+            backgroundImage:
+              "linear-gradient(to right, rgba(15,23,42,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.06) 1px, transparent 1px)",
+            backgroundSize: `${100 / COLS}% ${ROW_UNIT}px`,
+          }}
+        >
+          {blocks.length === 0 && (
+            <p className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-slate-400">
+              Add a block to get started.
+            </p>
+          )}
+          {cellWidth > 0 &&
+            blocks.map((b) => (
+              <CanvasBlock
+                key={b.id}
+                block={b}
+                cellWidth={cellWidth}
+                images={images}
+                selected={selectedId === b.id}
+                onSelect={() => setSelectedId(b.id)}
+                onDeselect={() => setSelectedId(null)}
+                onChange={(patch) => updateBlock(b.id, patch)}
+                onDelete={() => deleteBlock(b.id)}
+              />
+            ))}
+        </div>
       </div>
+    </div>
+  )
+}
+
+function ImagePickerGrid({ images, onPick }: { images: string[]; onPick: (src: string) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-1.5">
+      {images.map((src) => (
+        <button
+          key={src}
+          onClick={() => onPick(src)}
+          className="relative aspect-square overflow-hidden rounded-lg ring-1 ring-slate-200 transition hover:ring-2 hover:ring-(--royal-blue)"
+          title={src}
+        >
+          <Image src={src} alt="" fill sizes="80px" className="object-cover" />
+        </button>
+      ))}
     </div>
   )
 }
@@ -106,15 +190,19 @@ function textClassFor(type: BlockType): string {
 function CanvasBlock({
   block,
   cellWidth,
+  images,
   selected,
   onSelect,
+  onDeselect,
   onChange,
   onDelete,
 }: {
   block: Block
   cellWidth: number
+  images: string[]
   selected: boolean
   onSelect: () => void
+  onDeselect: () => void
   onChange: (patch: Partial<Block>) => void
   onDelete: () => void
 }) {
@@ -160,7 +248,7 @@ function CanvasBlock({
   const bg = block.bg ?? (block.type === "card" ? "#ffffff" : "transparent")
 
   return (
-    <Popover open={selected} onOpenChange={(open) => !open && onSelect()}>
+    <Popover open={selected} onOpenChange={(open) => !open && onDeselect()}>
       <PopoverAnchor asChild>
         <div
           className="group absolute"
@@ -181,6 +269,7 @@ function CanvasBlock({
             className={`relative h-full w-full overflow-auto rounded-xl p-3 shadow-sm transition-shadow ${selected ? "ring-2 ring-(--royal-blue)" : "ring-1 ring-black/5"} ${block.type === "card" ? "shadow-md" : ""}`}
             style={{ background: bg, color: block.color ?? undefined }}
           >
+            {/* Move handle — centered on the top-left border corner */}
             <motion.div
               drag
               dragMomentum={false}
@@ -189,14 +278,18 @@ function CanvasBlock({
               onDragStart={() => setDragging(true)}
               onDrag={handleDrag}
               onDragEnd={handleDragEnd}
-              className="absolute -top-2 -left-2 z-10 grid h-6 w-6 cursor-grab place-items-center rounded-md bg-brand-900 text-xs text-white opacity-0 group-hover:opacity-100 active:cursor-grabbing"
+              className="absolute left-0 top-0 z-10 grid h-6 w-6 -translate-x-1/2 -translate-y-1/2 cursor-grab place-items-center rounded-full border-2 border-white bg-brand-900 text-xs text-white opacity-0 shadow-sm group-hover:opacity-100 active:cursor-grabbing"
               title="Drag to move"
             >
               ⠿
             </motion.div>
 
             {block.type === "card" ? (
-              <CardContents block={block} onChange={onChange} />
+              <CardContents block={block} images={images} onChange={onChange} />
+            ) : block.type === "image" ? (
+              block.src ? (
+                <Image src={block.src} alt="" fill sizes={`${Math.round((block.colSpan / COLS) * 100)}vw`} className="rounded-lg object-cover" />
+              ) : null
             ) : (
               <div
                 contentEditable
@@ -208,12 +301,13 @@ function CanvasBlock({
               </div>
             )}
 
+            {/* Resize handle — centered on the bottom-right border corner */}
             <div
               onPointerDown={handleResizePointerDown}
-              className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize opacity-0 group-hover:opacity-100"
+              className="absolute bottom-0 right-0 z-10 grid h-5 w-5 translate-x-1/2 translate-y-1/2 cursor-se-resize place-items-center rounded-full border-2 border-white bg-brand-900 opacity-0 shadow-sm group-hover:opacity-100"
               title="Drag to resize"
             >
-              <div className="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-sm border-b-2 border-r-2 border-slate-400" />
+              <div className="h-1.5 w-1.5 rounded-sm bg-white" />
             </div>
           </div>
         </div>
@@ -226,6 +320,7 @@ function CanvasBlock({
         <ColorToolbar
           bg={block.bg}
           color={block.color}
+          showTextColor={block.type !== "image"}
           onBg={(bg) => onChange({ bg })}
           onColor={(color) => onChange({ color })}
           onDelete={onDelete}
@@ -235,9 +330,21 @@ function CanvasBlock({
   )
 }
 
-function CardContents({ block, onChange }: { block: Block; onChange: (patch: Partial<Block>) => void }) {
-  function addChild(type: Exclude<BlockType, "card">) {
+function CardContents({
+  block,
+  images,
+  onChange,
+}: {
+  block: Block
+  images: string[]
+  onChange: (patch: Partial<Block>) => void
+}) {
+  function addChild(type: Exclude<BlockType, "card" | "image">) {
     const child = newBlock(type, 0, 0)
+    onChange({ children: [...block.children, child] })
+  }
+  function addImageChild(src: string) {
+    const child = newImageBlock(src, 0, 0)
     onChange({ children: [...block.children, child] })
   }
   function updateChild(id: string, patch: Partial<Block>) {
@@ -249,7 +356,7 @@ function CardContents({ block, onChange }: { block: Block; onChange: (patch: Par
 
   return (
     <div className="flex h-full flex-col gap-2" onPointerDown={(e) => e.stopPropagation()}>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {(["heading", "subheading", "paragraph"] as const).map((t) => (
           <button
             key={t}
@@ -262,10 +369,27 @@ function CardContents({ block, onChange }: { block: Block; onChange: (patch: Par
             + {t}
           </button>
         ))}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-brand-900 hover:bg-slate-50"
+            >
+              + image
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2" onClick={(e) => e.stopPropagation()}>
+            {images.length === 0 ? (
+              <p className="text-xs text-slate-400">No images found.</p>
+            ) : (
+              <ImagePickerGrid images={images} onPick={addImageChild} />
+            )}
+          </PopoverContent>
+        </Popover>
       </div>
       <div className="flex-1 space-y-2 overflow-auto">
         {block.children.length === 0 ? (
-          <p className="text-xs text-slate-400">Empty card — add a heading, subheading, or paragraph.</p>
+          <p className="text-xs text-slate-400">Empty card — add a heading, subheading, paragraph, or image.</p>
         ) : (
           block.children.map((child) => (
             <ChildBlock key={child.id} block={child} onChange={(p) => updateChild(child.id, p)} onDelete={() => removeChild(child.id)} />
@@ -290,27 +414,36 @@ function ChildBlock({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
         <div
-          className="rounded-lg p-2 ring-1 ring-black/5"
+          className="relative rounded-lg p-2 ring-1 ring-black/5"
           style={{ background: block.bg ?? "transparent", color: block.color ?? undefined }}
           onClick={(e) => {
             e.stopPropagation()
             setOpen(true)
           }}
         >
-          <div
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={(e) => onChange({ text: e.currentTarget.textContent ?? "" })}
-            className={textClassFor(block.type)}
-          >
-            {block.text}
-          </div>
+          {block.type === "image" ? (
+            block.src ? (
+              <div className="relative h-24 w-full overflow-hidden rounded-md">
+                <Image src={block.src} alt="" fill sizes="240px" className="object-cover" />
+              </div>
+            ) : null
+          ) : (
+            <div
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => onChange({ text: e.currentTarget.textContent ?? "" })}
+              className={textClassFor(block.type)}
+            >
+              {block.text}
+            </div>
+          )}
         </div>
       </PopoverAnchor>
       <PopoverContent className="w-auto p-3" onOpenAutoFocus={(e) => e.preventDefault()} onClick={(e) => e.stopPropagation()}>
         <ColorToolbar
           bg={block.bg}
           color={block.color}
+          showTextColor={block.type !== "image"}
           onBg={(bg) => onChange({ bg })}
           onColor={(color) => onChange({ color })}
           onDelete={onDelete}
@@ -323,12 +456,14 @@ function ChildBlock({
 function ColorToolbar({
   bg,
   color,
+  showTextColor = true,
   onBg,
   onColor,
   onDelete,
 }: {
   bg: string | null
   color: string | null
+  showTextColor?: boolean
   onBg: (v: string | null) => void
   onColor: (v: string | null) => void
   onDelete: () => void
@@ -359,24 +494,26 @@ function ColorToolbar({
           />
         </div>
       </div>
-      <div>
-        <p className="mb-1.5 text-xs font-semibold text-slate-500">Text color</p>
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            onClick={() => onColor(null)}
-            className={`h-6 w-6 rounded-full border-2 bg-[repeating-conic-gradient(#e2e8f0_0_25%,white_0_50%)] bg-[length:8px_8px] ${color === null ? "border-(--royal-blue)" : "border-transparent"}`}
-            title="Default"
-          />
-          {TEXT_SWATCHES.map((c) => (
+      {showTextColor && (
+        <div>
+          <p className="mb-1.5 text-xs font-semibold text-slate-500">Text color</p>
+          <div className="flex flex-wrap gap-1.5">
             <button
-              key={c}
-              onClick={() => onColor(c)}
-              style={{ background: c }}
-              className={`h-6 w-6 rounded-full border-2 ${color === c ? "border-(--royal-blue)" : "border-transparent"}`}
+              onClick={() => onColor(null)}
+              className={`h-6 w-6 rounded-full border-2 bg-[repeating-conic-gradient(#e2e8f0_0_25%,white_0_50%)] bg-[length:8px_8px] ${color === null ? "border-(--royal-blue)" : "border-transparent"}`}
+              title="Default"
             />
-          ))}
+            {TEXT_SWATCHES.map((c) => (
+              <button
+                key={c}
+                onClick={() => onColor(c)}
+                style={{ background: c }}
+                className={`h-6 w-6 rounded-full border-2 ${color === c ? "border-(--royal-blue)" : "border-transparent"}`}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       <button onClick={onDelete} className="w-full rounded-lg border border-rose-200 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50">
         Delete block
       </button>

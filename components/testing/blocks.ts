@@ -2,7 +2,7 @@
 // no persistence, no backend. See lib/recruitment.ts for the sibling
 // "schema + helpers" pattern this mirrors.
 
-export type BlockType = "heading" | "subheading" | "paragraph" | "card"
+export type BlockType = "heading" | "subheading" | "paragraph" | "card" | "image"
 
 export type Block = {
   id: string
@@ -14,6 +14,8 @@ export type Block = {
   text: string
   bg: string | null
   color: string | null
+  /** Only set for "image". */
+  src: string | null
   /** Only meaningful for "card" — nested blocks rendered inside it. */
   children: Block[]
 }
@@ -21,7 +23,10 @@ export type Block = {
 export const COLS = 12
 export const ROW_UNIT = 28 // px per grid row
 
-export const BLOCK_LIBRARY: { type: BlockType; label: string; colSpan: number; rowSpan: number }[] = [
+// Text/container blocks — added via the "+ Add block" palette (click to
+// append). Images are added separately, from the image picker, since they
+// need a source picked first.
+export const BLOCK_LIBRARY: { type: Exclude<BlockType, "image">; label: string; colSpan: number; rowSpan: number }[] = [
   { type: "heading", label: "Heading", colSpan: 6, rowSpan: 2 },
   { type: "subheading", label: "Subheading", colSpan: 6, rowSpan: 1 },
   { type: "paragraph", label: "Paragraph", colSpan: 6, rowSpan: 3 },
@@ -33,6 +38,7 @@ const DEFAULT_TEXT: Record<BlockType, string> = {
   subheading: "Subheading",
   paragraph: "Write something…",
   card: "",
+  image: "",
 }
 
 // Curated swatches — brand palette first, then a few vivid extras so the
@@ -54,7 +60,7 @@ export function uid(prefix = "b"): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`
 }
 
-export function newBlock(type: BlockType, col: number, row: number): Block {
+export function newBlock(type: Exclude<BlockType, "image">, col: number, row: number): Block {
   const meta = BLOCK_LIBRARY.find((b) => b.type === type)!
   return {
     id: uid(),
@@ -66,6 +72,23 @@ export function newBlock(type: BlockType, col: number, row: number): Block {
     text: DEFAULT_TEXT[type],
     bg: type === "card" ? "#ffffff" : null,
     color: null,
+    src: null,
+    children: [],
+  }
+}
+
+export function newImageBlock(src: string, col: number, row: number): Block {
+  return {
+    id: uid(),
+    type: "image",
+    col,
+    row,
+    colSpan: 4,
+    rowSpan: 5,
+    text: "",
+    bg: null,
+    color: null,
+    src,
     children: [],
   }
 }
