@@ -157,10 +157,11 @@ export function CanvasBuilder() {
                 Add a block to get started.
               </p>
             )}
-            {blocks.map((b) => (
+            {blocks.map((b, i) => (
               <CanvasBlock
                 key={b.id}
                 block={b}
+                stackIndex={i}
                 images={images}
                 selected={selectedId === b.id}
                 onSelect={() => setSelectedId(b.id)}
@@ -230,10 +231,12 @@ function BlockContent({ block, onChange }: { block: Block; onChange: (patch: Par
   )
 }
 
-const DRAG_THRESHOLD = 4
+const HOLD_DELAY_MS = 200
+const HOLD_MOVE_ESCAPE = 8 // px — a deliberate fast drag engages immediately, no need to wait out the timer
 
 function CanvasBlock({
   block,
+  stackIndex,
   images,
   selected,
   onSelect,
@@ -243,6 +246,7 @@ function CanvasBlock({
   onReorder,
 }: {
   block: Block
+  stackIndex: number
   images: string[]
   selected: boolean
   onSelect: () => void
@@ -254,41 +258,67 @@ function CanvasBlock({
   const [dragging, setDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
 
-  // Press-and-hold anywhere on the block body to move it — no separate grip
-  // icon. A small movement threshold distinguishes "click to select/edit
-  // text" from "drag to move": below it, nothing happens here and the
-  // browser's normal click/focus behavior proceeds untouched (so text stays
-  // directly editable); past it, we take over. Position commits once on
-  // pointerup — same reliable pattern as the resize handle.
+  // Press-and-HOLD anywhere on the block body to move it — no separate grip
+  // icon. Holding past HOLD_DELAY_MS (or moving decisively before that)
+  // engages drag; a quick tap/click with no real hold never does, so the
+  // browser's normal click/focus behavior proceeds untouched (text stays
+  // directly editable). Position commits once on pointerup — same reliable
+  // pattern as the resize handle.
   function handleBodyPointerDown(e: React.PointerEvent) {
+    const pointerId = e.pointerId
+    const target = e.currentTarget
     const start = { x: e.clientX, y: e.clientY }
-    let moved = false
+    let engaged = false
+    let last = start
+
+    function engage() {
+      if (engaged) return
+      engaged = true
+      setDragging(true)
+      ;(document.activeElement as HTMLElement | null)?.blur?.()
+    }
+
+    const holdTimer = window.setTimeout(engage, HOLD_DELAY_MS)
+
     function onMove(ev: PointerEvent) {
-      const dx = ev.clientX - start.x
-      const dy = ev.clientY - start.y
-      if (!moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
-        moved = true
-        setDragging(true)
-        ;(document.activeElement as HTMLElement | null)?.blur?.()
-      }
-      if (moved) {
+      if (ev.pointerId !== pointerId) return
+      last = { x: ev.clientX, y: ev.clientY }
+      const dx = last.x - start.x
+      const dy = last.y - start.y
+      if (!engaged && Math.hypot(dx, dy) > HOLD_MOVE_ESCAPE) engage()
+      if (engaged) {
         ev.preventDefault()
         setDragOffset({ x: dx, y: dy })
       }
     }
     function onUp(ev: PointerEvent) {
+      if (ev.pointerId !== pointerId) return
+      window.clearTimeout(holdTimer)
       window.removeEventListener("pointermove", onMove)
       window.removeEventListener("pointerup", onUp)
-      if (moved) {
-        const dx = ev.clientX - start.x
-        const dy = ev.clientY - start.y
+      window.removeEventListener("pointercancel", onUp)
+      try {
+        target.releasePointerCapture(pointerId)
+      } catch {
+        /* already released */
+      }
+      if (engaged) {
+        const dx = last.x - start.x
+        const dy = last.y - start.y
         onChange({ x: clampX(Math.round(block.x + dx), block.width), y: Math.max(0, Math.round(block.y + dy)) })
         setDragging(false)
         setDragOffset({ x: 0, y: 0 })
       }
     }
+
+    try {
+      target.setPointerCapture(pointerId)
+    } catch {
+      /* not supported / already captured elsewhere — window listeners still work */
+    }
     window.addEventListener("pointermove", onMove)
     window.addEventListener("pointerup", onUp)
+    window.addEventListener("pointercancel", onUp)
   }
 
   function handleResizePointerDown(e: React.PointerEvent) {
@@ -325,7 +355,11 @@ function CanvasBlock({
             width: block.width,
             height: block.height,
             transform: dragging ? `translate(${dragOffset.x}px, ${dragOffset.y}px)` : undefined,
-            zIndex: dragging || selected ? 30 : 1,
+            // Stacking follows array order (what "bring to front" etc. control),
+            // not selection — otherwise a reorder wouldn't visibly change
+            // anything while the block is still selected. Dragging always wins
+            // so the block being moved never dips behind another mid-drag.
+            zIndex: dragging ? 9999 : stackIndex + 1,
           }}
         >
           {/* Content — clips its own contents (image/text overflow), but the
