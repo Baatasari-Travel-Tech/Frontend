@@ -1,19 +1,50 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { PageShell, SectionCard } from "@/components/platform/page-shell"
 import { useAuth } from "@/app/providers"
+import { apiRequest } from "@/lib/api/client"
+
+const buildSupportHref = (): string => {
+  const lines = [
+    "I'm stuck on organizer email verification.",
+    "",
+    "Details: ",
+  ]
+  return `/contact-us?problem=${encodeURIComponent(lines.join("\n"))}`
+}
 
 export default function OrganizerEmailVerificationPage() {
   const router = useRouter()
   const { user, organizerVerificationStatus, refreshOrganizerStatus } = useAuth()
+  const [resending, setResending] = useState(false)
+  const [resendMessage, setResendMessage] = useState<string | null>(null)
+  const [resendError, setResendError] = useState<string | null>(null)
 
   useEffect(() => {
     const id = setInterval(() => { void refreshOrganizerStatus() }, 10_000)
     return () => clearInterval(id)
   }, [refreshOrganizerStatus])
+
+  const resendVerificationEmail = async () => {
+    setResending(true)
+    setResendError(null)
+    setResendMessage(null)
+    try {
+      const res = await apiRequest<{ data: { message: string } }>("/auth/resend-verification", {
+        method: "POST",
+        auth: true,
+      })
+      setResendMessage(res.data.message)
+    } catch (err) {
+      setResendError(err instanceof Error ? err.message : "Could not resend the verification email.")
+    } finally {
+      setResending(false)
+    }
+  }
 
   useEffect(() => {
     if (!user || user.role !== "ORGANIZER") return
@@ -62,15 +93,37 @@ export default function OrganizerEmailVerificationPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600 sm:px-5">
-                If you cannot find the email, check Spam or Promotions. For support, reach our team directly.
+                If you cannot find the email, check Spam or Promotions, or resend it below. Links expire after 24 hours.
               </div>
 
-              <a
-                href="mailto:contact-us@baatasari.com"
-                className="inline-flex w-fit items-center justify-center rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800"
-              >
-                Contact support
-              </a>
+              {resendMessage ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 sm:px-5">
+                  {resendMessage}
+                </div>
+              ) : null}
+
+              {resendError ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 sm:px-5">
+                  {resendError}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void resendVerificationEmail()}
+                  disabled={resending}
+                  className="inline-flex w-fit items-center justify-center rounded-full bg-brand-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {resending ? "Sending…" : "Resend email"}
+                </button>
+                <Link
+                  href={buildSupportHref()}
+                  className="inline-flex w-fit items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                  Support
+                </Link>
+              </div>
             </div>
           </SectionCard>
         </div>
