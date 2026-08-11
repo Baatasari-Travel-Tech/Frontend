@@ -74,6 +74,32 @@ export const PUBLIC_ROUTES: Array<{ path: string; priority: number; changeFreque
   { path: "/grievance", priority: 0.2, changeFrequency: "yearly" },
 ]
 
+/**
+ * Reachable even while maintenance mode is on.
+ *
+ * The policy pages are published to satisfy the Consumer Protection
+ * (E-Commerce) Rules, the IT Rules and the payment gateway's onboarding
+ * requirements — obligations that do not pause because we are mid-deploy, and
+ * a gateway or regulator checking the links must not find a holding page.
+ * Contact is here for the same reason plus a practical one: it is what a
+ * stranded buyer needs precisely when the site is down.
+ *
+ * Consumed by proxy.ts (the gate) and by the maintenance page (which links to
+ * them), so the two can never disagree about what stays up.
+ */
+export const MAINTENANCE_ALLOWED: Array<{ path: string; label: string }> = [
+  { path: "/contact-us", label: "Contact us" },
+  { path: "/terms-and-conditions", label: "Terms & Conditions" },
+  { path: "/privacy-policy", label: "Privacy Policy" },
+  { path: "/refund-policy", label: "Refund Policy" },
+  { path: "/grievance", label: "Grievance Redressal" },
+]
+
+export const bypassesMaintenance = (pathname: string): boolean =>
+  MAINTENANCE_ALLOWED.some(
+    ({ path }) => pathname === path || pathname.startsWith(`${path}/`),
+  )
+
 // ─── JSON-LD ────────────────────────────────────────────────────────────────
 
 /** Site-wide identity. Emitted once, from the root layout. */

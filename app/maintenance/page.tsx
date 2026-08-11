@@ -1,4 +1,5 @@
 import Image from "next/image"
+import { MAINTENANCE_ALLOWED } from "@/lib/seo"
 
 export const metadata = {
   title: "Under Maintenance",
@@ -130,7 +131,24 @@ export default async function MaintenancePage() {
           </a>
         </p>
 
-        <p className="mt-10 text-xs text-white/40">
+        {/* The pages that stay up during maintenance, listed from the same
+            allowlist the gate uses — so a link here can never point at
+            something the gate rewrites out from under it. */}
+        <nav className="mt-10 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+          {MAINTENANCE_ALLOWED.filter(({ path }) => path !== "/contact-us").map(
+            ({ path, label }) => (
+              <a
+                key={path}
+                href={path}
+                className="text-xs text-white/40 underline-offset-2 transition hover:text-white/70 hover:underline"
+              >
+                {label}
+              </a>
+            ),
+          )}
+        </nav>
+
+        <p className="mt-6 text-xs text-white/40">
           © Baatasari · Discover, Connect, Experience
         </p>
       </div>
