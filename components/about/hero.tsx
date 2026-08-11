@@ -1,36 +1,25 @@
 "use client";
 
-import {
-  motion,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-  type Variants,
-} from "framer-motion";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import Link from "next/link";
-import { useRef } from "react";
 import { useShellReady } from "@/components/site-shell";
 
 const HEADLINE = ["Discover", "the", "best", "things", "to", "do", "in", "your", "city"];
 
 export default function Hero() {
   const reduce = useReducedMotion();
-  const sectionRef = useRef<HTMLElement>(null);
   // Every entrance below waits for the boot loader to start lifting. They used
   // to fire on mount, underneath an opaque overlay, and were long finished by
   // the time it cleared — which is why the page appeared to snap straight from
   // spinner to a fully settled hero.
   const shellReady = useShellReady();
 
-  // Scroll parallax — the background drifts/scales and the content lifts away.
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end start"],
-  });
-  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "18%"]);
-  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
-  const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
-  const contentOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
+  // The hero used to be scroll-linked: useScroll drove the background's y and
+  // scale and the content's y and opacity, so everything drifted as you moved.
+  // Removed deliberately — it reads as the section sliding rather than the page
+  // scrolling. It was also the expensive kind of motion, recalculating layout
+  // on every scroll frame for properties the compositor cannot handle alone.
+  // The one-time entrance settle below is unaffected.
 
   const container: Variants = {
     hidden: {},
@@ -59,14 +48,10 @@ export default function Hero() {
 
   return (
     <section
-      ref={sectionRef}
       className="hero-section relative min-h-[calc(100dvh-72px)] flex flex-col items-center justify-center px-6 py-16 overflow-hidden"
     >
-      {/* Parallax background layer (scroll) wrapping a one-time cinematic settle */}
-      <motion.div
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={reduce ? undefined : { y: bgY, scale: bgScale }}
-      >
+      {/* Fixed background layer wrapping the one-time cinematic settle */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
         {/* The settle deliberately does NOT animate opacity. This image is the
             LCP element, and an element at opacity 0 has not painted — starting
             there put a floor under LCP equal to however long the fade ran, so
@@ -104,7 +89,7 @@ export default function Hero() {
             />
           </picture>
         </motion.div>
-      </motion.div>
+      </div>
 
       {/* Readability overlay — directional warm-cream gradient */}
       <div
@@ -142,7 +127,6 @@ export default function Hero() {
         variants={container}
         initial="hidden"
         animate={shellReady ? "show" : "hidden"}
-        style={reduce ? undefined : { y: contentY, opacity: contentOpacity }}
         className="relative z-10 w-full max-w-4xl text-center"
       >
         {/* Kicker badge */}
