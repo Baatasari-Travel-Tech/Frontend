@@ -276,23 +276,29 @@ function UserMenu({
   )
 }
 
-function SiteShellContent({ children }: { children: React.ReactNode }) {
-  const [booting, setBooting] = useState(true)
-  const [hideLoader, setHideLoader] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { session, activeRole, userRoles, organizerVerificationStatus, profile, logout } = useAuth()
-  const [logoutKey, setLogoutKey] = useState(0)
+/**
+ * Opens the auth modal from `?auth=login|register`, then strips those params
+ * once it closes.
+ *
+ * This lives in its own leaf component, rendering nothing, for one reason:
+ * useSearchParams() opts a statically-generated route out of prerendering, and
+ * React fills the enclosing Suspense boundary with its fallback in the HTML.
+ * The hook used to sit in SiteShellContent — which renders `children` — so the
+ * boundary wrapping it contained EVERY page on the site. The prerendered HTML
+ * for every static route was therefore an empty shell, and nothing painted
+ * until the JS bundle had downloaded, parsed and hydrated. That is what put
+ * the homepage's LCP in the 4-5 second range.
+ *
+ * Isolated here, the deopt costs exactly this component, which renders null.
+ *
+ * Takes no props on purpose — pulling its own router/pathname/modal context
+ * keeps SiteShellContent free of any reason to reach for the hook again.
+ */
+function AuthQueryParamSync() {
+  const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { open, openModal } = useAuthModal()
-  const isOrderConfirmed = pathname?.startsWith('/order-confirmed') ?? false
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setBooting(false), 550)
-    const t2 = setTimeout(() => setHideLoader(true), 1150)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
 
   useEffect(() => {
     const auth = searchParams.get('auth')
@@ -323,6 +329,28 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     params.delete('totpPending')
     router.replace(params.size ? `${pathname}?${params}` : pathname)
   }, [open, searchParams, pathname, router])
+
+  return null
+}
+
+function SiteShellContent({ children }: { children: React.ReactNode }) {
+  const [booting, setBooting] = useState(true)
+  const [hideLoader, setHideLoader] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { session, activeRole, userRoles, organizerVerificationStatus, profile, logout } = useAuth()
+  const [logoutKey, setLogoutKey] = useState(0)
+  const router = useRouter()
+  const pathname = usePathname()
+  // Only the opener — the `open` flag and the param cleanup live in
+  // AuthQueryParamSync, which is where useSearchParams belongs.
+  const { openModal } = useAuthModal()
+  const isOrderConfirmed = pathname?.startsWith('/order-confirmed') ?? false
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setBooting(false), 550)
+    const t2 = setTimeout(() => setHideLoader(true), 1150)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
 
   // Collapse the mobile menu whenever we navigate or the signed-in identity
   // changes. Adjusting during render keeps the menu from being visible for a
@@ -516,7 +544,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                       className="cursor-pointer gap-2.5 py-2.5 font-medium"
                       onClick={() => {
                         // Plain user register — make sure no organizer role param lingers.
-                        const params = new URLSearchParams(searchParams.toString())
+                        const params = new URLSearchParams(window.location.search)
                         params.delete('role')
                         params.set('auth', 'register')
                         router.push(`${pathname}?${params.toString()}`)
@@ -528,7 +556,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                     <DropdownMenuItem
                       className="cursor-pointer gap-2.5 py-2.5 font-medium"
                       onClick={() => {
-                        const params = new URLSearchParams(searchParams.toString())
+                        const params = new URLSearchParams(window.location.search)
                         params.set('auth', 'register')
                         params.set('role', 'organizer')
                         router.push(`${pathname}?${params.toString()}`)
@@ -594,9 +622,13 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthModalRoot>
+      {/* The only boundary that needs to exist: it wraps the one component
+          that reads the query string, and that component renders nothing.
+          SiteShellContent — and therefore every page — now prerenders. */}
       <Suspense fallback={null}>
-        <SiteShellContent>{children}</SiteShellContent>
+        <AuthQueryParamSync />
       </Suspense>
+      <SiteShellContent>{children}</SiteShellContent>
     </AuthModalRoot>
   )
 }
