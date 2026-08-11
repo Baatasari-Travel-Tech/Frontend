@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Grievance Redressal",
   description:
     "Grievance Officer and complaint redressal details for Baatasari, as required under the Consumer Protection (E-Commerce) Rules, 2020 and the IT Rules, 2021.",
+  alternates: { canonical: "/grievance" },
 }
 
 export default function GrievanceRedressal() {

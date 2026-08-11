@@ -2,9 +2,10 @@ import type { Metadata } from "next"
 import { SiteFooter } from "@/components/site-footer"
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions — Baatasari",
+  title: "Terms & Conditions",
   description:
     "The terms governing your use of the Baatasari platform — accounts, bookings, tickets, payments, organizer and talent obligations, and dispute resolution.",
+  alternates: { canonical: "/terms-and-conditions" },
 }
 
 const SECTIONS = [

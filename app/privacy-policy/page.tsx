@@ -2,9 +2,10 @@ import type { Metadata } from "next"
 import { SiteFooter } from "@/components/site-footer"
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Baatasari",
+  title: "Privacy Policy",
   description:
     "How Baatasari collects, uses, shares, secures, and retains your personal data, and how to exercise your rights under the DPDP Act, 2023.",
+  alternates: { canonical: "/privacy-policy" },
 }
 
 const SECTIONS = [

@@ -462,7 +462,7 @@ export function LoginForm({ onSwitchMode }: AuthSwitch) {
 
         <p className="text-xs">
           By continuing, you agree to our{' '}
-          <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
+          <a href="/terms-and-conditions" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
             Terms &amp; Conditions
           </a>{' '}
           and{' '}
@@ -691,7 +691,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
           />
           <span>
             I am <strong>{minAge} years or older</strong> and agree to the{" "}
-            <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-700 underline">
+            <a href="/terms-and-conditions" target="_blank" className="font-semibold text-brand-700 underline">
               Terms &amp; Conditions
             </a>{" "}
             and{" "}
@@ -762,7 +762,7 @@ export function RegisterForm({ onSwitchMode }: AuthSwitch) {
         {role === 'user' && (
           <p className="text-xs">
             By continuing, you agree to our{' '}
-            <a href="/terms&conditions" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
+            <a href="/terms-and-conditions" target="_blank" className="font-semibold text-brand-800 underline-offset-2 hover:underline">
               Terms &amp; Conditions
             </a>{' '}
             and{' '}

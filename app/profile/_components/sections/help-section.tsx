@@ -15,7 +15,7 @@ export function HelpSection() {
             Open <ChevronRight className="ml-1 h-3.5 w-3.5" />
           </p>
         </Link>
-        <Link href="/terms&conditions" className="group block rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+        <Link href="/terms-and-conditions" className="group block rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
           <Shield className="h-5 w-5 text-(--brand-blue)" />
           <p className="mt-3 text-sm font-semibold text-slate-900">Terms &amp; policies</p>
           <p className="mt-1 text-xs text-slate-500">Read our terms of service and acceptable-use policy.</p>

@@ -5,7 +5,9 @@ const title = "Baatasari — Discover, Connect, Experience"
 const description = "Book the best events, dining, and activities near you — curated events, venues, and experiences all in one place."
 
 export const metadata: Metadata = {
-  title,
+  // `absolute` opts out of the root template — the homepage title already
+  // carries the brand and would otherwise read "Baatasari — … · Baatasari".
+  title: { absolute: title },
   description,
   alternates: { canonical: "/" },
   openGraph: {

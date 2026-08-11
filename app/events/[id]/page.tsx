@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { StateBlock } from "@/components/platform/state-block"
 import { getEventCoverImageUrl } from "@/lib/event-cover"
+import { breadcrumbJsonLd, eventJsonLd } from "@/lib/seo"
 import type { EventDetail } from "@/types/api"
 import EventDetailClient from "./event-detail-client"
 
@@ -53,6 +54,11 @@ export async function generateMetadata({
   return {
     title: event.title,
     description,
+    alternates: { canonical: `/events/${event.id}` },
+    // A cancelled event's page still has to be reachable — buyers follow their
+    // ticket link to find the notice — but it should not be competing in
+    // search results as if it were still on.
+    robots: event.cancelledAt ? { index: false, follow: true } : undefined,
     openGraph: {
       type: "website",
       title: event.title,
@@ -88,5 +94,24 @@ export default async function EventDetailPage({
     )
   }
 
-  return <EventDetailClient event={event} />
+  // Rendered server-side so the structured data is in the initial HTML —
+  // the crawler reads it without executing the client bundle.
+  const jsonLd = [
+    eventJsonLd(event, getEventCoverImageUrl(event.id, event.updatedAt)),
+    breadcrumbJsonLd([
+      { name: "Home", path: "/" },
+      { name: "Events", path: "/events" },
+      { name: event.title, path: `/events/${event.id}` },
+    ]),
+  ]
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <EventDetailClient event={event} />
+    </>
+  )
 }

@@ -58,7 +58,7 @@ export function SiteFooter() {
           <div className="space-y-3 text-sm">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Legal</p>
             <div className="grid gap-2 text-slate-300">
-              <a className="transition hover:text-white" href="/terms&conditions">
+              <a className="transition hover:text-white" href="/terms-and-conditions">
                 Terms &amp; Conditions
               </a>
               <a className="transition hover:text-white" href="/privacy-policy">

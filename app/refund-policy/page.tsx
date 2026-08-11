@@ -2,9 +2,10 @@ import type { Metadata } from "next"
 import { SiteFooter } from "@/components/site-footer"
 
 export const metadata: Metadata = {
-  title: "Refund & Cancellation Policy — Baatasari",
+  title: "Refund & Cancellation Policy",
   description:
     "Baatasari's refund and cancellation policy for event tickets — when refunds apply, how they are processed, timelines, and how to raise a request.",
+  alternates: { canonical: "/refund-policy" },
 }
 
 const SECTIONS = [
@@ -38,7 +39,7 @@ export default function RefundPolicy() {
       <p className="mb-8 text-sm text-gray-500">
         Effective date: 7 July 2026 · Please read this policy before booking. By completing a
         booking you agree to it. It forms part of our{" "}
-        <a className="text-blue-600 hover:underline" href="/terms&conditions">
+        <a className="text-blue-600 hover:underline" href="/terms-and-conditions">
           Terms &amp; Conditions
         </a>
         .

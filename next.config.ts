@@ -27,6 +27,22 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.googleusercontent.com" },
     ],
   },
+  async redirects() {
+    return [
+      {
+        // The page used to live at /terms&conditions. A literal "&" in a path
+        // cannot appear in a sitemap without entity-escaping, which Next's
+        // sitemap serializer does not do — the raw character made the whole
+        // sitemap invalid XML, and Google discards an invalid sitemap outright
+        // rather than skipping the one bad entry. Permanent so the old URL
+        // (linked from older pages, and possibly registered with the payment
+        // gateway) keeps resolving and passes its ranking on.
+        source: "/terms&conditions",
+        destination: "/terms-and-conditions",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

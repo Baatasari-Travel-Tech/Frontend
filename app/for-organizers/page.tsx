@@ -33,9 +33,10 @@ import { SiteFooter } from '@/components/site-footer'
 import { Illustration } from './illustration'
 
 export const metadata: Metadata = {
-  title: 'For Organizers — Baatasari',
+  title: 'For Organizers',
   description:
     'Baatasari quietly handles bookings, payments, tickets and check-ins, so you can focus on what people came for. Create your first event in under 5 minutes — free.',
+  alternates: { canonical: '/for-organizers' },
 }
 
 const REGISTER_HREF = '/for-organizers?auth=register&role=organizer'

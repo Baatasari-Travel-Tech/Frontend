@@ -3,6 +3,7 @@ import Providers from './providers'
 import SiteShell from '../components/site-shell'
 import { Sora, Bricolage_Grotesque, Albert_Sans, Poppins, Inter } from 'next/font/google'
 import { Analytics } from "@vercel/analytics/next"
+import { SITE_NAME, SITE_ORIGIN, organizationJsonLd, webSiteJsonLd } from '@/lib/seo'
 
 const sora = Sora({
   subsets: ['latin'],
@@ -43,11 +44,22 @@ const inter = Inter({
 })
 
 export const metadata = {
-  metadataBase: new URL('https://baatasari.com'),
-  title: 'Baatasari - Discover, Connect, Experience',
+  metadataBase: new URL(SITE_ORIGIN),
+  // A template rather than a bare string: every page that sets its own title
+  // was previously replacing the brand entirely, so search results for an
+  // event read as an unattributed title with no site behind it.
+  title: {
+    default: 'Baatasari - Discover, Connect, Experience',
+    template: '%s · Baatasari',
+  },
   description: 'Book the best events, dining, and activities near you.',
   icons: {
     icon: '/logo.png',
+  },
+  openGraph: {
+    siteName: SITE_NAME,
+    locale: 'en_IN',
+    type: 'website',
   },
 }
 
@@ -58,6 +70,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${sora.variable} ${bricolage.variable} ${albert.variable} ${poppins.variable} ${inter.variable}`}
     >
       <body className="font-sans antialiased" suppressHydrationWarning>
+        {/* Site identity + the sitelinks search box. Emitted once here rather
+            than per page — repeating Organization on every route gives search
+            engines nothing extra to work with. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([organizationJsonLd(), webSiteJsonLd()]),
+          }}
+        />
         <Providers>
           <SiteShell>{children}</SiteShell>
           <Analytics />

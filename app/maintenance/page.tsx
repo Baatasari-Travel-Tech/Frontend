@@ -1,7 +1,7 @@
 import Image from "next/image"
 
 export const metadata = {
-  title: "Under Maintenance · Baatasari",
+  title: "Under Maintenance",
   description: "Baatasari is currently undergoing scheduled maintenance.",
 }
 
