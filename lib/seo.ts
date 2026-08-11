@@ -4,8 +4,14 @@ import type { EventDetail } from "@/types/api"
  * Canonical origin. metadataBase in the root layout resolves relative URLs for
  * OG/canonical tags, but robots.ts, sitemap.ts and JSON-LD all need absolute
  * strings and none of them can read it, so it lives here once.
+ *
+ * MUST be the host that actually serves. The apex redirects to www, so naming
+ * the apex here pointed every canonical, every sitemap entry and every JSON-LD
+ * url at a URL that only redirects — Google is explicit that a sitemap should
+ * list final URLs, and a self-referencing canonical that resolves elsewhere is
+ * a contradictory signal. If the redirect direction ever flips, flip this.
  */
-export const SITE_ORIGIN = "https://baatasari.com"
+export const SITE_ORIGIN = "https://www.baatasari.com"
 
 export const SITE_NAME = "Baatasari"
 
