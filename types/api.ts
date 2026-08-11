@@ -451,6 +451,11 @@ export type OrganizerPayoutSummary = {
   cancelledAt: string | null;
   ordersCount: number;
   ticketRevenue: number;
+  /** Refunded to buyers. Not the organizer's to be paid — subtracted before
+   *  withholding is computed, so it explains the gap between gross and net. */
+  refunds: number;
+  /** ticketRevenue − refunds. TDS/TCS are charged on this, not on gross. */
+  netRevenue: number;
   tds: number;
   tcs: number;
   netPayable: number;

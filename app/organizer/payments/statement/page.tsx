@@ -130,11 +130,30 @@ function StatementContent() {
               <td className="py-2">Gross ticket revenue</td>
               <td className="py-2 text-right">{formatCurrency(summary.ticketRevenue)}</td>
             </tr>
+            {/* Only shown when there is something to explain — with no refunds
+                the subtotal would just restate the gross line above it. */}
+            {summary.refunds > 0 ? (
+              <>
+                <tr className="border-b border-slate-100 text-slate-500">
+                  <td className="py-2">
+                    Less: refunded to buyers
+                    <span className="block text-xs text-slate-400">
+                      Amounts returned to ticket buyers, which are not settled to you
+                    </span>
+                  </td>
+                  <td className="py-2 text-right">−{formatCurrency(summary.refunds)}</td>
+                </tr>
+                <tr className="border-b border-slate-200 font-semibold text-slate-900">
+                  <td className="py-2">Net revenue</td>
+                  <td className="py-2 text-right">{formatCurrency(summary.netRevenue)}</td>
+                </tr>
+              </>
+            ) : null}
             <tr className="border-b border-slate-100 text-slate-500">
               <td className="py-2">
                 Less: TDS deducted
                 <span className="block text-xs text-slate-400">
-                  Section 194-O, Income-tax Act — 0.1% of gross ticket revenue
+                  Section 194-O, Income-tax Act — 0.1% of net revenue
                 </span>
               </td>
               <td className="py-2 text-right">−{formatCurrency(summary.tds)}</td>
@@ -143,7 +162,7 @@ function StatementContent() {
               <td className="py-2">
                 Less: TCS collected
                 <span className="block text-xs text-slate-400">
-                  Section 52, CGST Act — 1% of gross ticket revenue
+                  Section 52, CGST Act — 1% of net revenue
                 </span>
               </td>
               <td className="py-2 text-right">−{formatCurrency(summary.tcs)}</td>
@@ -206,7 +225,8 @@ function StatementContent() {
 
         <p className="mt-6 text-[11px] leading-relaxed text-slate-400">
           This is a computer-generated statement of account summarizing ticket revenue collected
-          on your behalf and the statutory deductions applied under Section 194-O (TDS) of the
+          on your behalf, refunds returned to buyers, and the statutory deductions applied on the
+          net of the two under Section 194-O (TDS) of the
           Income-tax Act and Section 52 (TCS) of the CGST Act. It is provided for your records and
           does not constitute an official TDS certificate (Form 16A, available via TRACES) or GST
           TCS certificate (available via the GST portal) — please reconcile against those for

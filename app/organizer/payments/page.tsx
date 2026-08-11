@@ -33,18 +33,23 @@ function PaymentsListView() {
   const rows = query.data ?? []
   const totalPending = rows.reduce((sum, r) => sum + r.pending, 0)
   const totalPaid = rows.reduce((sum, r) => sum + r.paid, 0)
+  const totalRefunds = rows.reduce((sum, r) => sum + r.refunds, 0)
+  // The refund column is noise for the majority of organizers who have never
+  // had one — surface it only once there is something to explain.
+  const showRefunds = totalRefunds > 0
 
   return (
     <div className="w-full px-0 sm:px-6 lg:px-8 pt-0 pb-6 flex flex-col gap-5">
       <div>
         <h1 className="font-bricolage text-xl font-bold text-slate-900 sm:text-2xl">Payments</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Your ticket revenue per event, minus TDS (0.1% u/s 194-O) and TCS (1% u/s 52) — the same
-          statutory deductions applied when payouts are settled.
+          Your ticket revenue per event, less anything refunded to buyers, then minus TDS (0.1% u/s
+          194-O) and TCS (1% u/s 52) — the same statutory deductions applied when payouts are
+          settled.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2">
+      <div className={`grid gap-4 ${showRefunds ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"}`}>
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
             Paid to date
@@ -61,6 +66,16 @@ function PaymentsListView() {
             {formatCurrency(totalPending)}
           </p>
         </div>
+        {showRefunds ? (
+          <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 sm:col-span-1">
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+              Refunded to buyers
+            </p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-rose-700">
+              −{formatCurrency(totalRefunds)}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {query.isLoading ? (
@@ -78,12 +93,18 @@ function PaymentsListView() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className={`w-full ${showRefunds ? "min-w-[860px]" : "min-w-[720px]"} text-left text-sm`}>
             <thead className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
               <tr>
                 <th className="px-4 py-3 font-semibold">Event</th>
                 <th className="px-4 py-3 font-semibold">Date</th>
                 <th className="px-4 py-3 font-semibold text-right">Ticket revenue</th>
+                {showRefunds ? (
+                  <>
+                    <th className="px-4 py-3 font-semibold text-right">Refunds</th>
+                    <th className="px-4 py-3 font-semibold text-right">Net revenue</th>
+                  </>
+                ) : null}
                 <th className="px-4 py-3 font-semibold text-right">Net payable</th>
                 <th className="px-4 py-3 font-semibold text-right">Paid</th>
                 <th className="px-4 py-3 font-semibold text-right">Pending</th>
@@ -106,6 +127,16 @@ function PaymentsListView() {
                     <td className="px-4 py-3 text-right tabular-nums text-slate-900">
                       {formatCurrency(row.ticketRevenue)}
                     </td>
+                    {showRefunds ? (
+                      <>
+                        <td className="px-4 py-3 text-right tabular-nums text-rose-700">
+                          {row.refunds > 0 ? `−${formatCurrency(row.refunds)}` : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums text-slate-900">
+                          {formatCurrency(row.netRevenue)}
+                        </td>
+                      </>
+                    ) : null}
                     <td className="px-4 py-3 text-right tabular-nums text-slate-900">
                       {formatCurrency(row.netPayable)}
                     </td>
@@ -199,6 +230,27 @@ function PaymentDetailView({ eventId }: { eventId: string }) {
               </p>
               <p className="mt-0.5 text-xs text-slate-400">{summary.ordersCount} orders</p>
             </div>
+            {summary.refunds > 0 ? (
+              <>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                    Refunded to buyers
+                  </p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-rose-700">
+                    −{formatCurrency(summary.refunds)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                    Net revenue
+                  </p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">
+                    {formatCurrency(summary.netRevenue)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-400">Deductions apply to this</p>
+                </div>
+              </>
+            ) : null}
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
                 TDS (0.1%)
