@@ -314,7 +314,7 @@ Once approved, organizers can:
  ┣ 📜eslint.config.mjs
  ┣ 📜next-env.d.ts
  ┣ 📜next.config.ts
- ┣ 📜package-lock.json
+ ┣ 📜pnpm-lock.yaml
  ┣ 📜package.json
  ┣ 📜postcss.config.mjs
  ┗ 📜tsconfig.json

@@ -25,7 +25,6 @@ const CoverImageCropper: React.FC<CoverImageCropperProps> = ({ source, onCancel,
   const [offsetStart, setOffsetStart] = useState({ x: 0, y: 0 })
 
   const boxRef = useRef<HTMLDivElement>(null)
-  const defaultedRef = useRef(false)
   // Measure the frame's real size so scaling always matches what's on screen
   // (the frame is responsive and can be narrower than MAX_BOX_WIDTH).
   const [box, setBox] = useState({ width: MAX_BOX_WIDTH, height: Math.round((MAX_BOX_WIDTH * TARGET_HEIGHT) / TARGET_WIDTH) })
@@ -41,7 +40,6 @@ const CoverImageCropper: React.FC<CoverImageCropperProps> = ({ source, onCancel,
   }, [])
 
   useEffect(() => {
-    defaultedRef.current = false
     const img = new Image()
     img.onload = () => setImage(img)
     img.src = source
@@ -60,15 +58,19 @@ const CoverImageCropper: React.FC<CoverImageCropperProps> = ({ source, onCancel,
   const coverZoom = containScale > 0 ? coverScale / containScale : 1
   const maxZoom = Math.max(coverZoom * 3, 4)
 
-  useEffect(() => {
-    if (defaultedRef.current) return
-    if (!image || containScale <= 0) return
-    // Start fitted — the whole image is visible inside the frame — so the
-    // organizer can see everything before deciding to zoom in and fill.
+  // Start fitted — the whole image is visible inside the frame — so the
+  // organizer can see everything before deciding to zoom in and fill.
+  //
+  // Adjusted during render rather than in an effect, which would show the
+  // previous crop for one frame. Each `source` builds a fresh Image object, so
+  // comparing identity gives the same "once per loaded image" behaviour the
+  // old defaultedRef had, without a ref that render can't see.
+  const [defaultedFor, setDefaultedFor] = useState<HTMLImageElement | null>(null)
+  if (image && containScale > 0 && defaultedFor !== image) {
+    setDefaultedFor(image)
     setZoom(1)
     setOffset({ x: 0, y: 0 })
-    defaultedRef.current = true
-  }, [image, containScale])
+  }
 
   const getMetrics = (nextZoom = zoom) => {
     if (!image || containScale <= 0) return null

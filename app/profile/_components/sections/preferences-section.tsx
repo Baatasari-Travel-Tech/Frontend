@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { CheckCircle2, Heart } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import {
@@ -26,8 +26,12 @@ export function PreferencesSection() {
   const [prefSaving, setPrefSaving] = useState(false)
   const [prefMsg, setPrefMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
 
-  useEffect(() => {
-    if (!userPreferences) return
+  // Load the saved preferences into the editable copy whenever the server
+  // hands us a new object. React's "adjust state during render" pattern — an
+  // effect would paint one frame with the stale (empty) selection first.
+  const [syncedFrom, setSyncedFrom] = useState(userPreferences)
+  if (userPreferences && userPreferences !== syncedFrom) {
+    setSyncedFrom(userPreferences)
     setPrefs({
       travel: userPreferences.travel ?? [],
       interests: userPreferences.interests ?? [],
@@ -35,7 +39,7 @@ export function PreferencesSection() {
       emotional: userPreferences.emotional ?? [],
       logistics: userPreferences.logistics ?? [],
     })
-  }, [userPreferences])
+  }
 
   const togglePref = (cat: PreferenceCategory, opt: string) => {
     setPrefMsg(null)

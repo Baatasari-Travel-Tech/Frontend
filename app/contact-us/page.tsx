@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { FaInstagram, FaLinkedin } from "react-icons/fa"
@@ -45,10 +45,16 @@ function ContactUsPageContent() {
   const [problem, setProblem] = useState(() => (searchParams.get("problem") ?? "").slice(0, 2000))
   const [error, setError] = useState<string | null>(null)
 
-  // Auto-fill the phone from the profile once onboarding is done.
-  useEffect(() => {
-    if (onboardingDone) setPhone(toTenDigits(profile?.phone))
-  }, [onboardingDone, profile?.phone])
+  // Auto-fill the phone from the profile once onboarding is done. Adjusted
+  // during render rather than in an effect so the field is already populated
+  // on the first paint; the sync key makes it fire only when the source
+  // values actually change, leaving later edits by the user untouched.
+  const phoneSyncKey = `${onboardingDone}|${profile?.phone ?? ""}`
+  const [syncedPhoneKey, setSyncedPhoneKey] = useState(phoneSyncKey)
+  if (onboardingDone && phoneSyncKey !== syncedPhoneKey) {
+    setSyncedPhoneKey(phoneSyncKey)
+    setPhone(toTenDigits(profile?.phone))
+  }
 
   const mutation = useMutation({
     mutationFn: sendSupportMessage,

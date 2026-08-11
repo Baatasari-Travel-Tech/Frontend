@@ -80,6 +80,12 @@ type CreateOrderResponse = {
 // steppers stop at the limit instead of failing at submit.
 const MAX_TICKETS_PER_ORDER = 10
 
+// Pricing constants live at module scope so they are genuinely constant. Kept
+// inside the component they were re-created every render, which made them
+// reactive values the memo hooks had to list as dependencies.
+const PLATFORM_FEE_PER_TICKET = 10
+const RAZORPAY_RATE = 0.02 * 1.18 // 2% + 18% GST
+
 export default function CheckoutClient({ event }: { event: EventDetail }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -289,8 +295,6 @@ export default function CheckoutClient({ event }: { event: EventDetail }) {
     [lines],
   )
   const isFreeEvent = subtotal === 0
-  const PLATFORM_FEE_PER_TICKET = 10
-  const RAZORPAY_RATE = 0.02 * 1.18 // 2% + 18% GST
   const gatewayBearer = (event.addOns as Record<string, unknown>)?.gatewayBearer ?? "customer"
   const platformFee = useMemo(
     () => (isFreeEvent ? 0 : PLATFORM_FEE_PER_TICKET * totalQty),

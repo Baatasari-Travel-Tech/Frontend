@@ -12,16 +12,14 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { apiRequest } from "@/lib/api/client"
+import { useHydrated } from "@/hooks/use-hydrated"
 
 import type { EventDetail, EventFunnel } from "@/types/api"
 
-// Prevent hydration mismatch
+// Prevent hydration mismatch — recharts measures the DOM, so it must not run
+// during SSR.
 function ClientOnlyPieChart({ radialData }: { radialData: { name: string; value: number; fill?: string }[] }) {
-  const [isMounted, setIsMounted] = React.useState(false)
-
-  React.useEffect(() => {
-    setIsMounted(true)
-  }, [])
+  const isMounted = useHydrated()
 
   if (!isMounted) {
     return <div className="h-22.5 w-22.5 rounded-full border-4 border-muted" />

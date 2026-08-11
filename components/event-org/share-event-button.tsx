@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import QRCode from "qrcode"
 import { Share2, Copy, Check, X, Loader2 } from "lucide-react"
+import { useHydrated } from "@/hooks/use-hydrated"
 
 const LOGO_SRC = "/qr_logo.png"
 
@@ -51,14 +52,13 @@ interface ShareEventButtonProps {
 export function ShareEventButton({ eventId, slug, title, className, iconOnly = false }: ShareEventButtonProps) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [link, setLink] = useState("")
   const [qrReady, setQrReady] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    setLink(`${window.location.origin}/events/${slug || eventId}`)
-  }, [eventId, slug])
+  // `window.location.origin` isn't available during SSR, so the link is derived
+  // from a hydration flag rather than written into state by an effect.
+  const hydrated = useHydrated()
+  const link = hydrated ? `${window.location.origin}/events/${slug || eventId}` : ""
 
   // Render the QR (high error-correction so it stays scannable) and stamp the
   // logo in the centre on a white rounded backdrop.

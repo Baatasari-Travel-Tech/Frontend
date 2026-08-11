@@ -85,6 +85,16 @@ function UserMenu({
   }
 
   const avatarUrl = profile?.avatar_url ?? null
+  // A new avatar URL deserves a fresh chance to load, so the recorded failure
+  // is cleared as the prop changes. Done during render (React's documented
+  // "adjust state when a prop changes") rather than in an effect, which would
+  // paint one frame with the previous avatar's fallback still showing.
+  const [syncedAvatarUrl, setSyncedAvatarUrl] = useState(avatarUrl)
+  if (avatarUrl !== syncedAvatarUrl) {
+    setSyncedAvatarUrl(avatarUrl)
+    setFailedAvatarUrl(null)
+  }
+
   const displayAvatarUrl =
     !avatarUrl || failedAvatarUrl === avatarUrl ? DEFAULT_AVATAR_IMAGE : avatarUrl
   const showAvatar = failedAvatarUrl !== displayAvatarUrl
@@ -94,10 +104,6 @@ function UserMenu({
     .slice(0, 2)
     .map(part => part[0]?.toUpperCase())
     .join('')
-
-  useEffect(() => {
-    setFailedAvatarUrl(null)
-  }, [avatarUrl])
 
   const handleMenuLogout = async () => {
     if (!onLogout || busy) return
@@ -318,9 +324,22 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     router.replace(params.size ? `${pathname}?${params}` : pathname)
   }, [open, searchParams, pathname, router])
 
-  useEffect(() => {
+  // Collapse the mobile menu whenever we navigate or the signed-in identity
+  // changes. Adjusting during render keeps the menu from being visible for a
+  // frame on the new page, which an effect would allow.
+  const [navSnapshot, setNavSnapshot] = useState({
+    pathname,
+    user: session?.user,
+    activeRole,
+  })
+  if (
+    navSnapshot.pathname !== pathname ||
+    navSnapshot.user !== session?.user ||
+    navSnapshot.activeRole !== activeRole
+  ) {
+    setNavSnapshot({ pathname, user: session?.user, activeRole })
     setMobileMenuOpen(false)
-  }, [pathname, session?.user, activeRole])
+  }
 
   const handleLogout = async () => {
     try {
@@ -345,7 +364,6 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     return email.split('@')[0] || 'there'
   })()
   const isLoggedIn = Boolean(session?.user)
-  const showTalents = Boolean(session?.user) && activeRole === 'USER'
   const isOrganizerActive = Boolean(session?.user) && activeRole === 'EVENT_ORGANIZER'
   const activeRoleRecord = userRoles.find((record) => record.role === activeRole)
   const userRoleRecord = userRoles.find((record) => record.role === 'USER')

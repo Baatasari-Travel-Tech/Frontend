@@ -7,7 +7,16 @@ export const metadata = {
 
 type MaintenanceInfo = {
   message: string | null
-  to: string | null
+  /**
+   * The "we'll be back at" time, already parsed and validated to be in the
+   * future. Null when absent, unparseable, or already past.
+   *
+   * Resolved here rather than in the component because comparing against
+   * `Date.now()` is an impure read: doing it while rendering makes the output
+   * depend on when React happens to run, which is exactly what the
+   * react-hooks/purity rule flags. Data fetching is the right place for it.
+   */
+  backAt: Date | null
 }
 
 const DEFAULT_MESSAGE =
@@ -24,12 +33,17 @@ async function getMaintenanceInfo(): Promise<MaintenanceInfo> {
     const json = (await res.json()) as {
       data?: { maintenanceMessage?: string | null; maintenanceTo?: string | null }
     }
+    const to = json?.data?.maintenanceTo ?? null
+    const parsed = to ? new Date(to) : null
     return {
       message: json?.data?.maintenanceMessage ?? null,
-      to: json?.data?.maintenanceTo ?? null,
+      backAt:
+        parsed && !Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now()
+          ? parsed
+          : null,
     }
   } catch {
-    return { message: null, to: null }
+    return { message: null, backAt: null }
   }
 }
 
@@ -37,9 +51,7 @@ async function getMaintenanceInfo(): Promise<MaintenanceInfo> {
 // maintenance mode ON. The middleware rewrites every public route here, so
 // this must stand entirely on its own even if the data fetch below fails.
 export default async function MaintenancePage() {
-  const { message, to } = await getMaintenanceInfo()
-  const backAt = to ? new Date(to) : null
-  const backAtValid = backAt && !Number.isNaN(backAt.getTime()) && backAt.getTime() > Date.now()
+  const { message, backAt } = await getMaintenanceInfo()
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0c1D37] px-6 text-center text-white">
@@ -70,7 +82,7 @@ export default async function MaintenancePage() {
           {message?.trim() ? message : DEFAULT_MESSAGE}
         </p>
 
-        {backAtValid ? (
+        {backAt ? (
           <p className="mt-2 text-sm text-white/50">
             Expected back{" "}
             {backAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}

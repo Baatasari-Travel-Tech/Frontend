@@ -49,6 +49,16 @@ export default function ProfilePage() {
     defaultValues: EMPTY_VALUES,
   })
 
+  // Show the saved avatar whenever a new profile object arrives. Adjusted
+  // during render (not in the effect below) so the first paint already has the
+  // right image; the effect stays for form.reset(), which is a call into an
+  // external library rather than a state update.
+  const [syncedProfile, setSyncedProfile] = useState(profile)
+  if (profile && profile !== syncedProfile) {
+    setSyncedProfile(profile)
+    setAvatarPreview(profile.avatar_url ?? DEFAULT_AVATAR_IMAGE)
+  }
+
   // Hydrate the form from the loaded profile. Using reset() rather than
   // setValue per-field so the form's "dirty" state matches reality after
   // a refresh — typing a value back to its saved state should not register
@@ -69,7 +79,6 @@ export default function ProfilePage() {
       gender: profile.gender ?? "",
       profession: profile.profession ?? "",
     })
-    setAvatarPreview(profile.avatar_url ?? DEFAULT_AVATAR_IMAGE)
   }, [profile, form])
 
   useEffect(() => {

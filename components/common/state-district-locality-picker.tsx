@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { MapPin } from "lucide-react"
 import { listStates, listDistricts, searchLocalities, type LocationResult } from "@/lib/api/locations"
@@ -34,20 +34,22 @@ export function StateDistrictLocalityPicker({
   const [statesLoading, setStatesLoading] = useState(true)
   const [state, setState] = useState(initialState)
 
-  const [districts, setDistricts] = useState<string[]>([])
-  const [districtsLoading, setDistrictsLoading] = useState(false)
+  const [districtData, setDistrictData] = useState<{ forState: string; items: string[] }>({
+    forState: "",
+    items: [],
+  })
   const [district, setDistrict] = useState(initialDistrict)
+  const [localityData, setLocalityData] = useState<{ key: string; items: LocationResult[] }>({
+    key: "",
+    items: [],
+  })
 
   const [localityText, setLocalityText] = useState(initialLocalityLabel)
-  const [localityResults, setLocalityResults] = useState<LocationResult[]>([])
-  const [localityLoading, setLocalityLoading] = useState(false)
   const [localityOpen, setLocalityOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => setMounted(true), [])
+  const listboxId = useId()
 
   useEffect(() => {
     let active = true
@@ -63,44 +65,53 @@ export function StateDistrictLocalityPicker({
     }
   }, [])
 
+  // Districts are stored together with the state they were fetched for, so an
+  // empty list for a cleared state is derived rather than written back by an
+  // effect. Same trick as the locality search below.
   useEffect(() => {
-    if (!state) {
-      setDistricts([])
-      return
-    }
+    if (!state) return
     let active = true
-    setDistrictsLoading(true)
     listDistricts(state)
       .then((d) => {
-        if (active) setDistricts(d)
+        if (active) setDistrictData({ forState: state, items: d })
       })
-      .finally(() => {
-        if (active) setDistrictsLoading(false)
+      .catch(() => {
+        if (active) setDistrictData({ forState: state, items: [] })
       })
     return () => {
       active = false
     }
   }, [state])
 
+  const districts = districtData.forState === state ? districtData.items : []
+  const districtsLoading = Boolean(state) && districtData.forState !== state
+
+  const localityQuery = localityText.trim()
+  const localityActive = Boolean(state) && Boolean(district) && localityQuery.length >= 1
+  // Key the cached results by everything that defines them, so a stale list is
+  // a mismatch rather than something an effect has to clear.
+  const localityKey = `${state}|${district}|${localityQuery}`
+  const localityResults = localityData.key === localityKey ? localityData.items : []
+  const localityLoading = localityActive && localityData.key !== localityKey
+
   useEffect(() => {
-    const q = localityText.trim()
-    if (!state || !district || q.length < 1) {
-      setLocalityResults([])
-      setLocalityLoading(false)
-      return
-    }
-    setLocalityLoading(true)
+    if (!localityActive) return
+    let cancelled = false
     const t = setTimeout(async () => {
       try {
-        setLocalityResults(await searchLocalities(state, district, q))
+        const items = await searchLocalities(state, district, localityQuery)
+        if (!cancelled) setLocalityData({ key: localityKey, items })
       } catch {
-        setLocalityResults([])
-      } finally {
-        setLocalityLoading(false)
+        if (!cancelled) setLocalityData({ key: localityKey, items: [] })
       }
     }, 250)
-    return () => clearTimeout(t)
-  }, [localityText, state, district])
+    return () => {
+      // Also discards a response that lands after the query moved on, which
+      // clearTimeout alone can't do once the request is in flight.
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [localityActive, localityKey, state, district, localityQuery])
 
   useEffect(() => {
     if (!localityOpen) return
@@ -130,11 +141,16 @@ export function StateDistrictLocalityPicker({
     return () => document.removeEventListener("mousedown", onDown)
   }, [])
 
-  const showMenu = localityOpen && Boolean(district) && localityText.trim().length >= 1
+  const showMenu = localityOpen && localityActive
 
+  // `coords` is only ever set from an effect, so it stays null during SSR —
+  // which is what keeps createPortal off the server render. No separate
+  // "mounted" flag needed.
   const menu = showMenu && coords ? (
     <div
       ref={menuRef}
+      id={listboxId}
+      role="listbox"
       style={{ position: "fixed", top: coords.top, left: coords.left, width: coords.width }}
       className="z-[100] max-h-80 overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
     >
@@ -148,6 +164,8 @@ export function StateDistrictLocalityPicker({
             <button
               key={r.id}
               type="button"
+              role="option"
+              aria-selected={r.label === localityText}
               onClick={() => {
                 onSelect(r)
                 setLocalityText(r.label)
@@ -223,14 +241,15 @@ export function StateDistrictLocalityPicker({
             spellCheck={false}
             role="combobox"
             aria-autocomplete="list"
-            aria-expanded={localityOpen}
+            aria-expanded={showMenu}
+            aria-controls={listboxId}
             data-lpignore="true"
             data-1p-ignore="true"
             data-form-type="other"
             className="w-full bg-transparent py-2.5 text-sm text-slate-900 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
           />
         </div>
-        {mounted && menu ? createPortal(menu, document.body) : null}
+        {menu ? createPortal(menu, document.body) : null}
       </div>
     </div>
   )

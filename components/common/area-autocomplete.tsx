@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { MapPin } from "lucide-react"
 import { searchAreas, type LocationResult } from "@/lib/api/locations"
@@ -14,6 +14,9 @@ interface AreaAutocompleteProps {
   className?: string
 }
 
+/** Shortest query we'll send to the server. */
+const MIN_QUERY = 3
+
 // Area/city-name-only picker (min 3 chars) — no pincode typing. Used for
 // event creation, where the organizer names the venue's area by hand and
 // precise geolocation is the separate Google Maps URL field's job, so the
@@ -26,39 +29,55 @@ export function AreaAutocomplete({
   className = "",
 }: AreaAutocompleteProps) {
   const [text, setText] = useState(value ?? "")
-  const [results, setResults] = useState<LocationResult[]>([])
+  // Results are stored together with the query they belong to, so "is this
+  // list stale?" is a comparison rather than a second piece of state kept in
+  // sync by hand. That makes `searching` derivable and keeps the fetch effect
+  // free of synchronous setState.
+  const [data, setData] = useState<{ query: string; items: LocationResult[] }>({
+    query: "",
+    items: [],
+  })
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const listboxId = useId()
 
-  useEffect(() => setMounted(true), [])
-
-  useEffect(() => {
+  // Mirror the `value` prop into the editable text when the parent changes it.
+  // This is React's documented "adjust state during render" pattern: an effect
+  // would render once with the stale text first, and re-running it on every
+  // parent render would stomp on what the user is typing.
+  const [syncedValue, setSyncedValue] = useState(value)
+  if (value !== syncedValue) {
+    setSyncedValue(value)
     setText(value ?? "")
-  }, [value])
+  }
+
+  const query = text.trim()
+  const active = query.length >= MIN_QUERY
+  // Derived, not stored: we're searching whenever the loaded list belongs to a
+  // different query than the one currently typed.
+  const searching = active && data.query !== query
+  const results = data.query === query ? data.items : []
 
   useEffect(() => {
-    const q = text.trim()
-    if (q.length < 3) {
-      setResults([])
-      setLoading(false)
-      return
-    }
-    setLoading(true)
+    if (!active) return
+    let cancelled = false
     const t = setTimeout(async () => {
       try {
-        setResults(await searchAreas(q))
+        const items = await searchAreas(query)
+        if (!cancelled) setData({ query, items })
       } catch {
-        setResults([])
-      } finally {
-        setLoading(false)
+        if (!cancelled) setData({ query, items: [] })
       }
     }, 250)
-    return () => clearTimeout(t)
-  }, [text])
+    return () => {
+      // `cancelled` also discards a response that lands after the query moved
+      // on, which clearTimeout alone can't do once the request is in flight.
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [query, active])
 
   useEffect(() => {
     if (!open) return
@@ -88,15 +107,20 @@ export function AreaAutocomplete({
     return () => document.removeEventListener("mousedown", onDown)
   }, [])
 
-  const showMenu = open && text.trim().length >= 3
+  const showMenu = open && active
 
+  // `coords` is only ever set from an effect, so it stays null during SSR —
+  // which is what keeps createPortal off the server render. No separate
+  // "mounted" flag needed.
   const menu = showMenu && coords ? (
     <div
       ref={menuRef}
+      id={listboxId}
+      role="listbox"
       style={{ position: "fixed", top: coords.top, left: coords.left, width: coords.width }}
       className="z-[100] max-h-80 overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
     >
-      {loading ? (
+      {searching ? (
         <p className="px-3 py-2 text-xs text-slate-400">Searching…</p>
       ) : results.length === 0 ? (
         <p className="px-3 py-2 text-xs text-slate-400">No matches — keep typing</p>
@@ -106,6 +130,8 @@ export function AreaAutocomplete({
             <button
               key={r.id}
               type="button"
+              role="option"
+              aria-selected={r.label === text}
               onClick={() => {
                 onSelect(r)
                 setText(r.label)
@@ -140,14 +166,15 @@ export function AreaAutocomplete({
           spellCheck={false}
           role="combobox"
           aria-autocomplete="list"
-          aria-expanded={open}
+          aria-expanded={showMenu}
+          aria-controls={listboxId}
           data-lpignore="true"
           data-1p-ignore="true"
           data-form-type="other"
           className="w-full bg-transparent py-2.5 text-sm text-slate-900 outline-none"
         />
       </div>
-      {mounted && menu ? createPortal(menu, document.body) : null}
+      {menu ? createPortal(menu, document.body) : null}
     </div>
   )
 }
