@@ -15,6 +15,11 @@ const buildShareDescription = (event: EventDetail): string => {
       day: "numeric",
       month: "short",
       year: "numeric",
+      // This renders on the server, where Node's zone is UTC. Without an
+      // explicit zone a show starting after 5:30 AM IST is fine, but anything
+      // past midnight IST falls back a day — the share preview would name the
+      // wrong date on exactly the late-night events people share most.
+      timeZone: "Asia/Kolkata",
     })
     if (when) parts.push(when)
   } catch {

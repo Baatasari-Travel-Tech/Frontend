@@ -6,6 +6,14 @@ import { ADMIN_CONSOLE_PREFIX, isPrivatePath } from "@/lib/seo"
 // rewritten to /maintenance. The admin console is excluded so the switch can
 // always be toggled back OFF.
 
+/**
+ * Reachable even while maintenance is on. The maintenance page points its
+ * "Contact us" button at /contact-us — gating that too made the button lead
+ * straight back to the page it was clicked from. These are also the pages a
+ * visitor is most likely to need precisely when the site is down.
+ */
+const MAINTENANCE_ALLOWED = ["/contact-us", "/grievance", "/refund-policy"]
+
 const TTL_MS = 15_000 // re-check the flag at most every 15s per edge instance
 let cache: { value: boolean; at: number } | null = null
 
@@ -36,8 +44,12 @@ export async function proxy(req: NextRequest) {
   // switch in the ON position. Checked here, against the real prefix.
   const isAdminConsole = pathname.startsWith(ADMIN_CONSOLE_PREFIX)
 
-  const rewriteToMaintenance =
-    !isAdminConsole && pathname !== "/maintenance" && (await isMaintenanceOn())
+  const bypassesMaintenance =
+    isAdminConsole ||
+    pathname === "/maintenance" ||
+    MAINTENANCE_ALLOWED.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+
+  const rewriteToMaintenance = !bypassesMaintenance && (await isMaintenanceOn())
 
   const res = rewriteToMaintenance
     ? NextResponse.rewrite(new URL("/maintenance", req.url))

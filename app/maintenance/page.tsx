@@ -7,6 +7,8 @@ export const metadata = {
 
 type MaintenanceInfo = {
   message: string | null
+  /** From site-config, so changing it there changes it here. */
+  contactEmail: string
   /**
    * The "we'll be back at" time, already parsed and validated to be in the
    * future. Null when absent, unparseable, or already past.
@@ -18,6 +20,24 @@ type MaintenanceInfo = {
    */
   backAt: Date | null
 }
+
+const FALLBACK_CONTACT_EMAIL = "contact-us@baatasari.com"
+
+/**
+ * Every event, every admin and every organizer is in India, and the time an
+ * admin picks in the app is their local wall-clock time. This page renders on
+ * the server, where Node's zone is UTC — formatting without an explicit
+ * timeZone silently produced the UTC reading, so a window set for 11:00 PM
+ * advertised itself as 5:30 pm.
+ */
+const IST = "Asia/Kolkata"
+
+const formatBackAt = (at: Date): string =>
+  `${at.toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: IST,
+  })} IST`
 
 const DEFAULT_MESSAGE =
   "Baatasari is taking a short break for some scheduled upgrades. We're working to bring everything back online as quickly as possible. Thanks for your patience."
@@ -31,19 +51,24 @@ async function getMaintenanceInfo(): Promise<MaintenanceInfo> {
     const res = await fetch(`${base}/api/v1/site-config`, { cache: "no-store" })
     if (!res.ok) throw new Error(String(res.status))
     const json = (await res.json()) as {
-      data?: { maintenanceMessage?: string | null; maintenanceTo?: string | null }
+      data?: {
+        maintenanceMessage?: string | null
+        maintenanceTo?: string | null
+        contactEmail?: string | null
+      }
     }
     const to = json?.data?.maintenanceTo ?? null
     const parsed = to ? new Date(to) : null
     return {
       message: json?.data?.maintenanceMessage ?? null,
+      contactEmail: json?.data?.contactEmail?.trim() || FALLBACK_CONTACT_EMAIL,
       backAt:
         parsed && !Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now()
           ? parsed
           : null,
     }
   } catch {
-    return { message: null, backAt: null }
+    return { message: null, contactEmail: FALLBACK_CONTACT_EMAIL, backAt: null }
   }
 }
 
@@ -51,7 +76,7 @@ async function getMaintenanceInfo(): Promise<MaintenanceInfo> {
 // maintenance mode ON. The middleware rewrites every public route here, so
 // this must stand entirely on its own even if the data fetch below fails.
 export default async function MaintenancePage() {
-  const { message, backAt } = await getMaintenanceInfo()
+  const { message, backAt, contactEmail } = await getMaintenanceInfo()
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0c1D37] px-6 text-center text-white">
@@ -83,18 +108,27 @@ export default async function MaintenancePage() {
         </p>
 
         {backAt ? (
-          <p className="mt-2 text-sm text-white/50">
-            Expected back{" "}
-            {backAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
-          </p>
+          <p className="mt-2 text-sm text-white/50">Expected back {formatBackAt(backAt)}</p>
         ) : null}
 
+        {/* Links to the real contact page, which the maintenance gate lets
+            through — a mailto: does nothing at all on a device with no mail
+            client configured, which is most desktop browsers. */}
         <a
-          href="mailto:contact-us@baatasari.com"
+          href="/contact-us"
           className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-[#0c1D37] transition hover:bg-white/90"
         >
           Need help? Contact us
         </a>
+
+        {/* Spelled out as well, so there is still a way to reach us if the
+            contact form's API is part of whatever is being worked on. */}
+        <p className="mt-4 text-xs text-white/40">
+          or email{" "}
+          <a href={`mailto:${contactEmail}`} className="underline underline-offset-2 hover:text-white/70">
+            {contactEmail}
+          </a>
+        </p>
 
         <p className="mt-10 text-xs text-white/40">
           © Baatasari · Discover, Connect, Experience
