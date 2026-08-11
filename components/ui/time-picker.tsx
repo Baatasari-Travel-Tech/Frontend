@@ -217,7 +217,11 @@ const TimePicker: React.FC<TimePickerProps> = ({
                             lineHeight: "1",
                             color: view === "hours" ? primaryColor : "var(--gray-800)",
                             cursor: "pointer",
-                            fontWeight: 300,
+                            // Was 300. No family loaded here has a 300 face, so
+                            // the browser was already falling back to 400 —
+                            // this renders identically and stops implying a
+                            // light weight that never existed.
+                            fontWeight: 400,
                         }}
                     >
                         {timeState.hour.toString().padStart(2, "0")}
@@ -233,7 +237,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
                             lineHeight: "1",
                             color: view === "minutes" ? primaryColor : "var(--gray-800)",
                             cursor: "pointer",
-                            fontWeight: 300,
+                            fontWeight: 400,
                         }}
                     >
                         {timeState.minute.toString().padStart(2, "0")}

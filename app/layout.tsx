@@ -17,7 +17,12 @@ import { SITE_NAME, SITE_ORIGIN, organizationJsonLd, webSiteJsonLd } from '@/lib
 // must have a real consumer; each family costs a render-blocking preload.
 const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+  // 800 was loaded and never asked for — `font-extrabold` appears nowhere in
+  // the codebase, and no inline style requests it. Keep this list matched to
+  // the weights actually used: an unused weight is a whole extra file on every
+  // page, and a MISSING one is worse, since the browser silently synthesises a
+  // fake face instead of failing.
+  weight: ['400', '500', '600', '700'],
   variable: '--font-bricolage',
   display: 'swap',
 })
