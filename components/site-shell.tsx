@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, createContext, useContext, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
@@ -33,6 +33,22 @@ import {
 } from '@/lib/roles'
 import { AuthModalRoot } from '@/components/auth/auth-modal'
 import { useAuthModal } from '@/components/auth/auth-modal-context'
+
+/**
+ * True once the boot loader has started lifting.
+ *
+ * Entrance animations underneath the loader should wait for this. They used to
+ * run on mount, which meant they played out behind an opaque overlay and had
+ * already finished by the time it cleared — the page went from spinner to a
+ * fully settled hero in one jump. Handing them this flag lets the loader fade
+ * out and the content settle in over the same moment.
+ *
+ * Defaults to true so anything rendered outside the shell animates normally
+ * rather than waiting for a signal that never arrives.
+ */
+const ShellReadyContext = createContext(true)
+
+export const useShellReady = (): boolean => useContext(ShellReadyContext)
 
 function UserMenu({
   showLogout = false,
@@ -334,10 +350,9 @@ function AuthQueryParamSync() {
 }
 
 function SiteShellContent({ children }: { children: React.ReactNode }) {
-  const [booting, setBooting] = useState(true)
   const [hideLoader, setHideLoader] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { session, activeRole, userRoles, organizerVerificationStatus, profile, logout } = useAuth()
+  const { session, activeRole, userRoles, organizerVerificationStatus, profile, logout, isLoading } = useAuth()
   const [logoutKey, setLogoutKey] = useState(0)
   const router = useRouter()
   const pathname = usePathname()
@@ -346,11 +361,39 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   const { openModal } = useAuthModal()
   const isOrderConfirmed = pathname?.startsWith('/order-confirmed') ?? false
 
+  // ── Boot loader timing ────────────────────────────────────────────────
+  // Was two fixed timers, 550ms and 1150ms. That made sense when the loader
+  // was covering a genuinely blank page; now that every route prerenders, a
+  // fixed timer holds finished content back for over a second.
+  //
+  // Instead it lifts when the page is actually ready — the only thing worth
+  // waiting for is the auth bootstrap, since that decides whether the header
+  // shows "Get started" or the user's avatar.
+  const [minShownElapsed, setMinShownElapsed] = useState(false)
+  const [bootTimedOut, setBootTimedOut] = useState(false)
+
   useEffect(() => {
-    const t1 = setTimeout(() => setBooting(false), 550)
-    const t2 = setTimeout(() => setHideLoader(true), 1150)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
+    // A floor, so a warm cache doesn't strobe the loader for two frames.
+    const min = setTimeout(() => setMinShownElapsed(true), 320)
+    // ...and a ceiling. If the auth call hangs or the API is down, `isLoading`
+    // may never clear, and nobody should be held behind a spinner forever.
+    const max = setTimeout(() => setBootTimedOut(true), 2500)
+    return () => { clearTimeout(min); clearTimeout(max) }
   }, [])
+
+  const ready = bootTimedOut || (minShownElapsed && !isLoading)
+  // Derived, not stored — "we are still booting" is exactly "not ready yet",
+  // and keeping it as state would mean an effect writing a value already
+  // implied by one it depends on.
+  const booting = !ready
+
+  useEffect(() => {
+    if (!ready) return
+    // Matches the 500ms opacity transition on the overlay below — unmounting
+    // any earlier would cut the fade off mid-way.
+    const t = setTimeout(() => setHideLoader(true), 500)
+    return () => clearTimeout(t)
+  }, [ready])
 
   // Collapse the mobile menu whenever we navigate or the signed-in identity
   // changes. Adjusting during render keeps the menu from being visible for a
@@ -438,6 +481,10 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    // `!booting` rather than `hideLoader`: the handoff should begin as the
+    // overlay starts fading, so the loader going out and the hero settling in
+    // are the same motion instead of two consecutive ones.
+    <ShellReadyContext.Provider value={!booting}>
     <div className="min-h-dvh bg-background text-slate-900">
       {!hideLoader && (
         <div
@@ -616,6 +663,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
 
       <main className="min-h-[70dvh]">{children}</main>
     </div>
+    </ShellReadyContext.Provider>
   )
 }
 

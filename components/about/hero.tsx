@@ -9,12 +9,18 @@ import {
 } from "framer-motion";
 import Link from "next/link";
 import { useRef } from "react";
+import { useShellReady } from "@/components/site-shell";
 
 const HEADLINE = ["Discover", "the", "best", "things", "to", "do", "in", "your", "city"];
 
 export default function Hero() {
   const reduce = useReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
+  // Every entrance below waits for the boot loader to start lifting. They used
+  // to fire on mount, underneath an opaque overlay, and were long finished by
+  // the time it cleared — which is why the page appeared to snap straight from
+  // spinner to a fully settled hero.
+  const shellReady = useShellReady();
 
   // Scroll parallax — the background drifts/scales and the content lifts away.
   const { scrollYProgress } = useScroll({
@@ -70,7 +76,11 @@ export default function Hero() {
         <motion.div
           className="absolute inset-0"
           initial={reduce ? false : { scale: 1.18, filter: "blur(18px)" }}
-          animate={{ scale: 1, filter: "blur(0px)" }}
+          animate={
+            shellReady
+              ? { scale: 1, filter: "blur(0px)" }
+              : { scale: 1.18, filter: "blur(18px)" }
+          }
           transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
         >
           {/* Art direction needs real <source media> entries: the two crops are
@@ -87,7 +97,10 @@ export default function Hero() {
               alt=""
               fetchPriority="high"
               decoding="async"
-              className="absolute inset-0 h-full w-full object-cover object-[center_30%]"
+              // One <img> now serves both crops, so the object-position has to
+              // be per-breakpoint: the portrait mobile art was always centred,
+              // only the landscape desktop art sits high.
+              className="absolute inset-0 h-full w-full object-cover object-center md:object-[center_30%]"
             />
           </picture>
         </motion.div>
@@ -112,8 +125,10 @@ export default function Hero() {
         }}
       />
 
-      {/* One-time light streak sweeping across on load (the "swoosh") */}
-      {!reduce && (
+      {/* One-time light streak sweeping across on load (the "swoosh").
+          Mounted only once the shell is ready — a sweep nobody can see is a
+          sweep that has been spent. */}
+      {!reduce && shellReady && (
         <motion.div
           aria-hidden
           initial={{ x: "-130%" }}
@@ -126,7 +141,7 @@ export default function Hero() {
       <motion.div
         variants={container}
         initial="hidden"
-        animate="show"
+        animate={shellReady ? "show" : "hidden"}
         style={reduce ? undefined : { y: contentY, opacity: contentOpacity }}
         className="relative z-10 w-full max-w-4xl text-center"
       >
