@@ -8,7 +8,6 @@ import {
   type Variants,
 } from "framer-motion";
 import Link from "next/link";
-import Image from "next/image";
 import { useRef } from "react";
 
 const HEADLINE = ["Discover", "the", "best", "things", "to", "do", "in", "your", "city"];
@@ -62,28 +61,35 @@ export default function Hero() {
         className="absolute inset-0 z-0 pointer-events-none"
         style={reduce ? undefined : { y: bgY, scale: bgScale }}
       >
+        {/* The settle deliberately does NOT animate opacity. This image is the
+            LCP element, and an element at opacity 0 has not painted — starting
+            there put a floor under LCP equal to however long the fade ran, so
+            the page could not score well no matter how fast the bytes arrived.
+            Scale and blur both start visible, so the cinematic settle survives
+            while LCP fires on the first frame. */}
         <motion.div
           className="absolute inset-0"
-          initial={reduce ? false : { scale: 1.18, opacity: 0, filter: "blur(18px)" }}
-          animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+          initial={reduce ? false : { scale: 1.18, filter: "blur(18px)" }}
+          animate={{ scale: 1, filter: "blur(0px)" }}
           transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Image
-            src="/hero-bg.png"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="hidden md:block object-cover object-[center_30%]"
-          />
-          <Image
-            src="/hero-bg-mobile.png"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="md:hidden object-cover"
-          />
+          {/* Art direction needs real <source media> entries: the two crops are
+              genuinely different images (1536x1024 landscape vs 759x1600
+              portrait), and rendering both as next/image and hiding one with
+              `hidden md:block` downloaded BOTH — CSS display:none does not
+              cancel a fetch, and `priority` preloaded each of them. A <source>
+              cannot point at /_next/image, so these are pre-encoded WebP
+              (see scripts/build-assets.mjs). */}
+          <picture>
+            <source media="(min-width: 768px)" srcSet="/hero-bg.webp" />
+            <img
+              src="/hero-bg-mobile.webp"
+              alt=""
+              fetchPriority="high"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover object-[center_30%]"
+            />
+          </picture>
         </motion.div>
       </motion.div>
 

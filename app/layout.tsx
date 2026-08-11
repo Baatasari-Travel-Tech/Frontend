@@ -1,21 +1,20 @@
 import './globals.css'
 import Providers from './providers'
 import SiteShell from '../components/site-shell'
-import { Sora, Bricolage_Grotesque, Albert_Sans, Poppins, Inter } from 'next/font/google'
+import { Bricolage_Grotesque, Albert_Sans, Poppins } from 'next/font/google'
 import { Analytics } from "@vercel/analytics/next"
 import { SITE_NAME, SITE_ORIGIN, organizationJsonLd, webSiteJsonLd } from '@/lib/seo'
 
-const sora = Sora({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-sora',
-})
-
 // Brand typefaces. These were referenced everywhere (`font-bricolage`,
-// `font-albert`, `font-poppins`, `font-inter` and the var()s in globals.css)
-// but never actually loaded, so the whole site silently fell back to
-// system-ui. Loading them here and exposing the CSS variables on <html>
-// fixes the brand typography in one place.
+// `font-albert`, `font-poppins` and the var()s in globals.css) but never
+// actually loaded, so the whole site silently fell back to system-ui. Loading
+// them here and exposing the CSS variables on <html> fixes the brand
+// typography in one place.
+//
+// Sora and Inter used to be loaded here too. Neither had a single usage —
+// no class, no var() reference — so five families' worth of font files were
+// being preloaded on every page to render nothing. Anything added back here
+// must have a real consumer; each family costs a render-blocking preload.
 const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
@@ -37,12 +36,6 @@ const poppins = Poppins({
   display: 'swap',
 })
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-})
-
 export const metadata = {
   metadataBase: new URL(SITE_ORIGIN),
   // A template rather than a bare string: every page that sets its own title
@@ -60,6 +53,14 @@ export const metadata = {
     siteName: SITE_NAME,
     locale: 'en_IN',
     type: 'website',
+    // Site-wide fallback card. Pages that set their own images override this;
+    // the rest previously shared with no image at all, which renders as a bare
+    // grey link in every chat app.
+    images: [{ url: '/og-home.jpg', width: 1200, height: 630, alt: SITE_NAME }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og-home.jpg'],
   },
 }
 
@@ -67,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${sora.variable} ${bricolage.variable} ${albert.variable} ${poppins.variable} ${inter.variable}`}
+      className={`${bricolage.variable} ${albert.variable} ${poppins.variable}`}
     >
       <body className="font-sans antialiased" suppressHydrationWarning>
         {/* Site identity + the sitelinks search box. Emitted once here rather

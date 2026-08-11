@@ -51,6 +51,27 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Two years, and covering subdomains — the platform default omitted
+          // includeSubDomains, which left api. and campus-connect. open to a
+          // first-visit downgrade. Verified beforehand that every subdomain
+          // already redirects HTTP to HTTPS, so nothing is cut off.
+          //
+          // The `preload` token is deliberately absent: it only does anything
+          // once the domain is submitted at hstspreload.org, and getting back
+          // off that list takes months. That is a decision to make on purpose,
+          // not a side effect of a header tweak.
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
+          },
+          // Cuts this origin off from any window that opened it. Google sign-in
+          // is a full-page redirect here, not a popup, so `same-origin` would
+          // also be safe — allow-popups is chosen so that adding a popup-based
+          // flow later fails visibly rather than silently breaking sign-in.
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
         ],
       },
     ];

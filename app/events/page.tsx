@@ -16,13 +16,13 @@ export const metadata: Metadata = {
     siteName: "Baatasari",
     title,
     description,
-    images: [{ url: "/events-hero.png", width: 1200, height: 630, alt: "Baatasari Events" }],
+    images: [{ url: "/og-events.jpg", width: 1200, height: 630, alt: "Baatasari Events" }],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/events-hero.png"],
+    images: ["/og-events.jpg"],
   },
 }
 

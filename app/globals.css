@@ -634,10 +634,8 @@
 /* =========================
    Utility classes (not components)
    ========================= */
-.font-inter {
-  font-family: var(--font-inter), system-ui, sans-serif;
-}
-
+/* .font-inter removed along with the Inter family — the class had no users
+   and the var it pointed at was never defined by anything else. */
 .font-albert {
   font-family: var(--font-albert), system-ui, sans-serif;
 }
