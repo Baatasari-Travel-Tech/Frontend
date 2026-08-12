@@ -5,13 +5,18 @@ import type { EventDetail } from "@/types/api"
  * OG/canonical tags, but robots.ts, sitemap.ts and JSON-LD all need absolute
  * strings and none of them can read it, so it lives here once.
  *
- * MUST be the host that actually serves. The apex redirects to www, so naming
- * the apex here pointed every canonical, every sitemap entry and every JSON-LD
- * url at a URL that only redirects — Google is explicit that a sitemap should
- * list final URLs, and a self-referencing canonical that resolves elsewhere is
- * a contradictory signal. If the redirect direction ever flips, flip this.
+ * MUST be the host that actually serves — the one visitors are left on after
+ * any redirect, not the one they may have typed. Every canonical tag, every
+ * sitemap entry, robots.txt and the JSON-LD `url` fields all derive from it.
+ *
+ * Naming the wrong one is not cosmetic: Google asks that a sitemap list final
+ * URLs, and a self-referencing canonical that resolves somewhere else is a
+ * contradictory signal — both work against being indexed at all.
+ *
+ * The apex serves; www redirects here. If that direction is ever reversed, this
+ * line is the only thing that needs to change.
  */
-export const SITE_ORIGIN = "https://www.baatasari.com"
+export const SITE_ORIGIN = "https://baatasari.com"
 
 export const SITE_NAME = "Baatasari"
 
