@@ -50,7 +50,7 @@ const retryAfterSeconds = (until: string | null): number => {
   return Math.min(RETRY_MAX_S, Math.max(RETRY_MIN_S, Math.ceil(ms / 1000)))
 }
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // The admin console lives at an obscured path, NOT at /admin. The matcher's
@@ -102,6 +102,16 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
+  // Next 16 renamed middleware.ts to proxy.ts and made the proxy Node-only,
+  // rejecting runtime config outright. The Cloudflare adapter refuses Node
+  // middleware. The legacy filename plus this runtime is the only combination
+  // the two will both accept today.
+  //
+  // Next calls it experimental in its own error message, and that is accurate:
+  // the maintenance gate, the 503 and every noindex header ride on it. Revisit
+  // the moment @opennextjs/cloudflare supports a Node proxy — at which point
+  // this file goes back to being proxy.ts with this block deleted.
+  runtime: "experimental-edge",
   // Everything except Next internals and static assets. Route-level decisions
   // are made in the handler above, where they can be read.
   matcher: [

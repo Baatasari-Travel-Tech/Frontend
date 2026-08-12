@@ -9,6 +9,10 @@
 #   sharp          — Next.js uses it for image optimisation at build and runtime.
 #   unrs-resolver  — native module resolver behind eslint-config-next's import
 #                    plugin; `pnpm lint` fails to load without it.
+#   esbuild        — the bundler @opennextjs/cloudflare runs over the built
+#                    output; without its binary the Cloudflare build cannot run.
+#   workerd        — Cloudflare's runtime, used by `wrangler dev` to preview the
+#                    Worker locally before anything is deployed.
 #
 # Denied deliberately (left false rather than removed, so a future `pnpm install`
 # doesn't re-prompt and someone doesn't "fix" it by blanket-allowing):
@@ -21,6 +25,8 @@ allowBuilds:
   unrs-resolver: true
   core-js: false
   msw: false
+  esbuild: true
+  workerd: true
 
 # Transitive version pins for security advisories.
 #
