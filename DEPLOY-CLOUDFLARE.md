@@ -200,7 +200,15 @@ output into a Worker; `pnpm cf:deploy` ships it.
 
 ## Step 4 — Environment variables (the step that silently breaks things)
 
-Add these as **build** variables:
+Add these as **build** variables — Settings > **Build**, the same screen as the
+build and deploy commands.
+
+> Cloudflare has two variable screens and only one works here. Settings >
+> **Variables and Secrets** is the *runtime* one: anything put there is invisible
+> to the build, so a NEXT_PUBLIC_ value set there fails exactly as if it were
+> never set. The AWS secrets below are the opposite case — those *are* runtime,
+> and belong in Variables and Secrets.
+
 
 | Variable | Value |
 |---|---|

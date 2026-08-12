@@ -32,9 +32,12 @@ if (process.env.NODE_ENV === "production") {
   if (missing.length > 0) {
     throw new Error(
       `Missing required build variables: ${missing.join(", ")}.\n\n` +
-        "These are inlined at build time, so setting them as runtime bindings or\n" +
-        "secrets does nothing. On Cloudflare they must be BUILD variables on the\n" +
-        "Worker (Settings > Variables and Secrets). See DEPLOY-CLOUDFLARE.md step 4.",
+        "These are inlined into the bundle at BUILD time.\n\n" +
+        "On Cloudflare there are two separate places, and only one of them works:\n" +
+        "  Settings > Build          -> build variables   <- PUT IT HERE\n" +
+        "  Settings > Variables and Secrets -> runtime    <- has no effect on this\n\n" +
+        "The build section is the same screen that holds the build and deploy\n" +
+        "commands. See DEPLOY-CLOUDFLARE.md step 4.",
     );
   }
 }
