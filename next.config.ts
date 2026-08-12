@@ -1,5 +1,42 @@
 import type { NextConfig } from "next";
 
+/**
+ * Fail the build when a required public variable is missing.
+ *
+ * Every NEXT_PUBLIC_* value is inlined into the bundle at BUILD time. Miss one
+ * and nothing complains: the build succeeds, the site deploys, pages render —
+ * and then `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/v1/...` resolves to a
+ * path on our own origin, so every API call 404s against ourselves.
+ *
+ * That failure has now happened twice, and it is genuinely hard to read from
+ * the symptoms: sign-in breaks, the session never loads, and the maintenance
+ * gate silently stops working because the middleware reads the same variable
+ * and fails open. One missing string, four unrelated-looking bugs.
+ *
+ * A build that stops is a far cheaper way to learn this than a deployed site
+ * that looks fine.
+ *
+ * Only enforced for production builds, so `next dev` and lint still run in a
+ * bare checkout.
+ */
+const REQUIRED_PUBLIC_ENV = [
+  "NEXT_PUBLIC_API_URL",
+  "NEXT_PUBLIC_AVATAR_BASE_URL",
+  "NEXT_PUBLIC_EVENT_COVER_BASE_URL",
+] as const;
+
+if (process.env.NODE_ENV === "production") {
+  const missing = REQUIRED_PUBLIC_ENV.filter((key) => !process.env[key]?.trim());
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required build variables: ${missing.join(", ")}.\n\n` +
+        "These are inlined at build time, so setting them as runtime bindings or\n" +
+        "secrets does nothing. On Cloudflare they must be BUILD variables on the\n" +
+        "Worker (Settings > Variables and Secrets). See DEPLOY-CLOUDFLARE.md step 4.",
+    );
+  }
+}
+
 const nextConfig: NextConfig = {
   experimental: {
     // Tree-shake heavy barrel imports so only the used exports ship. These are

@@ -2,7 +2,6 @@ import './globals.css'
 import Providers from './providers'
 import SiteShell from '../components/site-shell'
 import { Bricolage_Grotesque, Albert_Sans, Poppins } from 'next/font/google'
-import { Analytics } from "@vercel/analytics/next"
 import { SITE_NAME, SITE_ORIGIN, organizationJsonLd, webSiteJsonLd } from '@/lib/seo'
 
 // Brand typefaces. These were referenced everywhere (`font-bricolage`,
@@ -90,7 +89,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <Providers>
           <SiteShell>{children}</SiteShell>
-          <Analytics />
         </Providers>
       </body>
     </html>

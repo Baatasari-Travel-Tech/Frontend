@@ -24,7 +24,6 @@
     "@radix-ui/react-visually-hidden": "^1.2.4",
     "@tanstack/react-query": "^5.100.10",
     "@types/animejs": "^3.1.13",
-    "@vercel/analytics": "^2.0.1",
     "animejs": "^4.4.1",
     "aws4fetch": "^1.0.20",
     "class-variance-authority": "^0.7.1",
