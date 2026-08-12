@@ -33,6 +33,7 @@ import {
 } from '@/lib/roles'
 import { AuthModalRoot } from '@/components/auth/auth-modal'
 import { useAuthModal } from '@/components/auth/auth-modal-context'
+import { useMaintenance } from '@/hooks/use-maintenance'
 
 /**
  * True once the boot loader has started lifting.
@@ -315,13 +316,19 @@ function AuthQueryParamSync() {
   const router = useRouter()
   const pathname = usePathname()
   const { open, openModal } = useAuthModal()
+  const maintenance = useMaintenance()
 
   useEffect(() => {
+    // ?auth=login is a second way in, independent of the header buttons — it is
+    // how /for-organizers links into signup. Hiding the buttons without this
+    // would leave the modal openable by URL on any page still reachable during
+    // maintenance.
+    if (maintenance) return
     const auth = searchParams.get('auth')
     if (auth === 'login' || auth === 'register') {
       openModal(auth)
     }
-  }, [searchParams, openModal])
+  }, [maintenance, searchParams, openModal])
 
   // Strip the auth params only after the modal has actually been open and then
   // closed. Without the ref this raced the opening effect above (open is still
@@ -349,6 +356,39 @@ function AuthQueryParamSync() {
   return null
 }
 
+/**
+ * Signs the user out when maintenance is on, and keeps them out.
+ *
+ * Renders nothing, and lives in SiteShell rather than SiteShellContent on
+ * purpose: SiteShellContent returns early for /maintenance, which is exactly
+ * the page a signed-in visitor gets redirected to, so a guard placed inside it
+ * would never run for the people it is meant to catch.
+ *
+ * Access tokens stay cryptographically valid for their full lifetime, so
+ * hiding the login controls is not by itself enough — a session that already
+ * exists keeps working against an API that is still up. This clears it.
+ *
+ * The site's own admin console is unaffected: it authenticates through
+ * useAdminSession with a separate cookie, so whoever needs to switch
+ * maintenance back off is not locked out by this.
+ */
+function MaintenanceSessionGuard() {
+  const maintenance = useMaintenance()
+  const { session, logout } = useAuth()
+  const signedOutRef = useRef(false)
+
+  useEffect(() => {
+    if (!maintenance || !session?.user) return
+    // Once per mount. Without the guard a failing logout would re-trigger on
+    // every render for as long as the session object stayed put.
+    if (signedOutRef.current) return
+    signedOutRef.current = true
+    void logout()
+  }, [maintenance, session?.user, logout])
+
+  return null
+}
+
 function SiteShellContent({ children }: { children: React.ReactNode }) {
   const [hideLoader, setHideLoader] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -359,6 +399,10 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   // Only the opener — the `open` flag and the param cleanup live in
   // AuthQueryParamSync, which is where useSearchParams belongs.
   const { openModal } = useAuthModal()
+  // Signing in and signing up are unavailable while maintenance is on: those
+  // routes are gated by the middleware, so leaving the controls up would offer
+  // a door that opens onto the holding page.
+  const maintenance = useMaintenance()
   const isOrderConfirmed = pathname?.startsWith('/order-confirmed') ?? false
 
   // ── Boot loader timing ────────────────────────────────────────────────
@@ -576,6 +620,12 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                   <UserMenu showLogout onLogout={handleLogout} />
                 </>
               )
+            ) : maintenance ? (
+              // Nothing to offer a signed-out visitor right now — every route
+              // these lead to is behind the gate.
+              <span className="text-sm font-medium text-slate-500">
+                Signing in is paused
+              </span>
             ) : (
               <>
                 <button
@@ -653,7 +703,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
                   {link.label}
                 </Link>
               ))}
-              {!isLoggedIn && (
+              {!isLoggedIn && !maintenance && (
                 <button
                   type="button"
                   onClick={() => {
@@ -685,6 +735,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         <AuthQueryParamSync />
       </Suspense>
+      <MaintenanceSessionGuard />
       <SiteShellContent>{children}</SiteShellContent>
     </AuthModalRoot>
   )
