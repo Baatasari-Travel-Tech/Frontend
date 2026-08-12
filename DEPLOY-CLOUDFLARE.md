@@ -44,22 +44,58 @@ Cloudflare website. It is only mentioned in the optional section at the end.
 This runs in **AWS**, not Cloudflare. The cache lives beside your event covers
 rather than in Cloudflare storage.
 
-### 1a. The bucket
+### 1a. Create the bucket
 
-S3 console → **Create bucket**, in region **`ap-south-2`** (Hyderabad — the same
-region as your covers):
+S3 console → **Create bucket**.
 
-```
-baatasari-frontend-cache
-```
+| Setting | Value | Why |
+|---|---|---|
+| AWS Region | **Asia Pacific (Hyderabad) `ap-south-2`** | Same region as your covers, and close to the edge |
+| Bucket type | General purpose | |
+| Bucket name | `baatasari-frontend-cache` | Must match `wrangler.jsonc` |
+| Object Ownership | ACLs disabled | Default. Nothing here needs per-object ACLs |
+| Block Public Access | **All four boxes ticked** | Default, and correct — this is internal cache data |
+| Bucket Versioning | **Disable** | Default. Versioning on a cache means every overwrite keeps the old copy forever, quietly billing you for garbage |
+| Encryption | SSE-S3 | Default |
+| Bucket Key | Enable | Default |
 
-Leave **Block all public access ON**. This is internal cache data; nothing
-should ever read it directly.
+Everything above except the name and region is the console default, so in
+practice: pick the region, type the name, scroll down, **Create bucket**.
 
-### 1b. A key that can only touch that bucket
+> `ap-south-2` is an opt-in region. Your covers already live there so it is
+> enabled — if you somehow get a region error, that is why.
 
-IAM → **Users** → create a user (e.g. `baatasari-frontend-cache`) with **no
-console access**, and attach an inline policy:
+### 1b. Add a lifecycle rule (do not skip)
+
+Cache entries are keyed by build id, so **every deploy orphans the previous
+deploy's entries**. Nothing deletes them on its own and they will accumulate
+forever.
+
+Open the bucket → **Management** → **Create lifecycle rule**:
+
+| Field | Value |
+|---|---|
+| Rule name | `expire-stale-cache` |
+| Scope | Limit to a prefix: `incremental-cache/` |
+| Action | Expire current versions of objects |
+| Days after object creation | `7` |
+| Also tick | Delete expired object delete markers / incomplete multipart uploads |
+
+Seven days is safe. Anything actively serving is rewritten far sooner than
+that — the sitemap hourly, event pages every 60 seconds. If a quiet page's entry
+does expire, the next request simply regenerates it. A cache miss, not an error.
+
+### 1c. Create a user that can touch only this bucket
+
+IAM → **Users** → **Create user**.
+
+| Field | Value |
+|---|---|
+| User name | `baatasari-frontend-cache` |
+| Console access | **No** — leave unchecked |
+| Permissions | **Attach policies directly** → **Create inline policy** → JSON |
+
+Paste exactly:
 
 ```json
 {
@@ -72,12 +108,33 @@ console access**, and attach an inline policy:
 }
 ```
 
-Three actions on one bucket, nothing else — the cache never lists objects and
-never touches anything outside this bucket, so it should not be able to. Do not
-reuse the credentials your backend uses for event covers: this key ends up in a
-Worker, and its blast radius should be one throwaway bucket.
+Name it `frontend-cache-rw` and create the user.
 
-Create an access key for that user and keep the two values for step 4.
+Three actions, one bucket, nothing else. The cache never lists objects and never
+touches anything outside this bucket, so it should not be able to. **Do not
+reuse the credentials your backend uses for event covers** — this key ends up
+inside a Worker, and its blast radius should be one bucket full of throwaway
+data.
+
+Note the `/*` on the resource: it grants access to objects *in* the bucket, not
+to the bucket itself. That is deliberate and sufficient.
+
+### 1d. Create the access key
+
+Open the user → **Security credentials** → **Create access key**.
+
+- Use case: **Application running outside AWS** (or "Other" — either is fine)
+- AWS will suggest roles instead of long-lived keys. Acknowledge and continue;
+  a Cloudflare Worker cannot assume an IAM role, so a key is the option.
+- Description: `cloudflare worker isr cache`
+
+**Copy both values now.** The secret access key is shown exactly once — if you
+lose it, delete the key and make a new one. They go into Cloudflare in step 4:
+
+| AWS shows you | Goes in as |
+|---|---|
+| Access key | `NEXT_INC_CACHE_S3_ACCESS_KEY_ID` |
+| Secret access key | `NEXT_INC_CACHE_S3_SECRET_ACCESS_KEY` |
 
 ### Why this exists
 
@@ -92,8 +149,13 @@ between deploys. That is the exact problem this week was spent fixing.
 Bucket name and region are in `wrangler.jsonc`; change them there if you use
 different ones.
 
-**✅ Done when:** the bucket exists, and you are holding an access key ID and
-secret access key.
+**✅ Done when:** the bucket exists in `ap-south-2`, has a lifecycle rule, and
+you are holding an access key ID and a secret access key.
+
+**How you will know it actually works:** after step 5, browse a few pages on the
+`.workers.dev` URL, then open the bucket. Objects should appear under
+`incremental-cache/`. An empty bucket after real traffic means the cache is not
+connected — go to Troubleshooting.
 
 ---
 
