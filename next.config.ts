@@ -18,12 +18,14 @@ import type { NextConfig } from "next";
  *
  * Only enforced for production builds, so `next dev` and lint still run in a
  * bare checkout.
+ *
+ * Only NEXT_PUBLIC_API_URL is listed. The avatar and event-cover base URLs are
+ * also NEXT_PUBLIC_, but lib/avatar.ts and lib/event-cover.ts both fall back to
+ * the correct S3 bucket when unset — which is how they have always run, Vercel
+ * included. Demanding them here would fail builds over variables that do not
+ * need to exist.
  */
-const REQUIRED_PUBLIC_ENV = [
-  "NEXT_PUBLIC_API_URL",
-  "NEXT_PUBLIC_AVATAR_BASE_URL",
-  "NEXT_PUBLIC_EVENT_COVER_BASE_URL",
-] as const;
+const REQUIRED_PUBLIC_ENV = ["NEXT_PUBLIC_API_URL"] as const;
 
 if (process.env.NODE_ENV === "production") {
   const missing = REQUIRED_PUBLIC_ENV.filter((key) => !process.env[key]?.trim());
