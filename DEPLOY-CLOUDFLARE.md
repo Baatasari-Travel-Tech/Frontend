@@ -162,8 +162,17 @@ connected — go to Troubleshooting.
 ## Step 2 — Connect the repository
 
 **In the dashboard:** go to **Workers & Pages** (newer accounts may label this
-**Compute**) → **Create** → choose the option to **import / connect a Git
-repository** (*not* "Pages" — see the note at the bottom of this file).
+**Compute**) → **Create** → the **Workers** tab → **import / connect a Git
+repository**.
+
+> **The one thing to get right.** Cloudflare offers a nearly identical Pages
+> flow, and it will happily accept this repo and then fail at deploy with
+> "Pages only supports files up to 25 MiB". A Pages project cannot be converted
+> afterwards — you have to delete it and start over.
+>
+> Check before deploying: a **Workers** project asks for a **deploy command**.
+> A **Pages** project asks for a **build output directory**. If you are looking
+> at a build output directory field, you are in the wrong one.
 
 - Authorise GitHub if it asks.
 - Pick repository **`Baatasari-Travel-Tech/Frontend`**.
@@ -294,6 +303,27 @@ has passed quietly.
 ---
 
 ## Troubleshooting
+
+**`Pages only supports files up to 25 MiB in size` / `.next/cache/... is 201 MiB`**
+— you created a **Pages** project instead of a **Workers** one. The build itself
+succeeded; Pages then ignored `wrangler.jsonc` (it wants a
+`pages_build_output_dir`, which this project deliberately does not have), ignored
+the deploy command, and tried to upload the entire repo as static files,
+including Next's build cache.
+
+The giveaway lines earlier in the same log:
+
+```
+Did you mean to use wrangler.toml to configure Pages?
+Note: No functions dir at /functions found. Skipping.
+```
+
+A Pages project cannot be converted. Delete it and create it again through the
+**Workers** flow.
+
+**Telling the two apart before you deploy:** a Workers project asks you for a
+*deploy command*. A Pages project asks for a *build output directory* instead.
+If you are being asked for an output directory, back out — you are in Pages.
 
 **`EPERM: symlink`** — you are running `pnpm cf:build` on Windows. Turn on
 Developer Mode (Settings → Privacy & security → For developers), or just let
