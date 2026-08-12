@@ -507,7 +507,14 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
               alt="Baatasari"
               width={32}
               height={32}
-              style={{ width: 'auto', height: 'auto' }}
+              // Sized in CSS, not left to the file's intrinsic dimensions.
+              // This carried `style={{ width: 'auto', height: 'auto' }}`, which
+              // overrode the width/height above — so the mark rendered at
+              // whatever the source happened to be. That was invisible while
+              // the source was a 30x30 logo.png and the intent matched by
+              // accident; swapping in a 96x96 asset rendered it at 96px, three
+              // times its intended size.
+              className="h-8 w-8"
               priority
             />
             <span className="text-lg font-semibold tracking-tight">Baatasari</span>
