@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "baatasari-frontend",
+  "name": "frontend",
   "main": ".open-next/worker.js",
 
   // Pin this. The Workers runtime is versioned by date, and leaving it floating
