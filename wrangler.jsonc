@@ -23,12 +23,18 @@
     "enabled": true
   },
 
-  // Backs the incremental cache in open-next.config.ts. Create it once with:
-  //   pnpm exec wrangler r2 bucket create baatasari-frontend-cache
-  "r2_buckets": [
-    {
-      "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "baatasari-frontend-cache"
-    }
-  ]
+  // Where the ISR cache lives — see open-next/s3-incremental-cache.ts.
+  //
+  // Only the non-secret half is here. The two AWS keys are Worker *secrets* and
+  // must never appear in this file, which is committed:
+  //
+  //   NEXT_INC_CACHE_S3_ACCESS_KEY_ID
+  //   NEXT_INC_CACHE_S3_SECRET_ACCESS_KEY
+  //
+  // Set those in the dashboard, or with `wrangler secret put <name>`.
+  "vars": {
+    "NEXT_INC_CACHE_S3_BUCKET": "baatasari-frontend-cache",
+    "NEXT_INC_CACHE_S3_REGION": "ap-south-2",
+    "NEXT_INC_CACHE_S3_PREFIX": "incremental-cache"
+  }
 }

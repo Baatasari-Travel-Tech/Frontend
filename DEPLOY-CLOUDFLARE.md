@@ -17,8 +17,9 @@ waiting for builds.
 **Worker** — Cloudflare's equivalent of a Vercel serverless function. Your whole
 Next.js app runs inside one.
 
-**R2** — Cloudflare's file storage. Their version of S3. You need one bucket,
-explained in step 1.
+**ISR cache** — where regenerated pages are stored between requests. Vercel did
+this for you; on Cloudflare you point it somewhere. Here that is an S3 bucket,
+set up in step 1.
 
 **wrangler** — Cloudflare's command-line tool, their equivalent of the `vercel`
 CLI. **You do not need it for this guide.** Everything below is done in the
@@ -31,40 +32,68 @@ Cloudflare website. It is only mentioned in the optional section at the end.
 - A Cloudflare account — you already have one, your DNS is there.
 - The GitHub repo `Baatasari-Travel-Tech/Frontend`, branch `cloudflare-migration`
   (already pushed).
-- The values of your four `NEXT_PUBLIC_*` environment variables. Copy them out
-  of your Vercel project settings now, before you start — you will need them in
-  step 4 and it is annoying to go hunting mid-flow.
+- The values of your `NEXT_PUBLIC_*` environment variables. Copy them out of
+  your Vercel project settings now — you need them in step 4 and it is annoying
+  to go hunting mid-flow.
+- AWS console access, for step 1.
 
 ---
 
-## Step 1 — Create the storage bucket
+## Step 1 — Create the S3 cache bucket and its key
 
-**In the Cloudflare dashboard:** find **R2** in the left sidebar → **Create
-bucket** → name it exactly:
+This runs in **AWS**, not Cloudflare. The cache lives beside your event covers
+rather than in Cloudflare storage.
+
+### 1a. The bucket
+
+S3 console → **Create bucket**, in region **`ap-south-2`** (Hyderabad — the same
+region as your covers):
 
 ```
 baatasari-frontend-cache
 ```
 
-Leave every other setting alone. Create it.
+Leave **Block all public access ON**. This is internal cache data; nothing
+should ever read it directly.
 
-> Cloudflare may ask you to enable R2 on your account first, which can mean
-> adding a card even though what you are about to store is a few megabytes and
-> sits inside the free tier.
+### 1b. A key that can only touch that bucket
 
-**Why this exists.** Your `sitemap.xml` is set to regenerate every hour, and
-your event pages cache for 60 seconds. Vercel does that invisibly. Cloudflare
-needs somewhere to *put* the regenerated page, and this bucket is that place.
+IAM → **Users** → create a user (e.g. `baatasari-frontend-cache`) with **no
+console access**, and attach an inline policy:
 
-**If you skip it:** the build still succeeds and the site still works, so nothing
-looks wrong — but the sitemap freezes at whatever it was the moment you
-deployed, and newly published events never reach Google. That is the exact
-problem this week was spent fixing, so do not skip it.
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+    "Resource": "arn:aws:s3:::baatasari-frontend-cache/*"
+  }]
+}
+```
 
-The name matters. It is written into `wrangler.jsonc`, so a different name will
-not connect.
+Three actions on one bucket, nothing else — the cache never lists objects and
+never touches anything outside this bucket, so it should not be able to. Do not
+reuse the credentials your backend uses for event covers: this key ends up in a
+Worker, and its blast radius should be one throwaway bucket.
 
-**✅ Done when:** the bucket appears in your R2 list.
+Create an access key for that user and keep the two values for step 4.
+
+### Why this exists
+
+Your `sitemap.xml` regenerates hourly and event pages cache for 60 seconds.
+Vercel handled that invisibly. On Workers there is nowhere for a regenerated
+page to live unless you provide it, and this bucket is that place.
+
+Skip it and nothing looks broken — the build passes, the site works — but ISR
+has no backing store, so newly published events stop reaching your sitemap
+between deploys. That is the exact problem this week was spent fixing.
+
+Bucket name and region are in `wrangler.jsonc`; change them there if you use
+different ones.
+
+**✅ Done when:** the bucket exists, and you are holding an access key ID and
+secret access key.
 
 ---
 
@@ -109,6 +138,18 @@ Add these as **build** variables:
 | `NEXT_PUBLIC_EVENT_COVER_BASE_URL` | copy from Vercel |
 
 Leave `NEXT_PUBLIC_AUTH_DEBUG` unset.
+
+Then add the two AWS keys from step 1b as **secrets**, not build variables —
+secrets are encrypted and not readable back once saved, which is what you want
+for credentials:
+
+| Secret | Value |
+|---|---|
+| `NEXT_INC_CACHE_S3_ACCESS_KEY_ID` | from step 1b |
+| `NEXT_INC_CACHE_S3_SECRET_ACCESS_KEY` | from step 1b |
+
+The bucket name, region and prefix are already in `wrangler.jsonc` and need no
+action.
 
 **Read this bit.** Anything named `NEXT_PUBLIC_` is baked into the JavaScript
 **when the site is built**, not read when it runs. So they must be set as
@@ -204,8 +245,12 @@ and never hits this.
 step 4. The variables are missing, or were added as runtime values instead of
 build values.
 
-**Sitemap never updates** — step 1. Either the bucket does not exist, or its
-name does not match `wrangler.jsonc`.
+**Sitemap never updates** — the cache is not working. Check, in order: the two
+AWS secrets are set on the Worker (step 4), the bucket name and region in
+`wrangler.jsonc` match what you created, and the IAM policy lists all three of
+GetObject/PutObject/DeleteObject. A misconfigured cache is deliberately
+non-fatal — the site stays up and simply stops caching — so this fails quietly
+rather than loudly.
 
 **`command not found: wrangler` locally** — run `pnpm install`. This branch has
 dependencies `main` does not, so switching between the two needs a reinstall

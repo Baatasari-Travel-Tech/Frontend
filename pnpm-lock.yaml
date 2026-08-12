@@ -34,6 +34,9 @@ importers:
       animejs:
         specifier: ^4.4.1
         version: 4.5.0
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -95,6 +98,9 @@ importers:
         specifier: ^5.0.13
         version: 5.0.14(@types/react@19.2.17)(react@19.2.7)
     devDependencies:
+      '@opennextjs/aws':
+        specifier: 4.1.0
+        version: 4.1.0(next@16.3.0(@babel/core@7.29.7(supports-color@10.2.2))(@types/node@20.19.43)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(supports-color@10.2.2)
       '@opennextjs/cloudflare':
         specifier: ^1.20.2
         version: 1.20.2(next@16.3.0(@babel/core@7.29.7(supports-color@10.2.2))(@types/node@20.19.43)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(supports-color@10.2.2)(wrangler@4.120.1(@types/node@20.19.43))
