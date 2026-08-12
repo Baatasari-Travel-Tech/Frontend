@@ -549,8 +549,8 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
             <Image
               src="/brand-96.webp"
               alt="Baatasari"
-              width={32}
-              height={32}
+              width={28}
+              height={28}
               // Sized in CSS, not left to the file's intrinsic dimensions.
               // This carried `style={{ width: 'auto', height: 'auto' }}`, which
               // overrode the width/height above — so the mark rendered at
@@ -558,7 +558,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
               // the source was a 30x30 logo.png and the intent matched by
               // accident; swapping in a 96x96 asset rendered it at 96px, three
               // times its intended size.
-              className="h-8 w-8"
+              className="h-7 w-7"
               priority
             />
             <span className="text-lg font-semibold tracking-tight">Baatasari</span>
