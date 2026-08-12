@@ -503,7 +503,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
         <div className="flex w-full items-center justify-between gap-8 py-4 px-2 md:px-6 lg:px-8">
           <Link href={homeHref} className="flex items-center gap-2">
             <Image
-              src="/nlogo.png"
+              src="/brand-96.webp"
               alt="Baatasari"
               width={32}
               height={32}

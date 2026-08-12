@@ -15,8 +15,20 @@ const nextConfig: NextConfig = {
     ],
   },
   images: {
-    // Serve modern formats — AVIF/WebP are a fraction of the size of JPEG/PNG,
-    // which directly improves mobile LCP on the cover/hero images.
+    // No host-side optimizer.
+    //
+    // This used to rely on Vercel's, which is not available on every runtime —
+    // it needs sharp, a native binary. Rather than trade one host lock-in for a
+    // paid transformation service, the bytes are made right at their source:
+    // everything in public/ is pre-encoded to WebP by scripts/build-assets.mjs,
+    // and event covers already arrive as 1000x1500 WebP because the backend
+    // resizes them on upload (organizer.service.ts).
+    //
+    // What is genuinely lost is per-device widths — a phone gets the same file
+    // as a laptop. The fix for that is a second, smaller variant written at
+    // upload time, which belongs in the backend next to the resize that is
+    // already there, not in a host-specific optimizer.
+    unoptimized: true,
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       { protocol: "https", hostname: "*.amazonaws.com" },

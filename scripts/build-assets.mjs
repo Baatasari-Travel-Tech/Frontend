@@ -13,7 +13,7 @@
 // not a build step, so a deploy never depends on sharp being installable.
 
 import sharp from "sharp"
-import { stat } from "node:fs/promises"
+import { readdir, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 
 const PUBLIC = path.resolve(import.meta.dirname, "..", "public")
@@ -30,6 +30,37 @@ const HEROES = [
   { from: "hero-bg-mobile.png", to: "hero-bg-mobile.webp", width: 900 },
 ]
 
+// Every raster in public/ that a component renders, pre-encoded to WebP at a
+// width it could plausibly be displayed at.
+//
+// These used to arrive as multi-megabyte PNGs and lean on the host's image
+// optimizer to become something a phone should download. That made the app
+// dependent on one specific host doing that work. Doing it here instead means
+// the bytes are already right wherever it is deployed — and the sources stay
+// in the repo, so a re-encode is always one command away.
+const RASTERS = [
+  { from: "talents-hero-mobile.png", to: "talents-hero-mobile.webp", width: 900 },
+  { from: "talent-hero.png", to: "talent-hero.webp", width: 1600 },
+  { from: "campus.png", to: "campus.webp", width: 1600 },
+  { from: "events-hero.png", to: "events-hero.webp", width: 1600 },
+  { from: "events-hero-mobile.jpeg", to: "events-hero-mobile.webp", width: 900 },
+  { from: "restar.jpeg", to: "restar.webp", width: 1200 },
+  { from: "event.jpeg", to: "event.webp", width: 1200 },
+  // Card art from lib/about-data.ts — referenced as data, not as a src
+  // attribute, which is why a JSX-shaped search missed them. Together they were
+  // 12 MB of PNG rendered into tiles a few hundred pixels wide.
+  { from: "last.png", to: "last.webp", width: 1200 },
+  { from: "av.png", to: "av.webp", width: 1200 },
+  { from: "as.png", to: "as.webp", width: 1200 },
+  { from: "an2.png", to: "an2.webp", width: 1200 },
+  { from: "p2.png", to: "p2.webp", width: 1200 },
+  { from: "plan.png", to: "plan.webp", width: 1200 },
+  // The brand mark as the UI actually uses it — 32px in the header, 72px on the
+  // holding page. nlogo.png itself stays as the canonical asset for JSON-LD,
+  // where a crawler wants the full-resolution mark.
+  { from: "nlogo.png", to: "brand-96.webp", width: 96 },
+]
+
 // The brand mark is an 870x870 source. A favicon is drawn at 16-32px and an
 // Apple touch icon at 180 — pointing either straight at the source would ship
 // a six-figure byte count to render a few dozen pixels, and neither is served
@@ -40,6 +71,23 @@ const ICONS = [
 ]
 
 const kib = async (file) => Math.round((await stat(path.join(PUBLIC, file))).size / 1024)
+
+// The testing canvas needs a list of the images sitting in public/. That list
+// used to come from a route handler calling fs.readdirSync at request time,
+// which cannot work on a runtime without a filesystem. The filenames are known
+// at build, so they are written out here instead — same answer, no server.
+const MANIFEST = "image-manifest.json"
+const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"])
+
+const writeImageManifest = async () => {
+  const entries = await readdir(PUBLIC, { withFileTypes: true })
+  const images = entries
+    .filter((e) => e.isFile() && IMAGE_EXT.has(path.extname(e.name).toLowerCase()))
+    .map((e) => `/${e.name}`)
+    .sort((a, b) => a.localeCompare(b))
+  await writeFile(path.join(PUBLIC, MANIFEST), `${JSON.stringify({ images }, null, 2)}\n`)
+  console.log(`list  public/*.{png,jpg,webp,...} -> ${MANIFEST} (${images.length} images)`)
+}
 
 const run = async () => {
   for (const { from, to } of OG) {
@@ -67,6 +115,17 @@ const run = async () => {
       .toFile(path.join(PUBLIC, to))
     console.log(`icon  ${from} (${await kib(from)} KiB) -> ${to} (${await kib(to)} KiB)`)
   }
+
+  for (const { from, to, width } of RASTERS) {
+    await sharp(path.join(PUBLIC, from))
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: 78 })
+      .toFile(path.join(PUBLIC, to))
+    console.log(`img   ${from} (${await kib(from)} KiB) -> ${to} (${await kib(to)} KiB)`)
+  }
+
+  // Last, so it catches everything the steps above just produced.
+  await writeImageManifest()
 }
 
 run().catch((error) => {

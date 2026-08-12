@@ -87,7 +87,7 @@ export default async function MaintenancePage() {
 
       <div className="relative z-10 flex max-w-md flex-col items-center">
         <Image
-          src="/nlogo.png"
+          src="/brand-96.webp"
           alt="Baatasari"
           width={72}
           height={72}

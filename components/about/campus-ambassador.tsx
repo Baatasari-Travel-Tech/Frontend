@@ -35,7 +35,7 @@ export default function CampusAmbassador() {
             {/* Mobile image */}
             <div className="relative w-full mb-8 lg:hidden h-72">
               <Image
-                src="/campus.png"
+                src="/campus.webp"
                 alt="Campus Ambassador Illustration"
                 fill
                 sizes="100vw"
@@ -72,7 +72,7 @@ export default function CampusAmbassador() {
           >
             <div className="relative w-full h-96 lg:h-[34rem] overflow-hidden rounded-3xl shadow-[0_30px_60px_-20px_rgba(12,29,55,0.25)]">
               <Image
-                src="/campus.png"
+                src="/campus.webp"
                 alt="Campus Ambassador Illustration"
                 fill
                 sizes="50vw"

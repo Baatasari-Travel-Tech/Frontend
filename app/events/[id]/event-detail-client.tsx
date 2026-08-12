@@ -342,7 +342,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
             fill
             sizes="1px"
             className="scale-125 object-cover opacity-50 blur-3xl saturate-[1.2]"
-            onError={() => setCoverImageSrc("/an2.png")}
+            onError={() => setCoverImageSrc("/an2.webp")}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-(--brand-navy)/70 via-(--brand-navy)/55 to-(--brand-navy)/85" />
           {/* Film grain */}
@@ -480,7 +480,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
                   priority
                   sizes="300px"
                   className={`object-cover ${unavailable ? "grayscale-[0.4]" : ""}`}
-                  onError={() => setCoverImageSrc("/an2.png")}
+                  onError={() => setCoverImageSrc("/an2.webp")}
                 />
               </div>
             </motion.div>
@@ -505,7 +505,7 @@ export default function EventDetailClient({ event }: { event: EventDetail }) {
               priority
               sizes="100vw"
               className={`object-cover object-[center_30%] ${unavailable ? "grayscale-[0.4]" : ""}`}
-              onError={() => setCoverImageSrc("/an2.png")}
+              onError={() => setCoverImageSrc("/an2.webp")}
             />
           </div>
         </motion.div>

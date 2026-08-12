@@ -38,7 +38,7 @@ export default function EventOrganizer() {
 
             <div className="relative w-full mb-8 lg:hidden h-72">
               <Image
-                src="/event.jpeg"
+                src="/event.webp"
                 alt="Event Organizer Illustration"
                 fill
                 sizes="100vw"
@@ -76,7 +76,7 @@ export default function EventOrganizer() {
           >
             <div className="relative w-full h-96 lg:h-[34rem] overflow-hidden rounded-3xl shadow-[0_30px_60px_-20px_rgba(12,29,55,0.25)]">
               <Image
-                src="/event.jpeg"
+                src="/event.webp"
                 alt="Event Organizer Illustration"
                 fill
                 sizes="50vw"

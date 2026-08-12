@@ -34,7 +34,7 @@ export function TalentInformationForm() {
       {/* Background image */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <Image
-          src="/talent-hero.png"
+          src="/talent-hero.webp"
           alt=""
           fill
           priority
@@ -42,7 +42,7 @@ export function TalentInformationForm() {
           className="hidden object-cover object-bottom md:block"
         />
         <Image
-          src="/talents-hero-mobile.png"
+          src="/talents-hero-mobile.webp"
           alt=""
           fill
           priority

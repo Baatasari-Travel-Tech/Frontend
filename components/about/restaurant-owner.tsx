@@ -35,7 +35,7 @@ export default function RestaurantOwner() {
 
             <div className="relative w-full mb-8 lg:hidden h-72">
               <Image
-                src="/restar.jpeg"
+                src="/restar.webp"
                 alt="Restaurant Owner Illustration"
                 fill
                 sizes="100vw"
@@ -74,7 +74,7 @@ export default function RestaurantOwner() {
           >
             <div className="relative w-full h-96 lg:h-[34rem] overflow-hidden rounded-3xl shadow-[0_30px_60px_-20px_rgba(12,29,55,0.25)]">
               <Image
-                src="/restar.jpeg"
+                src="/restar.webp"
                 alt="Restaurant Owner Illustration"
                 fill
                 sizes="50vw"

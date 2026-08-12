@@ -43,7 +43,7 @@ export default function RecruitmentFillClient({
     <main className="min-h-screen bg-background">
       <section className="relative isolate flex h-56 w-full items-end overflow-hidden sm:h-72">
         <div className="pointer-events-none absolute inset-0 -z-10">
-          <Image src="/talent-hero.png" alt="" fill priority sizes="100vw" className="object-cover object-center" />
+          <Image src="/talent-hero.webp" alt="" fill priority sizes="100vw" className="object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/10 to-background" />
         </div>
         <h1 className="mx-auto w-full max-w-lg px-4 pb-6 text-center font-bricolage text-2xl font-bold text-brand-900 sm:text-3xl">

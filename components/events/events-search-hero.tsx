@@ -154,7 +154,7 @@ export function EventsSearchHero({ cities = [] }: EventsSearchHeroProps) {
 
         {/* Background image — desktop/landscape */}
         <Image
-          src="/events-hero.png"
+          src="/events-hero.webp"
           alt=""
           fill
           priority
@@ -164,7 +164,7 @@ export function EventsSearchHero({ cities = [] }: EventsSearchHeroProps) {
 
         {/* Background image — mobile/portrait */}
         <Image
-          src="/events-hero-mobile.jpeg"
+          src="/events-hero-mobile.webp"
           alt=""
           fill
           priority
