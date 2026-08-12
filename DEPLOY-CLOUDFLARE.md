@@ -268,7 +268,7 @@ signal, not a quirk.
 **The SEO work** — easiest in the browser devtools Network tab, clicking the
 first request and reading the response headers
 
-- [ ] `/robots.txt` loads and mentions `www.baatasari.com`
+- [ ] `/robots.txt` loads and names `baatasari.com` (no www)
 - [ ] `/sitemap.xml` loads and lists your events
 - [ ] `/login` sends a header `X-Robots-Tag: noindex, nofollow`
 - [ ] The homepage sends **no** `X-Robots-Tag`
@@ -286,7 +286,7 @@ first request and reading the response headers
 
 Only when step 6 is clean.
 
-In your Worker's settings, add the custom domain `www.baatasari.com`. Cloudflare
+In your Worker's settings, add the custom domain `baatasari.com`. Cloudflare
 already runs your DNS, so it wires the record itself.
 
 Do **not** do this during a maintenance window, and give it a day or two after
