@@ -35,7 +35,7 @@ const IST = "Asia/Kolkata"
 
 const formatBackAt = (at: Date) => ({
   day: at.toLocaleString("en-IN", { dateStyle: "medium", timeZone: IST }),
-  time: `${at.toLocaleString("en-IN", { timeStyle: "short", timeZone: IST })} IST`,
+  time: `${at.toLocaleString("en-IN", { timeStyle: "short", timeZone: IST })}`,
 })
 
 const DEFAULT_MESSAGE =
