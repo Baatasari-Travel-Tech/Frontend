@@ -32,6 +32,12 @@
   //   NEXT_INC_CACHE_S3_SECRET_ACCESS_KEY
   //
   // Set those in the dashboard, or with `wrangler secret put <name>`.
+  //
+  // They must be SECRETS, not plain-text variables. `wrangler deploy` defaults
+  // to keep_vars=false: it deletes every var and re-sets only what this block
+  // lists. A key added as a plain variable therefore survives until the next
+  // push to main and then vanishes, taking the cache with it. Secrets are
+  // never touched by a deployment.
   "vars": {
     "NEXT_INC_CACHE_S3_BUCKET": "baatasari-frontend-cache",
     "NEXT_INC_CACHE_S3_REGION": "ap-south-2",

@@ -218,9 +218,16 @@ build and deploy commands.
 
 Leave `NEXT_PUBLIC_AUTH_DEBUG` unset.
 
-Then add the two AWS keys from step 1b as **secrets**, not build variables —
-secrets are encrypted and not readable back once saved, which is what you want
-for credentials:
+Then add the two AWS keys from step 1b as **secrets**, not build variables and
+not plain-text variables. Two reasons, and the second is the one that bites:
+
+1. Secrets are encrypted and not readable back once saved.
+2. **Plain-text vars do not survive a deploy.** `wrangler deploy` runs with
+   `keep_vars` defaulting to false, which *deletes every var* and then sets
+   only what `wrangler.jsonc` lists — and the keys are deliberately not in that
+   file. Workers Builds runs a deploy on every push to `main`, so an access key
+   added as a plain variable disappears at the next unrelated commit and the
+   cache silently stops working. Secrets are never deleted by a deployment.
 
 | Secret | Value |
 |---|---|
