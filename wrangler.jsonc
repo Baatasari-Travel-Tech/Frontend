@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "baatasari-frontend",
+  "main": ".open-next/worker.js",
+
+  // Pin this. The Workers runtime is versioned by date, and leaving it floating
+  // means a deploy months from now can behave differently to one today.
+  "compatibility_date": "2026-08-12",
+
+  // Required by the adapter: Next's server code uses Node APIs (Buffer, streams,
+  // async_hooks) that the bare Workers runtime does not provide.
+  "compatibility_flags": ["nodejs_compat"],
+
+  // public/ plus the build output. `assets` serves these directly from
+  // Cloudflare's edge without waking the Worker, which is what keeps static
+  // files cheap and fast.
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "observability": {
+    "enabled": true
+  },
+
+  // Backs the incremental cache in open-next.config.ts. Create it once with:
+  //   pnpm exec wrangler r2 bucket create baatasari-frontend-cache
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "baatasari-frontend-cache"
+    }
+  ]
+}
