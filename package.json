@@ -15,7 +15,8 @@
     "assets": "node scripts/build-assets.mjs",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare preview",
-    "cf:deploy": "opennextjs-cloudflare deploy"
+    "cf:deploy": "opennextjs-cloudflare deploy",
+    "cache:check": "node scripts/check-s3-cache.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
