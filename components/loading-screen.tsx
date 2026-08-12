@@ -5,13 +5,20 @@ import type { FC } from "react";
 export const LoadingScreen: FC = () => {
   return (
     <div
-      className="fixed inset-0 z-50 flex min-h-screen flex-col items-center justify-center bg-brand-900/5 backdrop-blur-[6px] font-sans"
+      // Was `bg-brand-900/5 backdrop-blur-[6px]`. A full-screen backdrop-blur
+      // re-filters everything behind it on every frame, and since the page now
+      // server-renders there is a whole painted page back there to filter —
+      // while the loader's own spinners animate on top. Opaque costs nothing,
+      // and it no longer shows a half-legible page through the overlay.
+      className="fixed inset-0 z-50 flex min-h-screen flex-col items-center justify-center bg-background font-sans"
       role="status"
       aria-live="polite"
       aria-busy="true"
       aria-label="Loading Baatasari experience"
     >
-      <div className="relative w-[min(92vw,420px)] rounded-[28px] border border-white/60 bg-white/50 px-10 py-12 text-center shadow-[0_30px_90px_rgba(12,29,55,0.18)] backdrop-blur-2xl">
+      {/* backdrop-blur-2xl dropped too — with an opaque backdrop there is
+          nothing behind the card left to blur, so it was pure cost. */}
+      <div className="relative w-[min(92vw,420px)] rounded-[28px] border border-white/60 bg-white/70 px-10 py-12 text-center shadow-[0_30px_90px_rgba(12,29,55,0.18)]">
         <div className="absolute inset-0 -z-10 rounded-[28px] bg-linear-to-br from-white/80 via-white/40 to-white/10" />
 
         <div className="relative mx-auto w-fit">

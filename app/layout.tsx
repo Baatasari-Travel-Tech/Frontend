@@ -51,8 +51,11 @@ export const metadata = {
     template: '%s · Baatasari',
   },
   description: 'Book the best events, dining, and activities near you.',
+  // Derived from nlogo.png rather than pointing at it: the source is 870x870
+  // and 164 KiB, and icons are fetched raw — the optimizer never sees them.
   icons: {
-    icon: '/logo.png',
+    icon: '/icon-32.png',
+    apple: '/apple-touch-icon.png',
   },
   openGraph: {
     siteName: SITE_NAME,

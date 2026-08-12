@@ -114,7 +114,7 @@ export const organizationJsonLd = () => ({
   "@type": "Organization",
   name: SITE_NAME,
   url: SITE_ORIGIN,
-  logo: `${SITE_ORIGIN}/logo.png`,
+  logo: `${SITE_ORIGIN}/nlogo.png`,
   description: "Book the best events, dining, and activities near you.",
   areaServed: { "@type": "Country", name: "India" },
 })

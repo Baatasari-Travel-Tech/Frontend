@@ -30,6 +30,15 @@ const HEROES = [
   { from: "hero-bg-mobile.png", to: "hero-bg-mobile.webp", width: 900 },
 ]
 
+// The brand mark is an 870x870 source. A favicon is drawn at 16-32px and an
+// Apple touch icon at 180 — pointing either straight at the source would ship
+// a six-figure byte count to render a few dozen pixels, and neither is served
+// through the image optimizer.
+const ICONS = [
+  { from: "nlogo.png", to: "icon-32.png", size: 32 },
+  { from: "nlogo.png", to: "apple-touch-icon.png", size: 180 },
+]
+
 const kib = async (file) => Math.round((await stat(path.join(PUBLIC, file))).size / 1024)
 
 const run = async () => {
@@ -49,6 +58,14 @@ const run = async () => {
       .webp({ quality: 78 })
       .toFile(path.join(PUBLIC, to))
     console.log(`hero  ${from} (${await kib(from)} KiB) -> ${to} (${await kib(to)} KiB)`)
+  }
+
+  for (const { from, to, size } of ICONS) {
+    await sharp(path.join(PUBLIC, from))
+      .resize(size, size, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png({ compressionLevel: 9 })
+      .toFile(path.join(PUBLIC, to))
+    console.log(`icon  ${from} (${await kib(from)} KiB) -> ${to} (${await kib(to)} KiB)`)
   }
 }
 

@@ -374,10 +374,12 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // A floor, so a warm cache doesn't strobe the loader for two frames.
-    const min = setTimeout(() => setMinShownElapsed(true), 320)
+    const min = setTimeout(() => setMinShownElapsed(true), 260)
     // ...and a ceiling. If the auth call hangs or the API is down, `isLoading`
     // may never clear, and nobody should be held behind a spinner forever.
-    const max = setTimeout(() => setBootTimedOut(true), 2500)
+    // Kept short: this is the landing page, and a visitor who has not signed in
+    // loses nothing by seeing it before the session call comes back.
+    const max = setTimeout(() => setBootTimedOut(true), 1200)
     return () => { clearTimeout(min); clearTimeout(max) }
   }, [])
 
@@ -389,9 +391,9 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready) return
-    // Matches the 500ms opacity transition on the overlay below — unmounting
+    // Matches the 300ms opacity transition on the overlay below — unmounting
     // any earlier would cut the fade off mid-way.
-    const t = setTimeout(() => setHideLoader(true), 500)
+    const t = setTimeout(() => setHideLoader(true), 300)
     return () => clearTimeout(t)
   }, [ready])
 
@@ -488,7 +490,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
     <div className="min-h-dvh bg-background text-slate-900">
       {!hideLoader && (
         <div
-          className={`fixed inset-0 z-60 transition-opacity duration-500 ${
+          className={`fixed inset-0 z-60 transition-opacity duration-300 ${
             booting ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
           aria-hidden
@@ -501,7 +503,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
         <div className="flex w-full items-center justify-between gap-8 py-4 px-2 md:px-6 lg:px-8">
           <Link href={homeHref} className="flex items-center gap-2">
             <Image
-              src="/logo.png"
+              src="/nlogo.png"
               alt="Baatasari"
               width={32}
               height={32}
