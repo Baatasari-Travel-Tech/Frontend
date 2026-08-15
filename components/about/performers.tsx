@@ -152,6 +152,7 @@ export default function Performers() {
         <div className="mt-6 flex justify-center gap-4 md:absolute md:right-6 md:bottom-24 md:mt-0">
           <Button
             variant="outline"
+            aria-label="Previous performer"
             onClick={() => navigate("left")}
             className="w-12 h-12 rounded-full flex items-center justify-center transition border p-0 bg-(--white) text-(--gray-600) border-(--gray-300) hover:bg-(--gray-100)"
           >
@@ -160,6 +161,7 @@ export default function Performers() {
 
           <Button
             variant="outline"
+            aria-label="Next performer"
             onClick={() => navigate("right")}
             className="w-12 h-12 rounded-full flex items-center justify-center transition border p-0 bg-(--white) text-(--gray-600) border-(--gray-300) hover:bg-(--gray-100)"
           >

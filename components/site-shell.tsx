@@ -548,7 +548,11 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
           <Link href={homeHref} className="flex items-center gap-2">
             <Image
               src="/brand-96.webp"
-              alt="Baatasari"
+              // Empty on purpose. The wordmark sits immediately to the right,
+              // so alt="Baatasari" made a screen reader announce the brand
+              // twice for one link. Decorative here — the adjacent <span>
+              // already names the destination.
+              alt=""
               width={28}
               height={28}
               // Sized in CSS, not left to the file's intrinsic dimensions.

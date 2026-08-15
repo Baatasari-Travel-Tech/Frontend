@@ -66,12 +66,22 @@ const nextConfig: NextConfig = {
     // and event covers already arrive as 1000x1500 WebP because the backend
     // resizes them on upload (organizer.service.ts).
     //
-    // What is genuinely lost is per-device widths — a phone gets the same file
-    // as a laptop. The fix for that is a second, smaller variant written at
-    // upload time, which belongs in the backend next to the resize that is
-    // already there, not in a host-specific optimizer.
-    unoptimized: true,
-    formats: ["image/avif", "image/webp"],
+    // This used to set `unoptimized: true`, which does more than skip the
+    // optimizer — it stops Next emitting a `srcset` entirely. Every `sizes`
+    // prop in the codebase was inert, so a phone downloaded the 1200px file to
+    // paint it at ~460 CSS px. Lighthouse measured 533 KiB of waste on the
+    // homepage alone.
+    //
+    // The loader instead maps a requested width onto a pre-encoded file that
+    // scripts/build-assets.mjs already wrote and committed. Still no runtime
+    // image processing, still no host lock-in, but responsive again.
+    loader: "custom",
+    loaderFile: "./lib/image-loader.ts",
+    // Next only ever asks the loader for widths drawn from these two lists.
+    // Their union MUST equal VARIANT_WIDTHS in scripts/build-assets.mjs, or the
+    // loader rewrites to a file that was never generated.
+    imageSizes: [384],
+    deviceSizes: [640, 828, 1200],
     remotePatterns: [
       { protocol: "https", hostname: "*.amazonaws.com" },
       { protocol: "https", hostname: "res.cloudinary.com" },

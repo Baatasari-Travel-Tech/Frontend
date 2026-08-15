@@ -27,5 +27,36 @@ export const metadata: Metadata = {
 }
 
 export default function Page() {
-  return <HomeClient />
+  return (
+    <>
+      {/*
+        The LCP element on this page is the hero background in
+        components/about/hero.tsx. It already carries fetchPriority="high", but
+        that only raises the priority of a request once the browser has FOUND
+        it — and it was not being found until 730 ms in, because discovery sat
+        behind ~780 ms of render-blocking CSS. Measured LCP was 4.4 s, of which
+        730 ms was pure load *delay*.
+
+        These two hints are in the document head, ahead of the stylesheets, so
+        the fetch starts immediately. The `media` attributes mirror the
+        <picture> breakpoint exactly — get them out of step and a phone
+        preloads the desktop crop, downloading both.
+      */}
+      <link
+        rel="preload"
+        as="image"
+        href="/hero-bg-mobile.webp"
+        media="(max-width: 767px)"
+        fetchPriority="high"
+      />
+      <link
+        rel="preload"
+        as="image"
+        href="/hero-bg.webp"
+        media="(min-width: 768px)"
+        fetchPriority="high"
+      />
+      <HomeClient />
+    </>
+  )
 }
