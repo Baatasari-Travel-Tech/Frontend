@@ -313,7 +313,7 @@ export type EventFunnel = {
 
 export type OrderBreakdown = {
   subtotal: number;
-  taxAmount: number;
+  gatewayFee: number;
   platformFee: number;
   totalAmount: number;
   currency: string;

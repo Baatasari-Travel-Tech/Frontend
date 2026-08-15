@@ -67,7 +67,7 @@ type CreateOrderResponse = {
   eventId: string
   breakdown: {
     subtotal: number
-    taxAmount: number
+    gatewayFee: number
     platformFee: number
     totalAmount: number
     currency: string
