@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import QRCode from "qrcode"
+import { qrDataUrl } from "@/lib/qrcode"
 import { Check, Copy, KeyRound, LogOut, Mail, Shield, ShieldCheck, Smartphone } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import { apiRequest } from "@/lib/api/client"
@@ -106,7 +106,7 @@ export function SecuritySection() {
       )
       setTotpSecret(res.data.secret)
       if (res.data.otpauthUrl) {
-        const url = await QRCode.toDataURL(res.data.otpauthUrl, { width: 200, margin: 2 }).catch(
+        const url = await qrDataUrl(res.data.otpauthUrl, { width: 200, margin: 2 }).catch(
           () => null,
         )
         setTotpQrSrc(url)

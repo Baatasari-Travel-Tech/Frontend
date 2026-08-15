@@ -17,7 +17,9 @@ import {
   User,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
-import QRCode from "qrcode"
+// Aliased: this component already has a `qrDataUrl` piece of state holding
+// the rendered image, and an unaliased import silently shadowed it.
+import { qrDataUrl as renderQrDataUrl } from "@/lib/qrcode"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Button } from "@/components/ui/button"
 import { apiRequest } from "@/lib/api/client"
@@ -204,7 +206,7 @@ function OrderConfirmedContent() {
     if (withQr.length === 0) return
     void Promise.all(
       withQr.map(async (t) => {
-        const url = await QRCode.toDataURL(t.qrPayload as string, { width: 180, margin: 2 }).catch(
+        const url = await renderQrDataUrl(t.qrPayload as string, { width: 180, margin: 2 }).catch(
           () => null,
         )
         return [t.ticketId, url] as const
@@ -274,7 +276,7 @@ function OrderConfirmedContent() {
           qr:
             qrMap[pass.ticketId] ??
             (pass.qrPayload
-              ? await QRCode.toDataURL(pass.qrPayload, { width: 180, margin: 2 }).catch(() => null)
+              ? await renderQrDataUrl(pass.qrPayload, { width: 180, margin: 2 }).catch(() => null)
               : null),
         })),
       )

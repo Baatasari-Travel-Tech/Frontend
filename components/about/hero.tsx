@@ -81,8 +81,19 @@ export default function Hero() {
               cancel a fetch, and `priority` preloaded each of them. A <source>
               cannot point at /_next/image, so these are pre-encoded WebP
               (see scripts/build-assets.mjs). */}
+          {/* AVIF first, WebP second, <img> last. Order is the selection
+              order — the browser takes the first <source> it both matches and
+              can decode, so the type-annotated AVIF entries must precede their
+              WebP twins or they are never reached.
+
+              Everything in package.json#browserslist decodes AVIF, so in
+              practice the WebP lines are the fallback for browsers we do not
+              target rather than the common path. The mobile hero is the LCP
+              element: 122 KiB as WebP, 70 KiB as AVIF. */}
           <picture>
+            <source media="(min-width: 768px)" type="image/avif" srcSet="/hero-bg.avif" />
             <source media="(min-width: 768px)" srcSet="/hero-bg.webp" />
+            <source type="image/avif" srcSet="/hero-bg-mobile.avif" />
             <img
               src="/hero-bg-mobile.webp"
               alt=""

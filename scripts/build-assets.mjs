@@ -159,6 +159,22 @@ const run = async () => {
       .webp({ quality: 78 })
       .toFile(path.join(PUBLIC, to))
     console.log(`hero  ${from} (${await kib(from)} KiB) -> ${to} (${await kib(to)} KiB)`)
+
+    // AVIF alongside, because the mobile hero is the LCP element and 122 KB of
+    // it was most of what remained of LCP once the preload fixed discovery.
+    //
+    // Every browser in package.json#browserslist (Chrome/Edge/Firefox 111+,
+    // Safari 16.4+) decodes AVIF, so the WebP above is a fallback rather than
+    // the main path. quality 48 rather than the WebP's 78: this image sits
+    // under a gradient overlay with text on it, so it takes far more
+    // compression than a photograph shown on its own would. Measured
+    // 119 KiB -> 70 KiB at the same 900px width — no resolution given up.
+    const avif = to.replace(/\.webp$/, ".avif")
+    await sharp(path.join(PUBLIC, from))
+      .resize({ width, withoutEnlargement: true })
+      .avif({ quality: 48, effort: 6 })
+      .toFile(path.join(PUBLIC, avif))
+    console.log(`  └─  ${avif} (${await kib(avif)} KiB)`)
   }
 
   for (const { from, to, size } of ICONS) {

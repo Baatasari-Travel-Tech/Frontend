@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import QRCode from "qrcode"
+import { qrToCanvas, qrToString } from "@/lib/qrcode"
 import { Share2, Copy, Check, X, Loader2 } from "lucide-react"
 import { useHydrated } from "@/hooks/use-hydrated"
 
@@ -71,7 +71,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
 
     // Render at higher internal resolution (shown at 232px via CSS) so the
     // centre logo stays sharp instead of looking pixelated/blurry.
-    QRCode.toCanvas(canvas, link, {
+    qrToCanvas(canvas, link, {
       width: 464,
       margin: 1,
       errorCorrectionLevel: "H",
@@ -153,7 +153,7 @@ export function ShareEventButton({ eventId, slug, title, className, iconOnly = f
   // SVG: a crisp vector QR with the logo embedded as a centred <image>.
   const downloadSvg = async () => {
     try {
-      const svg = await QRCode.toString(link, {
+      const svg = await qrToString(link, {
         type: "svg",
         errorCorrectionLevel: "H",
         margin: 1,

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { ArrowLeft, Download, Share2 } from "lucide-react"
-import QRCode from "qrcode"
+import { qrDataUrl } from "@/lib/qrcode"
 import { useQuery } from "@tanstack/react-query"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { apiRequest } from "@/lib/api/client"
@@ -69,7 +69,7 @@ export default function TicketDetailPage() {
     if (withQr.length === 0) return
     void Promise.all(
       withQr.map(async (t) => {
-        const url = await QRCode.toDataURL(t.qrPayload as string, { width: 200, margin: 2 }).catch(
+        const url = await qrDataUrl(t.qrPayload as string, { width: 200, margin: 2 }).catch(
           () => null,
         )
         return [t.ticketId, url] as const
@@ -113,7 +113,7 @@ export default function TicketDetailPage() {
           qr:
             qrMap[pass.ticketId] ??
             (pass.qrPayload
-              ? await QRCode.toDataURL(pass.qrPayload, { width: 180, margin: 2 }).catch(() => null)
+              ? await qrDataUrl(pass.qrPayload, { width: 180, margin: 2 }).catch(() => null)
               : null),
         })),
       )
