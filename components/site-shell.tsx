@@ -25,7 +25,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import LoadingScreen from '@/components/loading-screen'
 import { DEFAULT_AVATAR_IMAGE } from '@/lib/avatar'
 import {
   type AppRole, ROLE_LABELS,
@@ -389,9 +388,7 @@ function MaintenanceSessionGuard() {
   return null
 }
 
-function SiteShellContent({ children }: { children: React.ReactNode }) {
-  const [hideLoader, setHideLoader] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+function SiteShellContent({ children }: { children: React.ReactNode }) {  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { session, activeRole, userRoles, organizerVerificationStatus, profile, logout, isLoading } = useAuth()
   const [logoutKey, setLogoutKey] = useState(0)
   const router = useRouter()
@@ -405,42 +402,22 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   const maintenance = useMaintenance()
   const isOrderConfirmed = pathname?.startsWith('/order-confirmed') ?? false
 
-  // ── Boot loader timing ────────────────────────────────────────────────
-  // Was two fixed timers, 550ms and 1150ms. That made sense when the loader
-  // was covering a genuinely blank page; now that every route prerenders, a
-  // fixed timer holds finished content back for over a second.
+  // ── The boot loader is gone, on purpose ───────────────────────────────
+  // There used to be a full-screen overlay here, held for a 260ms floor and up
+  // to a 1200ms ceiling while the auth bootstrap ran.
   //
-  // Instead it lifts when the page is actually ready — the only thing worth
-  // waiting for is the auth bootstrap, since that decides whether the header
-  // shows "Get started" or the user's avatar.
-  const [minShownElapsed, setMinShownElapsed] = useState(false)
-  const [bootTimedOut, setBootTimedOut] = useState(false)
-
-  useEffect(() => {
-    // A floor, so a warm cache doesn't strobe the loader for two frames.
-    const min = setTimeout(() => setMinShownElapsed(true), 260)
-    // ...and a ceiling. If the auth call hangs or the API is down, `isLoading`
-    // may never clear, and nobody should be held behind a spinner forever.
-    // Kept short: this is the landing page, and a visitor who has not signed in
-    // loses nothing by seeing it before the session call comes back.
-    const max = setTimeout(() => setBootTimedOut(true), 1200)
-    return () => { clearTimeout(min); clearTimeout(max) }
-  }, [])
-
-  const ready = bootTimedOut || (minShownElapsed && !isLoading)
-  // Derived, not stored — "we are still booting" is exactly "not ready yet",
-  // and keeping it as state would mean an effect writing a value already
-  // implied by one it depends on.
-  const booting = !ready
-
-  useEffect(() => {
-    if (!ready) return
-    // Matches the 300ms opacity transition on the overlay below — unmounting
-    // any earlier would cut the fade off mid-way.
-    const t = setTimeout(() => setHideLoader(true), 300)
-    return () => clearTimeout(t)
-  }, [ready])
-
+  // It was covering a page that was already finished. Every route prerenders,
+  // so the HTML arrives complete — and because the overlay's own state started
+  // as "showing", it went out in the server-rendered markup too. The first
+  // thing every visitor painted was a spinner on top of a hero that was
+  // already there, followed by a 300ms fade. Lighthouse measured Speed Index
+  // at 4.4s against an LCP of 4.4s: the page was not slow to build, it was
+  // deliberately hidden.
+  //
+  // The one real problem it solved was the header flashing "Get started" at
+  // someone who turns out to be signed in. That is a corner of one row, and it
+  // is now handled where it happens — see the placeholder in the header below.
+  // Covering the whole viewport to avoid it was the wrong size of fix.
   // Collapse the mobile menu whenever we navigate or the signed-in identity
   // changes. Adjusting during render keeps the menu from being visible for a
   // frame on the new page, which an effect would allow.
@@ -527,22 +504,11 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    // `!booting` rather than `hideLoader`: the handoff should begin as the
-    // overlay starts fading, so the loader going out and the hero settling in
-    // are the same motion instead of two consecutive ones.
-    <ShellReadyContext.Provider value={!booting}>
+    // Always true now that nothing covers the page. The context used to mean
+    // "the overlay has begun lifting, you may start animating"; with no
+    // overlay there is nothing to wait behind, so the hero settles on mount.
+    <ShellReadyContext.Provider value={true}>
     <div className="min-h-dvh bg-background text-slate-900">
-      {!hideLoader && (
-        <div
-          className={`fixed inset-0 z-60 transition-opacity duration-300 ${
-            booting ? 'opacity-100' : 'pointer-events-none opacity-0'
-          }`}
-          aria-hidden
-        >
-          <LoadingScreen />
-        </div>
-      )}
-
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-nav text-slate-900 backdrop-blur-lg">
         <div className="flex w-full items-center justify-between gap-8 py-4 px-2 md:px-6 lg:px-8">
           <Link href={homeHref} className="flex items-center gap-2">
@@ -586,7 +552,23 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {
             </nav>
           )}
           <div className="flex items-center gap-2 md:gap-3" key={logoutKey}>
-            {session?.user ? (
+            {/* Until the session call comes back we genuinely do not know
+                whether this is a signed-in visitor, and guessing wrong means
+                showing "Get started" to someone who is already signed in and
+                then swapping it for their avatar.
+
+                This used to be hidden behind a full-screen boot loader. That
+                covered the entire prerendered page to avoid a flash in one
+                corner of the header. A fixed-size placeholder here does the
+                same job at the size of the thing that is actually unknown.
+
+                The width matches the Login + Get started pair so nothing moves
+                when the real controls arrive — CLS is 0 and must stay 0.
+                `bootstrapping` starts true in the store, so the server and the
+                first client render agree and hydration stays quiet. */}
+            {isLoading ? (
+              <div className="h-10 w-[132px] animate-pulse rounded-full bg-slate-100 md:w-[196px]" />
+            ) : session?.user ? (
               isOrganizerActive ? (
                 <>
                   {isOrganizerApproved ? (
