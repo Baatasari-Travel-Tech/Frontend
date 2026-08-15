@@ -55,21 +55,6 @@ const nextConfig: NextConfig = {
       "date-fns",
       "embla-carousel-react",
     ],
-    // Ship the CSS inside the HTML instead of as a separate <link>.
-    //
-    // Lighthouse measured two render-blocking stylesheets, 30.7 KiB together,
-    // costing ~450 ms before anything could paint — and they sat on the
-    // critical path ahead of the hero, which is the LCP element. A stylesheet
-    // is a whole extra round trip on a mobile connection before the first
-    // pixel, and this one is small enough that carrying it in the document is
-    // the cheaper trade.
-    //
-    // What it costs: the CSS is no longer a separately cacheable file, so a
-    // repeat visitor re-downloads it with each HTML response. That is the
-    // right way round for this site — the pages are ISR-cached at the edge and
-    // most visits are first visits, which is exactly what the mobile score
-    // measures. Revisit if that stops being true.
-    inlineCss: true,
   },
   images: {
     // No host-side optimizer.
