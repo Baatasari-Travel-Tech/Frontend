@@ -114,14 +114,26 @@ export default function Features() {
                   }
                   `}
               >
-                {/* Image — framed with a border inset from the card edge */}
+                {/* Image — framed with a border inset from the card edge.
+
+                    Deliberately NOT `priority`. It used to be
+                    `priority={isActive}`, and Next turns that into a real
+                    <link rel="preload"> in the document head. This carousel
+                    sits below a hero of min-h-[calc(100dvh-72px)] — a full
+                    viewport — so the card is never in the initial view, and on
+                    a throttled connection its preload was competing with the
+                    hero's for the same pipe. The hero is the LCP element, and
+                    LCP was the only metric still losing real points.
+
+                    Lazy is right for something a full viewport down: it still
+                    loads long before a scrolling visitor arrives. */}
                 <div className="relative mx-4 mt-4 flex-1 overflow-hidden rounded-2xl border border-(--gray-200) bg-(--gray-100)">
                   <Image
                     src={item.image}
                     alt={item.title}
                     fill
                     sizes="360px"
-                    priority={isActive}
+                    loading="lazy"
                     className={`object-cover transition-transform duration-1000 ease-out ${isActive ? "scale-105" : "scale-100"}`}
                     onError={(e) => {
                       e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zNWVtIiBmaWxsPSIjOUI5QkE0IiBmb250LXNpemU9IjE0Ij5Ccm9rZW48L3RleHQ+Cjwvc3ZnPg==';
