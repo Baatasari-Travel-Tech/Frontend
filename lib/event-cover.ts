@@ -32,3 +32,33 @@ export const getEventCoverImageUrl = (eventId: string, version?: string | number
 
   return `${baseUrl}/${objectKey}${versionParam}`
 }
+
+/**
+ * Width of the smaller cover the backend writes alongside the 1000x1500 one.
+ * Must match EVENT_COVER_SMALL_WIDTH in the backend's config/s3.ts — the key
+ * contains the number, so a mismatch is a 404 rather than a wrong size.
+ */
+export const EVENT_COVER_SMALL_WIDTH = 500
+
+export const getEventCoverSmallImageUrl = (eventId: string, version?: string | number | null) => {
+  const objectKey = `events/${encodeURIComponent(eventId)}/cover-${EVENT_COVER_SMALL_WIDTH}.webp`
+  const normalizedVersion = toEpochVersion(version)
+  const versionParam = normalizedVersion !== null ? `?v=${normalizedVersion}` : ""
+
+  return `${baseUrl}/${objectKey}${versionParam}`
+}
+
+/**
+ * A srcset offering both widths, so a phone downloads the 500px file instead of
+ * the 1000px one.
+ *
+ * Covers uploaded before 16 Aug 2026 have only the large file, and a srcset
+ * candidate that 404s is a broken image rather than a silent fallback. Two
+ * things cover that: `pnpm covers:backfill` in the backend generates the
+ * missing variants, and every call site here keeps an onError that drops back
+ * to the full-size URL. The backfill is the fix; the fallback is what makes
+ * shipping this before running it safe.
+ */
+export const getEventCoverSrcSet = (eventId: string, version?: string | number | null) =>
+  `${getEventCoverSmallImageUrl(eventId, version)} ${EVENT_COVER_SMALL_WIDTH}w, ` +
+  `${getEventCoverImageUrl(eventId, version)} 1000w`
