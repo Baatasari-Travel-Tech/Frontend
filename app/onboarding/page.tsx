@@ -63,7 +63,28 @@ export default function OnboardingPage() {
   const previewUrlRef = useRef<string | null>(null)
   const avatarFileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
+  // Seed the form from the loaded profile, DURING RENDER rather than in an
+  // effect.
+  //
+  // An effect runs after paint, so the first frame showed empty inputs and the
+  // second showed the real values — a visible flicker on every open, and the
+  // cascading re-render that react-hooks/set-state-in-effect exists to catch.
+  // Adjusting during render lets React discard the in-progress output and
+  // re-run before anything reaches the screen.
+  //
+  // This is React's documented "adjust state when a prop changes", and the same
+  // shape already used for the avatar in components/site-shell.tsx.
+  //
+  // Re-seeds whenever the profile object identity or the account email changes
+  // — exactly the old dependency array, so anything typed is overwritten in the
+  // same cases it always was, and no others.
+  const [seededFrom, setSeededFrom] = useState<{
+    profile: typeof profile
+    email: string | undefined
+  } | null>(null)
+
+  if (seededFrom?.profile !== profile || seededFrom?.email !== user?.email) {
+    setSeededFrom({ profile, email: user?.email })
     setEmail(user?.email ?? profile?.email ?? "")
     setName(profile?.full_name ?? "")
     setPhone((profile?.phone ?? "").replace(/^\+91/, ""))
@@ -79,7 +100,7 @@ export default function OnboardingPage() {
       setOtherProfession(profileProfession)
     }
     setAvatarPreview(profile?.avatar_url ?? DEFAULT_AVATAR_IMAGE)
-  }, [profile, user?.email])
+  }
 
   useEffect(() => {
     return () => {

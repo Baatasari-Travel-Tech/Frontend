@@ -366,9 +366,27 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
+  // Kick off the session probe once, on mount.
+  //
+  // bootstrap() sets `bootstrapping` as its first act, which trips
+  // react-hooks/set-state-in-effect. That rule exists to catch state derived
+  // from other state in an effect, causing a second render for no reason. This
+  // is the other thing an effect is for: talking to an external system. The
+  // session lives on a server, the answer arrives over the network, and a
+  // loading flag has to be raised before the request goes out.
+  //
+  // The alternatives are worse. Calling it during render makes rendering
+  // impure and fires it twice under StrictMode; moving it to an event has no
+  // event to hang from — the trigger IS "the app started". Rewriting the auth
+  // bootstrap to satisfy a heuristic would put every session at risk for no
+  // correctness gain.
+  //
+  // `setBootstrapping` was in the dependency array and is not used here; the
+  // effect only ever called bootstrap, which closes over it.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void bootstrap()
-  }, [bootstrap, setBootstrapping])
+  }, [bootstrap])
 
   // Cross-tab session sync. When tab A signs out (or hits a refresh
   // failure), the API client broadcasts on the "baatasari-auth" channel.

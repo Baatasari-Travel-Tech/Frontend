@@ -44,6 +44,56 @@ interface EventPageProps {
 
 const SCROLL_OFFSET = 100;
 
+/**
+ * The saved draft, read from localStorage exactly once.
+ *
+ * Called from a useState initialiser rather than an effect so the restored
+ * values are in the FIRST painted frame. Restoring in an effect meant the user
+ * saw an empty form and then watched it fill in, and it is the cascading render
+ * that react-hooks/set-state-in-effect flags.
+ *
+ * Guarded on `window`: this component also renders on the server, where
+ * localStorage does not exist. Every parse is wrapped — a corrupted draft
+ * should start a blank form, never crash the page an organizer needs.
+ */
+function readSavedDraft(action: string | null): {
+  hasDraft: boolean;
+  data: Partial<EventFormData>;
+  sections: Record<string, boolean> | null;
+} {
+  const empty = { hasDraft: false, data: {}, sections: null };
+  if (typeof window === "undefined") return empty;
+
+  let data: Partial<EventFormData> = {};
+  let hasDraft = false;
+  try {
+    const raw = localStorage.getItem("eventFormData");
+    if (raw) {
+      data = JSON.parse(raw) as Partial<EventFormData>;
+      hasDraft = true;
+      // Rescheduling or repeating reuses everything EXCEPT when it happens.
+      // Carrying the old dates over is how you publish an event for a date
+      // that has already passed.
+      if (action === "reschedule" || action === "repeat") {
+        data = { ...data, date: "", endDate: "", time: "", endTime: "" };
+      }
+    }
+  } catch {
+    data = {};
+    hasDraft = false;
+  }
+
+  let sections: Record<string, boolean> | null = null;
+  try {
+    const raw = localStorage.getItem("eventFormOpenSections");
+    if (raw) sections = JSON.parse(raw) as Record<string, boolean>;
+  } catch {
+    sections = null;
+  }
+
+  return { hasDraft, data, sections };
+}
+
 function getScrollContainer(
   target: HTMLElement | null,
   mainContainerRef: React.RefObject<HTMLDivElement | null>,
@@ -129,20 +179,44 @@ const EventPage: React.FC<EventPageProps> = ({
     }
     return 1;
   });
-  const [showCreateEvent, setShowCreateEvent] = useState(startDirectly);
+  // Read the saved draft ONCE, lazily, the same way currentStep above does.
+  //
+  // This used to happen in a mount effect that called setFormData,
+  // setOpenSections and setShowCreateEvent. That painted an empty form first
+  // and the restored draft second — a visible flash of blank fields on every
+  // resume — and it is the cascading render react-hooks/set-state-in-effect
+  // exists to catch. A lazy initialiser runs before the first paint instead.
+  //
+  // Guarded on `window`: this component renders on the server too, where
+  // localStorage does not exist.
+  const savedDraft = useState(() => readSavedDraft(action))[0];
 
-  useEffect(() => {
+  const [showCreateEvent, setShowCreateEvent] = useState(
+    // Auto-resume: a saved draft means skip the "Get Started" screen, which the
+    // mount effect used to do a frame late.
+    startDirectly || savedDraft.hasDraft,
+  );
+
+  // `startDirectly` is a prop and can flip after mount. Adjusted during render
+  // rather than in an effect — React's documented "adjust state when a prop
+  // changes" — so the transition is applied before paint, not after.
+  const [syncedStartDirectly, setSyncedStartDirectly] = useState(startDirectly);
+  if (startDirectly !== syncedStartDirectly) {
+    setSyncedStartDirectly(startDirectly);
     if (startDirectly) setShowCreateEvent(true);
-  }, [startDirectly]);
+  }
 
-  const [formData, setFormData] = useState<EventFormData>(INITIAL_EVENT_FORM_DATA);
+  const [formData, setFormData] = useState<EventFormData>(() => ({
+    ...INITIAL_EVENT_FORM_DATA,
+    ...savedDraft.data,
+  }));
   const [photoPreview, setPhotoPreview] = useState<string | null>(initialCoverPreview);
   const [photoError, setPhotoError] = useState("");
   const [coverCropSource, setCoverCropSource] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  const [openSections, setOpenSections] = useState({
+  const [openSections, setOpenSections] = useState(() => ({
     "event-info": true,
     "date-time": true,
     "event-highlights": true,
@@ -151,7 +225,10 @@ const EventPage: React.FC<EventPageProps> = ({
     audience: true,
     guidelines: true,
     addOns: true,
-  });
+    // Spread last so a saved layout wins, and anything the saved copy predates
+    // still gets its default rather than coming back undefined.
+    ...savedDraft.sections,
+  }));
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   const toggleSection = (section: string) => {
@@ -169,37 +246,26 @@ const EventPage: React.FC<EventPageProps> = ({
   const formRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load saved state
-  useEffect(() => {
-    const savedData = localStorage.getItem("eventFormData");
-    const savedSections = localStorage.getItem("eventFormOpenSections");
+  // The draft used to be restored here, in a mount effect. It is now read once
+  // by readSavedDraft() and fed into the useState initialisers above, so the
+  // first painted frame already has it.
 
-    if (savedData) {
-      try {
-        const parsedData = JSON.parse(savedData);
-        if (action === "reschedule" || action === "repeat") {
-          parsedData.date = "";
-          parsedData.endDate = "";
-          parsedData.time = "";
-          parsedData.endTime = "";
-        }
-        setFormData((prev) => ({ ...prev, ...parsedData }));
+  // Fill empty contact fields from the organizer's profile when the prefill
+  // arrives. Adjusted during render on a change of the prop, rather than in an
+  // effect — same trigger as the old `[contactInfoPrefill]` dependency, but
+  // applied before paint instead of after, so the fields never visibly fill
+  // themselves in a frame later.
+  //
+  // The updater below still only writes when something actually changes and
+  // never overwrites a field the organizer has typed into, which is what makes
+  // running it during render safe: it is idempotent.
+  const [syncedContactPrefill, setSyncedContactPrefill] = useState(contactInfoPrefill);
+  if (contactInfoPrefill !== syncedContactPrefill) {
+    setSyncedContactPrefill(contactInfoPrefill);
+    if (contactInfoPrefill) applyContactPrefill();
+  }
 
-        // Auto-resume: if we have draft data, skip the "Get Started" screen
-        if (!startDirectly) {
-          setShowCreateEvent(true);
-        }
-      } catch { }
-    }
-
-    if (savedSections) {
-      try {
-        setOpenSections(JSON.parse(savedSections));
-      } catch { }
-    }
-  }, [action, startDirectly]);
-
-  useEffect(() => {
+  function applyContactPrefill() {
     if (!contactInfoPrefill) return;
 
     setFormData((prev) => {
@@ -233,7 +299,7 @@ const EventPage: React.FC<EventPageProps> = ({
         contactInfo: next,
       };
     });
-  }, [contactInfoPrefill]);
+  }
 
   // Persist form data (debounced)
   useEffect(() => {

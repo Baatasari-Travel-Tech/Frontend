@@ -737,7 +737,15 @@ export default function OrganizerProfilePage() {
     setError(null)
   }
 
-  const onSubmit = form.handleSubmit(async (submitted) => {
+  // form.handleSubmit(...) is invoked HERE, during render, and the callbacks it
+  // is handed read refs. react-hooks/refs rejects that: from the compiler's
+  // point of view a function receiving a ref might read it during render, and
+  // a ref read during render is a value React cannot track.
+  //
+  // The callbacks genuinely only run on submit, so the fix is to stop building
+  // the handler during render. onSubmit now calls handleSubmit at EVENT time,
+  // which is when it was always meant to run.
+  const submitValid = async (submitted: Values) => {
     setError(null)
     saveSucceededRef.current = false
     try {
@@ -820,16 +828,22 @@ export default function OrganizerProfilePage() {
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Profile update failed.")
     }
-  },
+  }
+
   // Validation failed. On mobile only one step is on screen, so an error on
   // another step would render on a hidden card and the save would look like it
   // silently did nothing. Jump to the first step that actually has an error.
-  (fieldErrors) => {
+  const submitInvalid = (fieldErrors: Record<string, unknown>) => {
     const firstBadStep = CHAPTERS.find((chapter) => chapter.fields.some((field) => field in fieldErrors))
     if (!firstBadStep) return
     setActiveId(firstBadStep.id)
     contentRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" })
-  })
+  }
+
+  // Built per event, not per render. Nothing here touches a ref until the user
+  // actually submits.
+  const onSubmit = (event?: React.BaseSyntheticEvent) =>
+    form.handleSubmit(submitValid, submitInvalid)(event)
 
   /**
    * Mobile step change. Scrolls to the top of the content column, NOT the top of

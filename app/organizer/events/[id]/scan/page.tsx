@@ -99,7 +99,15 @@ function ScannerContent() {
     }
   }, [eventId])
 
+  // Load the check-in counters when the scanner opens.
+  //
+  // refreshStats() sets state after an await, which trips
+  // react-hooks/set-state-in-effect. The rule is aimed at state derived from
+  // other state during an effect; this is a network read of something that
+  // lives on the server, which is exactly what an effect is for. There is no
+  // event to hang it from — the trigger is "the scanner is now on screen".
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refreshStats()
   }, [refreshStats])
 

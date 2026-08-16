@@ -93,7 +93,18 @@ export default function OrganizerDocumentUploadPage() {
     const orgName = organizerProfile?.orgName?.trim()
     if (orgName) return orgName
     return user?.email ?? "Organizer"
-  }, [organizerProfile?.orgName, profile?.full_name, user?.email])
+    // Whole objects as dependencies, not optional-chained members.
+    //
+    // With `[organizerProfile?.orgName, profile?.full_name, user?.email]` the
+    // React Compiler reported "existing memoization could not be preserved" —
+    // it cannot match an optional chain in the dependency list to the same
+    // expression in the body, so it gives up on the whole component rather
+    // than risk changing its behaviour.
+    //
+    // Depending on the objects is marginally broader (a change to any field
+    // recomputes a string), which costs three comparisons and buys back
+    // compilation for everything in this file.
+  }, [organizerProfile, profile, user])
 
   const organizerAddress = useMemo(() => {
     const parts = [
@@ -106,7 +117,9 @@ export default function OrganizerDocumentUploadPage() {
       .filter((part) => part.length > 0)
     if (parts.length === 0) return "Not provided"
     return parts.join(", ")
-  }, [organizerProfile?.address, organizerProfile?.city, organizerProfile?.pincode, organizerProfile?.state])
+    // Same reason as organizerDisplayName above: optional chains in a
+    // dependency list defeat the React Compiler.
+  }, [organizerProfile])
 
   const organizerEntityTypeLabel =
     organizerProfile?.entityType === "INDIVIDUAL" ? "Individual" : "Organization"
@@ -135,11 +148,19 @@ export default function OrganizerDocumentUploadPage() {
     }
   }, [organizerVerificationStatus, router, user])
 
-  useEffect(() => {
-    if (!organizerProfile) return
+  // Seed the two checklist flags from the loaded profile, during render.
+  //
+  // They cannot be plain derived values: the page also sets them locally the
+  // moment an upload or a download finishes, before the profile is refetched.
+  // So they are state that STARTS from a prop — React's documented "adjust
+  // state when a prop changes" — and doing it in an effect meant one frame
+  // showing both steps incomplete before they flipped.
+  const [syncedProfile, setSyncedProfile] = useState(organizerProfile)
+  if (organizerProfile && organizerProfile !== syncedProfile) {
+    setSyncedProfile(organizerProfile)
     setPanUploaded(Boolean(organizerProfile.panDocumentKey))
     setAgreementDownloaded(Boolean(organizerProfile.agreementDownloadedAt))
-  }, [organizerProfile])
+  }
 
   useEffect(() => {
     return () => {
