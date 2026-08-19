@@ -486,13 +486,21 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {  const
   }
 
   const homeHref = resolveHomeHref()
-  const navLinks = session?.user
-    ? []
-    : [
-      { label: 'Home', href: homeHref },
-      { label: 'Events', href: '/events' },
-      { label: 'Talents', href: '/talent' },
-    ]
+  // `external` marks a link that leaves this app. /for-restaurants is a 308 in
+  // next.config.ts pointing at restaurant.baatasari.com, and next/link would
+  // try to resolve it through the client router first — a round trip whose only
+  // possible outcome is a hard navigation anyway, and one more thing to go
+  // wrong on a slow connection. Rendered as a plain <a> so the browser follows
+  // the redirect itself.
+  const navLinks: Array<{ label: string; href: string; external?: boolean }> =
+    session?.user
+      ? []
+      : [
+        { label: 'Home', href: homeHref },
+        { label: 'Events', href: '/events' },
+        { label: 'Talents', href: '/talent' },
+        { label: 'Venues', href: '/for-restaurants', external: true },
+      ]
 
   // Maintenance page stands alone — no site nav/footer chrome.
   if (pathname === '/maintenance') {
@@ -537,14 +545,18 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {  const
             <nav className="hidden flex-1 items-center justify-center gap-8 text-sm font-medium text-slate-700 md:flex">
               {navLinks.map(link => {
                 const active = isActive(link.href)
+                const className = `pb-1 transition hover:text-slate-900 ${
+                  active ? 'text-slate-900 font-semibold border-b-2 border-slate-900' : ''
+                }`
+                if (link.external) {
+                  return (
+                    <a key={link.href} href={link.href} className={className}>
+                      {link.label}
+                    </a>
+                  )
+                }
                 return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`pb-1 transition hover:text-slate-900 ${
-                      active ? 'text-slate-900 font-semibold border-b-2 border-slate-900' : ''
-                    }`}
-                  >
+                  <Link key={link.href} href={link.href} className={className}>
                     {link.label}
                   </Link>
                 )
@@ -675,20 +687,35 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {  const
         {!isOrganizerActive && mobileMenuOpen && (
           <nav className="absolute top-full left-0 right-0 z-50 rounded-b-2xl bg-white px-4 py-3 shadow-lg md:hidden">
             <div className="grid gap-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={`mobile-${link.href}`}
-                  href={link.href}
-                  className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
-                    isActive(link.href)
-                      ? 'bg-slate-100 text-slate-900'
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const className = `rounded-xl px-3 py-2 text-sm font-medium transition ${
+                  isActive(link.href)
+                    ? 'bg-slate-100 text-slate-900'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                }`
+                if (link.external) {
+                  return (
+                    <a
+                      key={`mobile-${link.href}`}
+                      href={link.href}
+                      className={className}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {link.label}
+                    </a>
+                  )
+                }
+                return (
+                  <Link
+                    key={`mobile-${link.href}`}
+                    href={link.href}
+                    className={className}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                )
+              })}
               {!isLoggedIn && !maintenance && (
                 <button
                   type="button"

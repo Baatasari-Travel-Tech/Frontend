@@ -13,7 +13,7 @@ import Image from "next/image"
 import { motion, type Variants } from "framer-motion"
 
 const FEATURES = [
-  { icon: Tag, title: "No Subscription Fees", description: "Join and use the platform absolutely free." },
+  { icon: Tag, title: "₹299 Lifetime", description: "One payment, once. No subscription, nothing to renew, nothing that lapses." },
   { icon: Handshake, title: "Direct Connections", description: "Connect directly with verified businesses and organizers." },
   { icon: ShieldCheck, title: "Verified Businesses", description: "Every business is verified for your safety and trust." },
   { icon: Lock, title: "Secure Payments", description: "Get paid securely with clear transactions and reports." },

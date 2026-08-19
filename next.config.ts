@@ -94,6 +94,28 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        // Venue partners live on their own Worker at restaurant.baatasari.com
+        // (D:/Restaurant/CodeBase/Frontend). This path is what the
+        // nav, the footer and any campaign link point at, so the subdomain is
+        // named in ONE place: if the venue pitch ever moves onto this app, or
+        // onto a different host, that is a one-line change here rather than a
+        // hunt through components.
+        //
+        // A config redirect, not middleware: next.config redirects are
+        // evaluated BEFORE middleware runs. That keeps it working while
+        // maintenance mode is ON — a partner following the link during a
+        // deploy window should still reach the venue site, which is a separate
+        // Worker and is not down — and it costs no site-config fetch.
+        //
+        // Permanent (308), so browsers cache it hard. Worth the SEO signal,
+        // but it means retargeting this path later is slow to take effect for
+        // anyone who has followed it once; change the path, not the
+        // destination, if it ever has to move in a hurry.
+        source: "/for-restaurants",
+        destination: "https://restaurant.baatasari.com",
+        permanent: true,
+      },
+      {
         // The page used to live at /terms&conditions. A literal "&" in a path
         // cannot appear in a sitemap without entity-escaping, which Next's
         // sitemap serializer does not do — the raw character made the whole

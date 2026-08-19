@@ -364,8 +364,8 @@ export default function TalentOnboardingPage() {
 
                 <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-5 backdrop-blur">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-bricolage text-3xl font-bold text-white">₹249</span>
-                    <span className="font-albert text-xs text-white/55">one-time</span>
+                    <span className="font-bricolage text-3xl font-bold text-white">₹299</span>
+                    <span className="font-albert text-xs text-white/55">lifetime</span>
                   </div>
                   <p className="mt-1 font-albert text-[11px] leading-4 text-white/55">
                     Inclusive of all taxes &amp; payment charges
@@ -382,7 +382,7 @@ export default function TalentOnboardingPage() {
                       </>
                     ) : (
                       <>
-                        Pay ₹249 &amp; submit
+                        Pay ₹299 &amp; submit
                         <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                       </>
                     )}
@@ -618,8 +618,8 @@ export default function TalentOnboardingPage() {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <div className="flex items-baseline gap-1.5">
-                          <span className="font-bricolage text-2xl font-bold text-white">₹249</span>
-                          <span className="font-albert text-xs text-white/55">one-time</span>
+                          <span className="font-bricolage text-2xl font-bold text-white">₹299</span>
+                          <span className="font-albert text-xs text-white/55">lifetime</span>
                         </div>
                         <p className="font-albert text-[11px] leading-4 text-white/60">
                           Inclusive of all taxes &amp; payment charges
@@ -632,7 +632,7 @@ export default function TalentOnboardingPage() {
                       >
                         {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : (
                           <>
-                            Pay ₹249
+                            Pay ₹299
                             <ArrowRight className="h-4 w-4" />
                           </>
                         )}
