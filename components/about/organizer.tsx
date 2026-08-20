@@ -3,11 +3,9 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function EventOrganizer() {
-  const router = useRouter();
-
   return (
     <motion.section
       id="events"
@@ -58,11 +56,23 @@ export default function EventOrganizer() {
             </p>
 
             {/* CTA */}
+            {/*
+              next/link, not a button with a router.push: same destination, but
+              a link can be opened in a new tab, copied, followed by a crawler,
+              announced with somewhere to go, and it survives JS failing to
+              load. The onClick did none of that.
+
+              <Link> here rather than the plain <a> used for the venue CTA, and
+              the difference is the destination: /for-organizers is a route in
+              this app, so the client router is the right thing to hand it to.
+              /for-restaurants is a redirect off this origin, which is exactly
+              what the client router cannot usefully do.
+            */}
             <Button
+              asChild
               className="font-albert font-medium text-lg leading-6 text-(--white) bg-brand-900 hover:bg-(--brand-navy)/90 px-8 py-3 rounded-full transition h-auto"
-              onClick={() => router.push('/for-organizers')}
             >
-              List Your Event 
+              <Link href="/for-organizers">List Your Event</Link>
             </Button>
           </motion.div>
 
