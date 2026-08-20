@@ -3,11 +3,8 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 
 export default function RestaurantOwner() {
-  const router = useRouter();
-
   return (
     <motion.section
       id="restaurants"
@@ -60,10 +57,30 @@ export default function RestaurantOwner() {
             </div>
 
             {/* CTA */}
-            <Button 
-                className="font-albert font-medium text-lg leading-6 text-(--white) bg-brand-900 hover:bg-(--brand-navy)/90 px-8 py-3 rounded-full transition h-auto"
-                onClick={() => router.push('/for-restaurants')}>
-              Check It Out
+            {/*
+              A real <a>, not a button with a router.push.
+
+              /for-restaurants is a 308 to restaurant.baatasari.com. Pushed
+              through the client router, Next first fetches the RSC payload for
+              it, follows the redirect cross-origin, and has that response
+              blocked by CORS — the venue Worker sends no
+              Access-Control-Allow-Origin, and nothing it could send would make
+              a foreign app's RSC payload useful. Next then falls back to a full
+              page load, so it works, having first waited on a request that
+              could never have succeeded.
+
+              The rest is what any link gives and a button cannot: open in a new
+              tab, copy link address, a destination in the accessibility tree,
+              a crawlable path to the venue site, and it still works with JS off.
+
+              asChild swaps the underlying element for the child while keeping
+              every Button style — see components/ui/button.tsx.
+            */}
+            <Button
+              asChild
+              className="font-albert font-medium text-lg leading-6 text-(--white) bg-brand-900 hover:bg-(--brand-navy)/90 px-8 py-3 rounded-full transition h-auto"
+            >
+              <a href="/for-restaurants">Check It Out</a>
             </Button>
           </motion.div>
 
