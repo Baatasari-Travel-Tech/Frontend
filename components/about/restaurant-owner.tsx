@@ -60,7 +60,7 @@ export default function RestaurantOwner() {
             {/*
               A real <a>, not a button with a router.push.
 
-              /for-restaurants is a 308 to restaurant.baatasari.com. Pushed
+              /for-restaurants is a 308 to venue.baatasari.com. Pushed
               through the client router, Next first fetches the RSC payload for
               it, follows the redirect cross-origin, and has that response
               blocked by CORS — the venue Worker sends no

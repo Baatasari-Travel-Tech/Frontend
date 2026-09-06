@@ -94,12 +94,21 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        // Venue partners live on their own Worker at restaurant.baatasari.com
-        // (D:/Restaurant/CodeBase/Frontend). This path is what the
-        // nav, the footer and any campaign link point at, so the subdomain is
-        // named in ONE place: if the venue pitch ever moves onto this app, or
-        // onto a different host, that is a one-line change here rather than a
-        // hunt through components.
+        // Venue partners live on their own Worker at venue.baatasari.com
+        // (D:/Restaurant/CodeBase/Frontend) — restaurant.baatasari.com until
+        // this destination changed. That old hostname is still attached to
+        // the same Worker (Cloudflare custom domains aren't torn down by
+        // removing them from wrangler.jsonc) and keeps serving on purpose:
+        // this redirect is permanent and browsers cache it hard, so anyone
+        // who followed /for-restaurants before this change may still be
+        // holding a cached 308 straight to the old hostname for a long
+        // time yet. Do not detach restaurant.baatasari.com in Cloudflare
+        // until well after this has had time to expire from caches.
+        //
+        // This path is what the nav, the footer and any campaign link point
+        // at, so the subdomain is named in ONE place: if the venue pitch ever
+        // moves onto this app, or onto a different host, that is a one-line
+        // change here rather than a hunt through components.
         //
         // A config redirect, not middleware: next.config redirects are
         // evaluated BEFORE middleware runs. That keeps it working while
@@ -112,7 +121,7 @@ const nextConfig: NextConfig = {
         // anyone who has followed it once; change the path, not the
         // destination, if it ever has to move in a hurry.
         source: "/for-restaurants",
-        destination: "https://restaurant.baatasari.com",
+        destination: "https://venue.baatasari.com",
         permanent: true,
       },
       {

@@ -487,7 +487,7 @@ function SiteShellContent({ children }: { children: React.ReactNode }) {  const
 
   const homeHref = resolveHomeHref()
   // `external` marks a link that leaves this app. /for-restaurants is a 308 in
-  // next.config.ts pointing at restaurant.baatasari.com, and next/link would
+  // next.config.ts pointing at venue.baatasari.com, and next/link would
   // try to resolve it through the client router first — a round trip whose only
   // possible outcome is a hard navigation anyway, and one more thing to go
   // wrong on a slow connection. Rendered as a plain <a> so the browser follows
