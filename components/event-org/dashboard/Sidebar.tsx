@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -44,6 +45,32 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, positionMode = "fi
               <ChevronRight className="w-4 h-4 text-gray-600" />
             )}
           </button>
+
+          {/* Brand */}
+          <div className="flex w-full shrink-0 items-center gap-3 border-b border-slate-800/60 px-3.5 pb-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--gold)]/30 bg-[var(--gold)]/10">
+              <Image
+                src="/nlogo.png"
+                alt="Baatasari"
+                width={256}
+                height={256}
+                className="h-8 w-8 object-contain"
+              />
+            </div>
+            <div
+              className={classNames(
+                "flex flex-col overflow-hidden whitespace-nowrap transition-opacity duration-300",
+                isOpen ? "opacity-100" : "w-0 opacity-0"
+              )}
+            >
+              <span className="truncate text-sm font-bold tracking-wide text-white leading-tight">
+                Baatasari
+              </span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                Event Organizer
+              </span>
+            </div>
+          </div>
 
           {/* Main Navigation */}
           <nav className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 px-3 w-full">
